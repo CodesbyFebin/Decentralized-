@@ -52,7 +52,7 @@ export const MetricCard: React.FC<Props> = ({
           </div>
           <div>
             <div className="text-xs font-medium text-slate-400 font-sans">{label}</div>
-            <div className="text-2xl font-bold font-mono tracking-tight text-white mt-0.5">
+            <div className="text-2xl font-bold tabular-nums whitespace-nowrap tracking-tight text-white mt-0.5">
               {value}
             </div>
           </div>
@@ -77,7 +77,7 @@ export const MetricCard: React.FC<Props> = ({
               <span>{change}</span>
             </div>
           )}
-          {subValue && <span className="text-xs text-slate-400 font-mono">{subValue}</span>}
+          {subValue && <span className="text-xs text-slate-400">{subValue}</span>}
           {provenance && (
             <span className="text-[10px] text-slate-500 font-mono truncate max-w-[100px]" title={provenance}>
               · {provenance}

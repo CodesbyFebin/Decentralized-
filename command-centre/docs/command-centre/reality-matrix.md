@@ -29,6 +29,7 @@ This document defines the authoritative capability mapping between the Command C
 | **Analytics** | `AnalyticsView.tsx` | Ingress Access Logs & Node Metrics | **DERIVED** | Traffic metrics derived from HTTP access logs; zero `Math.random()` in operational analytics. |
 | **Billing** | `BillingView.tsx` | Autonomous Self-Hosted Ledger | **CONFIGURED** | Honestly displays: "Self-hosted autonomous mode. External credit card billing is not configured." |
 | **Team & RBAC** | `TeamView.tsx` | Auth & Session Principal Store | **LIVE** | Server-side permission enforcement on all destructive mutation endpoints (`app.delete`, `node.drain`, `cert.renew`). |
+| **Ownership fleet** (Nodes & Compute, Storage, Deploy overviews) | `NodesView.tsx`, `StorageView.tsx`, `DeployView.tsx` | `GET /api/v1/fleet`, `/storage/fleet`, `/deploy/overview` (`src/server/fleet.ts`) | **SIMULATED (demo) / DERIVED** | Seed lists of owned, community and DePIN nodes, storage nodes and deployments. Every count, total, region roll-up and ownership share is derived from those lists server-side. Responses carry `mode: "demo"` and the UI shows a `DEMO DATA` tag until a live adapter replaces the seed lists. S3 and DePIN storage targets say "Not available yet" instead of pretending to connect. |
 | **RAG Copilot** | `CopilotView.tsx`, `DashboardView.tsx` | Hybrid RAG Engine (Docs + Live State + Gemini) | **LIVE** | Permission-filtered retrieval. Unknown states are explicitly stated. Destructive actions require explicit operator approval. |
 
 ---

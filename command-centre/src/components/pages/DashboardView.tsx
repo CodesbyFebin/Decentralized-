@@ -28,6 +28,8 @@ import {
 import { api } from '../../lib/api';
 import { MetricCard } from '../common/MetricCard';
 import { WorldMap } from '../common/WorldMap';
+import { HoloGlobe, GlobeMarker, GlobeArc } from '../common/HoloGlobe';
+import { NodeInfo } from '../../types/platform';
 import { CapabilityBadge } from '../common/CapabilityBadge';
 import { NavRoute } from '../layout/Sidebar';
 import { NodeTelemetryDashboard } from '../dashboard/NodeTelemetryDashboard';
@@ -39,6 +41,11 @@ interface Props {
 export const DashboardView: React.FC<Props> = ({ onNavigate }) => {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<any>(null);
+  const [heroNodes, setHeroNodes] = useState<NodeInfo[]>([]);
+
+  useEffect(() => {
+    api.getNodes().then((r) => setHeroNodes(r.data)).catch(() => {});
+  }, []);
   const [activeTab, setActiveTab] = useState<'overview' | 'telemetry'>('overview');
   const [selectedCopilotMode, setSelectedCopilotMode] = useState<
     'ask' | 'diagnose' | 'plan' | 'execute'
@@ -59,6 +66,32 @@ export const DashboardView: React.FC<Props> = ({ onNavigate }) => {
   useEffect(() => {
     loadData();
   }, []);
+
+  // Hero globe: one callout per observed region, derived from node placement.
+  const regionColors = ['#20DDF7', '#248BFF', '#F59E0B', '#FB4F64', '#A855F7', '#10D981', '#38BDF8'];
+  const byRegion = new Map<string, NodeInfo[]>();
+  heroNodes.forEach((n) => byRegion.set(n.region, [...(byRegion.get(n.region) ?? []), n]));
+  const heroMarkers: GlobeMarker[] = [...byRegion.entries()].map(([region, ns], i) => {
+    const c = regionColors[i % regionColors.length];
+    return {
+      id: region,
+      lat: ns.reduce((a, n) => a + n.coordinates[0], 0) / ns.length,
+      lng: ns.reduce((a, n) => a + n.coordinates[1], 0) / ns.length,
+      color: c,
+      kind: 'cube' as const,
+      callout: (
+        <div className="px-2.5 py-1.5 rounded-xl bg-[rgba(6,16,40,0.82)] backdrop-blur-md border whitespace-nowrap" style={{ borderColor: `${c}66` }}>
+          <div className="text-[11.5px] font-bold text-white leading-tight">{region}</div>
+          <div className="text-[10.5px] text-slate-400">{ns.length} node{ns.length === 1 ? '' : 's'}</div>
+        </div>
+      )
+    };
+  });
+  const heroArcs: GlobeArc[] = heroMarkers.slice(1).map((m, i) => ({
+    from: [heroMarkers[i].lat, heroMarkers[i].lng],
+    to: [m.lat, m.lng],
+    color: regionColors[(i + 3) % regionColors.length]
+  }));
 
   if (loading || !data) {
     return (
@@ -89,7 +122,7 @@ export const DashboardView: React.FC<Props> = ({ onNavigate }) => {
             {/* Date Banner */}
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[rgba(10,26,56,0.7)] border border-[rgba(125,190,255,0.2)] text-xs font-mono text-cyan-300 mb-3 shadow-inner">
               <Calendar className="w-3.5 h-3.5 text-cyan-400" />
-              <span>Wednesday, Sep 24, 2026</span>
+              <span>{new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' })}</span>
               <span className="text-slate-600">·</span>
               <span className="text-emerald-400 font-semibold flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_6px_#10D981]" />
@@ -152,80 +185,31 @@ export const DashboardView: React.FC<Props> = ({ onNavigate }) => {
             </div>
           </div>
 
-          {/* Right Column: Embedded 3D Earth Rim Graphic with Floating Region Tags & Summary Pill */}
-          <div className="relative w-full lg:w-[380px] h-[190px] flex items-center justify-center select-none">
-            {/* Curved Planetary Earth Rim SVG */}
-            <svg
-              viewBox="0 0 380 190"
-              className="w-full h-full overflow-visible"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <defs>
-                <radialGradient id="heroAtmosphere" cx="50%" cy="110%" r="90%">
-                  <stop offset="0%" stopColor="#0B2348" stopOpacity="0.9" />
-                  <stop offset="65%" stopColor="#08162C" stopOpacity="0.95" />
-                  <stop offset="90%" stopColor="#248BFF" stopOpacity="0.4" />
-                  <stop offset="100%" stopColor="#20DDF7" stopOpacity="0.8" />
-                </radialGradient>
-                <linearGradient id="heroRimGlow" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="#20DDF7" stopOpacity="0.2" />
-                  <stop offset="35%" stopColor="#20DDF7" stopOpacity="0.9" />
-                  <stop offset="70%" stopColor="#248BFF" stopOpacity="0.8" />
-                  <stop offset="100%" stopColor="#A855F7" stopOpacity="0.3" />
-                </linearGradient>
-              </defs>
-
-              {/* Glowing Outer Atmospheric Halo */}
-              <ellipse cx="190" cy="210" rx="200" ry="120" fill="none" stroke="url(#heroRimGlow)" strokeWidth="3" filter="drop-shadow(0 0 16px #20DDF7)" />
-              <ellipse cx="190" cy="210" rx="194" ry="114" fill="url(#heroAtmosphere)" stroke="rgba(125,190,255,0.25)" strokeWidth="1" />
-
-              {/* Latitude and Longitude Grid Lines */}
-              <ellipse cx="190" cy="210" rx="180" ry="90" fill="none" stroke="rgba(125,190,255,0.12)" strokeWidth="1" strokeDasharray="3 3" />
-              <ellipse cx="190" cy="210" rx="150" ry="60" fill="none" stroke="rgba(125,190,255,0.15)" strokeWidth="1" />
-              <line x1="90" y1="130" x2="290" y2="130" stroke="rgba(125,190,255,0.15)" strokeWidth="1" strokeDasharray="4 4" />
-
-              {/* Glowing Arcs connecting regions */}
-              <path d="M 95 125 Q 150 95, 200 115" fill="none" stroke="#20DDF7" strokeWidth="1.8" strokeDasharray="3 2" filter="drop-shadow(0 0 6px #20DDF7)" />
-              <path d="M 200 115 Q 240 100, 285 120" fill="none" stroke="#A855F7" strokeWidth="1.8" strokeDasharray="3 2" filter="drop-shadow(0 0 6px #A855F7)" />
-
-              {/* Node Beacon Dots on Earth Rim */}
-              <circle cx="95" cy="125" r="3.5" fill="#20DDF7" filter="drop-shadow(0 0 6px #20DDF7)" />
-              <circle cx="200" cy="115" r="3.5" fill="#248BFF" filter="drop-shadow(0 0 6px #248BFF)" />
-              <circle cx="285" cy="120" r="3.5" fill="#F59E0B" filter="drop-shadow(0 0 6px #F59E0B)" />
-            </svg>
-
-            {/* Floating Region Tags */}
-            <div className="absolute top-2 left-2 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[rgba(8,20,44,0.85)] border border-cyan-400/30 text-[10px] font-mono text-cyan-300 shadow-lg">
-              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_6px_#20DDF7]" />
-              <span>North America</span>
-            </div>
-
-            <div className="absolute top-1 right-12 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[rgba(8,20,44,0.85)] border border-blue-400/30 text-[10px] font-mono text-blue-300 shadow-lg">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-400 shadow-[0_0_6px_#248BFF]" />
-              <span>Europe</span>
-            </div>
-
-            <div className="absolute bottom-14 right-2 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[rgba(8,20,44,0.85)] border border-amber-400/30 text-[10px] font-mono text-amber-300 shadow-lg">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shadow-[0_0_6px_#F59E0B]" />
-              <span>Asia</span>
-            </div>
-
-            <div className="absolute bottom-10 left-8 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[rgba(8,20,44,0.85)] border border-violet-400/30 text-[10px] font-mono text-violet-300 shadow-lg">
-              <span className="w-1.5 h-1.5 rounded-full bg-violet-400 shadow-[0_0_6px_#A855F7]" />
-              <span>Africa</span>
-            </div>
-
-            {/* Global Network Summary Pill */}
-            <div className="absolute bottom-1 left-1/2 -translate-x-1/2 z-10">
+          {/* Right Column: live holographic globe with region callouts + network summary pill */}
+          <div className="relative w-full lg:w-[460px] h-[230px] -my-6 lg:-mr-6 select-none">
+            <HoloGlobe
+              markers={heroMarkers}
+              arcs={heroArcs}
+              focusLng={20}
+              tilt={24}
+              speed={2}
+              center={[0.5, 0.95]}
+              radius={0.9}
+              resolution={1.3}
+              className="absolute inset-0"
+            />
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10">
               <button
                 onClick={() => onNavigate('nodes')}
-                className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[rgba(10,26,56,0.92)] hover:bg-[rgba(16,36,78,0.95)] border border-emerald-500/40 text-xs font-mono font-semibold text-emerald-300 shadow-[0_4px_16px_rgba(2,6,23,0.8)] transition-all cursor-pointer group"
+                className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[rgba(10,26,56,0.92)] hover:bg-[rgba(16,36,78,0.95)] border border-emerald-500/40 text-xs font-semibold text-emerald-300 shadow-[0_4px_16px_rgba(2,6,23,0.8)] transition-all cursor-pointer group whitespace-nowrap"
               >
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#10D981]" />
-                <span>8 / 10 nodes online</span>
-                <span className="text-cyan-400 group-hover:translate-x-0.5 transition-transform">
-                  View Nodes →
+                <span>
+                  {data?.platformStatus
+                    ? `${data.platformStatus.onlineNodesCount} / ${data.platformStatus.totalNodesCount} nodes online`
+                    : 'Observing nodes…'}
                 </span>
+                <span className="text-cyan-400 group-hover:translate-x-0.5 transition-transform">View Nodes →</span>
               </button>
             </div>
           </div>
@@ -269,7 +253,7 @@ export const DashboardView: React.FC<Props> = ({ onNavigate }) => {
             <MetricCard
               icon={<Globe className="w-5 h-5 text-cyan-400" />}
               label="Applications"
-              value={12}
+              value={data.metrics.websitesAndApps}
               change="+20%"
               trendColor="cyan"
               capability="LIVE"
@@ -281,7 +265,7 @@ export const DashboardView: React.FC<Props> = ({ onNavigate }) => {
             <MetricCard
               icon={<Server className="w-5 h-5 text-emerald-400" />}
               label="Nodes Online"
-              value="8 / 10"
+              value={`${data.platformStatus.onlineNodesCount} / ${data.platformStatus.totalNodesCount}`}
               change="+12%"
               trendColor="green"
               capability="LIVE"
@@ -293,7 +277,7 @@ export const DashboardView: React.FC<Props> = ({ onNavigate }) => {
             <MetricCard
               icon={<HardDrive className="w-5 h-5 text-purple-400" />}
               label="Storage Used"
-              value="428 GB"
+              value={data.metrics.storageUsedGb >= 1000 ? `${(data.metrics.storageUsedGb / 1000).toFixed(1)} TB` : `${data.metrics.storageUsedGb} GB`}
               change="+18%"
               trendColor="purple"
               capability="LIVE"
@@ -305,7 +289,7 @@ export const DashboardView: React.FC<Props> = ({ onNavigate }) => {
             <MetricCard
               icon={<AtSign className="w-5 h-5 text-amber-400" />}
               label="Domains"
-              value={8}
+              value={data.metrics.domains}
               change="+14%"
               trendColor="amber"
               capability="LIVE"
@@ -317,7 +301,7 @@ export const DashboardView: React.FC<Props> = ({ onNavigate }) => {
             <MetricCard
               icon={<ShieldCheck className="w-5 h-5 text-blue-400" />}
               label="SSL Certificates"
-              value={6}
+              value={data.metrics.sslCertificates}
               change="+33%"
               trendColor="blue"
               capability="LIVE"
@@ -352,10 +336,6 @@ export const DashboardView: React.FC<Props> = ({ onNavigate }) => {
               {/* Holographic 3D Interactive Map */}
               <WorldMap
                 heightClass="h-[390px]"
-                onlineCount={8}
-                degradedCount={1}
-                offlineCount={1}
-                unknownCount={0}
                 onSelectRegion={() => onNavigate('nodes')}
                 onViewAllNodes={() => onNavigate('nodes')}
               />
@@ -737,7 +717,7 @@ export const DashboardView: React.FC<Props> = ({ onNavigate }) => {
                 {[
                   { name: 'API Server & Control Plane', latency: '18ms', uptime: '99.99%', status: 'Nominal' },
                   { name: 'Distributed State & Quorum', latency: '24ms', uptime: '99.98%', status: 'Nominal' },
-                  { name: 'Node Agents & Heartbeats', latency: '42ms', uptime: '8 / 10 Active', status: 'Nominal' },
+                  { name: 'Node Agents & Heartbeats', latency: '42ms', uptime: `${data.platformStatus.onlineNodesCount} / ${data.platformStatus.totalNodesCount} Active`, status: 'Nominal' },
                   { name: 'IPFS Storage & Block Store', latency: '32ms', uptime: '1.2M Blocks', status: 'Nominal' },
                   { name: 'Security & ACME Daemon', latency: '12ms', uptime: 'All SSL Valid', status: 'Nominal' }
                 ].map((sys, idx) => (

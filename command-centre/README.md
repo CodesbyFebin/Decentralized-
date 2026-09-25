@@ -1,20 +1,38 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# Decentralized.Host Command Centre
 
-# Run and deploy your AI Studio app
+Operator console for Decentralized.Host: a React + Vite front end with a small
+Express BFF (`server.ts`) that serves `/api/v1/*` from a demo platform store.
 
-This contains everything you need to run your app locally.
+## Run locally
 
-View your app in AI Studio: https://ai.studio/apps/031202b9-2556-4ff2-aa59-75930d371c60
+Prerequisites: Node.js 22+ (or Bun).
 
-## Run Locally
+```bash
+npm install          # or: bun install
+npm run dev          # http://localhost:3000 (Vite middleware + API)
+npm run lint         # tsc --noEmit
+npm run build && NODE_ENV=production npm start
+```
 
-**Prerequisites:**  Node.js
+Set `GEMINI_API_KEY` in `.env.local` to enable model-backed RAG Copilot answers.
 
+## Surfaces
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+| Route | What it shows |
+| --- | --- |
+| `/` | Dashboard: greeting, live globe, KPIs, resource usage, RAG Copilot, activity, health |
+| `/deploy` | Universal Deploy: source → build → artifact → targets pipeline, strategies, KPIs, live deployment map, ownership mix, deployments table. `/deploy/new[:preset]` opens the deployment wizard |
+| `/nodes` | Nodes & Compute: owned / community / DePIN fleet, contribution, node table, Add a Node (real `dh node invite` → `dh-noded --join-file` → `dh node approve` flow) |
+| `/storage` | Storage & Data: capacity, replication, integrity, distributed storage map, storage nodes, Add Storage |
+
+The holographic globe (`src/components/common/HoloGlobe.tsx`) is a dependency-free
+canvas renderer: dotted continents, great-circle arcs with travelling pulses, node
+markers and HTML callouts that track rotation and avoid overlapping. It pauses
+off-screen and respects `prefers-reduced-motion`.
+
+Fonts are bundled with `@fontsource-variable/*`, so the console loads nothing from
+third-party hosts.
+
+See [`design.md`](design.md) for the visual system and
+[`docs/command-centre/reality-matrix.md`](docs/command-centre/reality-matrix.md)
+for which numbers are live, derived or simulated.

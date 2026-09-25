@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import { platformStore } from './src/server/store';
 import { getActivePlatformAdapter } from './src/server/platformAdapter';
 import { handleCopilotQuery } from './src/server/copilotService';
+import { fleetStore } from './src/server/fleet';
 import { createServer as createViteServer } from 'vite';
 
 dotenv.config();
@@ -705,6 +706,19 @@ app.post('/api/v1/copilot/actions/:id/approve', async (req, res) => {
 app.post('/api/v1/copilot/actions/:id/dismiss', (req, res) => {
   platformStore.pendingActions.delete(req.params.id);
   res.json({ status: 'success', message: 'Action proposal dismissed' });
+});
+
+// Ownership-aware fleet views (Nodes & Compute, Storage, Deploy command surfaces)
+app.get('/api/v1/fleet', (req, res) => {
+  res.json({ status: 'success', data: fleetStore.fleetOverview() });
+});
+
+app.get('/api/v1/storage/fleet', (req, res) => {
+  res.json({ status: 'success', data: fleetStore.storageOverview() });
+});
+
+app.get('/api/v1/deploy/overview', (req, res) => {
+  res.json({ status: 'success', data: fleetStore.deployOverview() });
 });
 
 // Vite Dev Server middleware mode or static serve

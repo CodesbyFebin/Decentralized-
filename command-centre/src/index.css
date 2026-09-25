@@ -28,20 +28,20 @@
     --unknown:  #64748B;
 
     --bg-base: #020711;
-    --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-    --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+    --font-sans: 'Plus Jakarta Sans Variable', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
   }
 
   body {
     background-color: var(--bg-base);
     color: #F1F5F9;
-    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: 'Plus Jakarta Sans Variable', 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     overflow-x: hidden;
   }
 
   code, kbd, samp, pre {
-    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-family: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
     font-feature-settings: "liga" 0, "calt" 0;
   }
 }
@@ -193,4 +193,110 @@
 
 .animate-spin-slow {
   animation: spinSlow 30s linear infinite;
+}
+
+/* ------------------------------------------------------------------ */
+/* Command-surface glass (reference screens)                           */
+/* ------------------------------------------------------------------ */
+.dh-glass {
+  background: linear-gradient(180deg, rgba(10, 24, 54, 0.72) 0%, rgba(6, 15, 36, 0.72) 100%);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  border: 1px solid rgba(110, 170, 255, 0.2);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 0 0 1px rgba(36, 139, 255, 0.04),
+    0 10px 30px -12px rgba(0, 0, 0, 0.7);
+}
+
+.dh-glass-strong {
+  background: linear-gradient(180deg, rgba(12, 28, 64, 0.86) 0%, rgba(6, 14, 34, 0.9) 100%);
+  backdrop-filter: blur(28px) saturate(150%);
+  -webkit-backdrop-filter: blur(28px) saturate(150%);
+  border: 1px solid rgba(120, 190, 255, 0.28);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.09),
+    0 0 30px -6px rgba(36, 139, 255, 0.3);
+}
+
+.dh-hover-lift {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s;
+}
+.dh-hover-lift:hover {
+  transform: translateY(-2px);
+  border-color: rgba(32, 221, 247, 0.45);
+}
+
+/* Gradient-bordered feature card (deployment strategies) */
+.dh-feature {
+  position: relative;
+  background: linear-gradient(180deg, rgba(14, 30, 70, 0.78), rgba(8, 16, 40, 0.82));
+  border-radius: 18px;
+  isolation: isolate;
+}
+.dh-feature::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(160deg, var(--dh-accent, #20DDF7), rgba(125, 190, 255, 0.12) 45%, var(--dh-accent-2, #A855F7));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+.dh-feature::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  box-shadow: 0 0 28px -8px var(--dh-accent, #20DDF7);
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* Data tables on command surfaces */
+.dh-table th {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgb(148 163 184 / 0.9);
+  padding: 10px 10px;
+  text-align: left;
+  white-space: nowrap;
+}
+.dh-table td {
+  padding: 9px 10px;
+  white-space: nowrap;
+  border-top: 1px solid rgba(125, 190, 255, 0.08);
+  font-size: 12.5px;
+  vertical-align: middle;
+}
+.dh-table tbody tr {
+  transition: background 0.15s;
+}
+.dh-table tbody tr:hover {
+  background: rgba(36, 139, 255, 0.06);
+}
+
+@keyframes dhFlow {
+  from { stroke-dashoffset: 24; }
+  to { stroke-dashoffset: 0; }
+}
+.dh-flow {
+  stroke-dasharray: 4 8;
+  animation: dhFlow 1.2s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dh-flow, .animate-pulse, .animate-ping, .animate-float-slow, .animate-pulse-glow, .animate-spin-slow {
+    animation: none !important;
+  }
+}
+
+.dh-fade-edges {
+  -webkit-mask-image: radial-gradient(ellipse 62% 60% at 56% 48%, #000 62%, transparent 100%);
+  mask-image: radial-gradient(ellipse 62% 60% at 56% 48%, #000 62%, transparent 100%);
 }

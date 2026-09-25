@@ -15,7 +15,10 @@ import {
   CopilotMessage,
   ComputeSummary,
   DePINIntegration,
-  SelfHostingBenefit
+  SelfHostingBenefit,
+  FleetOverview,
+  StorageFleetOverview,
+  DeployOverview
 } from '../types/platform';
 
 const API_BASE = '/api/v1';
@@ -42,6 +45,9 @@ async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
 }
 
 export const api = {
+  getHealth: () =>
+    request<{ status: string; health: { healthy: boolean; mode: string; message: string } }>('/health'),
+
   getCapabilities: () =>
     request<{ capabilities: PlatformCapabilities }>('/capabilities'),
 
@@ -125,6 +131,12 @@ export const api = {
         benefits: SelfHostingBenefit[];
       };
     }>('/compute'),
+
+  getFleet: () => request<{ status: string; data: FleetOverview }>('/fleet'),
+
+  getStorageFleet: () => request<{ status: string; data: StorageFleetOverview }>('/storage/fleet'),
+
+  getDeployOverview: () => request<{ status: string; data: DeployOverview }>('/deploy/overview'),
 
   getDePINIntegrations: () =>
     request<{ status: string; data: DePINIntegration[] }>('/depin'),

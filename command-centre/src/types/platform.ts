@@ -334,3 +334,159 @@ export interface PlatformEvent {
   severity: 'info' | 'success' | 'warn' | 'error';
   message: string;
 }
+
+/* ------------------------------------------------------------------ */
+/* Infrastructure ownership model (Nodes & Compute / Storage / Deploy) */
+/* ------------------------------------------------------------------ */
+
+/** Who operates a piece of infrastructure. Drives colour + icon everywhere. */
+export type Ownership = 'owned' | 'community' | 'depin' | 'edge' | 'cloud';
+
+export type WorldRegion = 'North America' | 'South America' | 'Europe' | 'Africa' | 'Asia' | 'Oceania';
+
+export interface FleetNode {
+  id: string;
+  name: string;
+  shortId: string;
+  ownership: Ownership;
+  status: 'Online' | 'Degraded' | 'Offline';
+  roles: string[];
+  cpuAllocated: number;
+  cpuTotal: number;
+  memoryAllocatedGb: number;
+  memoryTotalGb: number;
+  storageAllocatedGb: number;
+  storageTotalGb: number;
+  gpuModel?: string;
+  gpuCount: number;
+  gpuAllocated: number;
+  country: string;
+  countryCode: string;
+  region: WorldRegion;
+  coordinates: [number, number];
+  uptime: string;
+  workloadsOwner: number;
+  workloadsCommunity: number;
+  contribution: { cpuHours: number; gpuHours: number; bandwidthGb: number; storageTbHours: number };
+}
+
+export interface RegionRollup {
+  region: WorldRegion;
+  coordinates: [number, number];
+  owned: number;
+  community: number;
+  depin: number;
+  offline: number;
+  storageTb: number;
+  storageNodes: number;
+  deployments: number;
+}
+
+export interface ExternalNetwork {
+  id: string;
+  name: string;
+  description: string;
+  kind: 'compute' | 'storage';
+  status: 'Active' | 'Ready to Deploy' | 'Ready to Install' | 'Not Installed' | 'Not Configured' | 'Eligibility Check';
+  nodes?: number;
+  accent: string;
+  glyph: string;
+}
+
+export interface ContributionMetric {
+  id: string;
+  label: string;
+  value: string;
+  deltaPercent: number;
+  tone: 'cyan' | 'violet' | 'blue' | 'amber' | 'emerald';
+}
+
+export interface BenefitRing {
+  id: string;
+  label: string;
+  value: number;
+  unit: '%' | '';
+  tone: 'cyan' | 'violet' | 'emerald' | 'blue';
+}
+
+export interface StorageNode {
+  id: string;
+  name: string;
+  shortId: string;
+  ownership: Ownership;
+  type: string;
+  filesystem: string;
+  status: 'Online' | 'Offline' | 'Degraded';
+  capacityTb: number;
+  usedTb: number;
+  volumes: number;
+  replicas: number;
+  integrity: 'Healthy' | 'Checking' | 'Degraded';
+  bandwidthServed: string;
+  policy: string;
+  region: WorldRegion;
+  coordinates: [number, number];
+}
+
+export interface FleetDeployment {
+  id: string;
+  name: string;
+  shortId: string;
+  status: 'Running' | 'Deploying' | 'Degraded' | 'Stopped' | 'Failed';
+  source: 'GitHub' | 'GitLab' | 'Docker' | 'Upload' | 'Template';
+  sourceRef: string;
+  environment: 'Production' | 'Preview';
+  replicasObserved: number;
+  replicasDesired: number;
+  placement: Ownership[];
+  endpoint: string;
+  region: WorldRegion;
+  lastDeployed: string;
+  commit: string;
+}
+
+export interface DeployTemplate {
+  id: string;
+  name: string;
+  description: string;
+  glyph: string;
+  accent: string;
+}
+
+export interface FleetOverview {
+  mode: 'demo' | 'live';
+  observedAt: string;
+  nodes: FleetNode[];
+  regions: RegionRollup[];
+  contribution: ContributionMetric[];
+  networks: ExternalNetwork[];
+  benefits: BenefitRing[];
+}
+
+export interface StorageFleetOverview {
+  mode: 'demo' | 'live';
+  observedAt: string;
+  storageNodes: StorageNode[];
+  regions: RegionRollup[];
+  contribution: ContributionMetric[];
+  networks: ExternalNetwork[];
+  benefits: BenefitRing[];
+  replicatedTb: number;
+  protectedPercent: number;
+  integrityChecks: number;
+  integrityPassedPercent: number;
+}
+
+export interface DeployOverview {
+  mode: 'demo' | 'live';
+  observedAt: string;
+  deployments: FleetDeployment[];
+  regions: RegionRollup[];
+  templates: DeployTemplate[];
+  networks: ExternalNetwork[];
+  ownershipMix: { ownership: Ownership; percent: number }[];
+  successRatePercent: number;
+  avgDeploySeconds: number;
+  deploysThisWeek: number;
+  traffic24h: { requests: number; requestsDeltaPercent: number; bandwidthGb: number; bandwidthDeltaPercent: number };
+}

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Search, Bell, Sun, Moon, ChevronDown, ShieldCheck, Check, User, LogOut, Box, Sparkles } from 'lucide-react';
+import { Search, Bell, Sun, ChevronDown, ShieldCheck, Check, User, LogOut, Menu } from 'lucide-react';
 import { PlatformCapabilities } from '../../types/platform';
-import { CapabilityBadge } from '../common/CapabilityBadge';
+import { BrandMark } from '../common/Brand';
 
 interface Props {
   onOpenCommandPalette: () => void;
@@ -9,174 +9,124 @@ interface Props {
   unreadNotificationsCount?: number;
   onOpenNotifications?: () => void;
   onNavigateHome?: () => void;
+  onOpenMobileNav?: () => void;
+  onOpenAudit?: () => void;
 }
 
 export const TopBar: React.FC<Props> = ({
   onOpenCommandPalette,
-  unreadNotificationsCount = 1,
+  unreadNotificationsCount = 0,
   onOpenNotifications,
-  onNavigateHome
+  onNavigateHome,
+  onOpenMobileNav,
+  onOpenAudit
 }) => {
-  const [themeDark, setThemeDark] = useState(true);
   const [profileOpen, setProfileOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-20 bg-[rgba(6,16,36,0.72)] backdrop-blur-2xl border-b border-[rgba(125,190,255,0.14)] px-5 py-3 flex flex-col gap-2.5 shadow-[0_4px_24px_rgba(2,6,23,0.5)]">
-      {/* Main Top Command Row */}
-      <div className="flex items-center justify-between gap-4">
-        {/* Left: Brand Header with Luminous 3D Cube Logo & Tagline */}
-        <div
-          onClick={onNavigateHome}
-          className="flex items-center gap-3 cursor-pointer select-none group"
-        >
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-400 via-blue-600 to-violet-600 p-0.5 shadow-[0_0_16px_rgba(32,221,247,0.35)] flex items-center justify-center transition-transform group-hover:scale-105">
-            <div className="w-full h-full bg-[#050D1E] rounded-[10px] flex items-center justify-center">
-              <Box className="w-5 h-5 text-cyan-400 animate-pulse-glow" />
-            </div>
-          </div>
-          <div className="flex flex-col">
-            <span className="font-extrabold text-sm sm:text-base tracking-tight text-white flex items-center">
-              Decentralized<span className="text-cyan-400">.Host</span>
-            </span>
-            <span className="text-[9px] uppercase tracking-widest text-slate-400 font-mono font-semibold">
-              Your Data. Your Rules.
-            </span>
-          </div>
-        </div>
+    <header className="sticky top-0 z-30 h-[68px] px-3 sm:px-4 flex items-center gap-2 sm:gap-4 bg-[linear-gradient(180deg,rgba(2,7,17,0.92),rgba(2,7,17,0.6))] backdrop-blur-xl">
+      <button
+        onClick={onOpenMobileNav}
+        className="lg:hidden p-2 rounded-xl border border-[rgba(125,190,255,0.2)] text-slate-200"
+        aria-label="Open navigation"
+      >
+        <Menu className="w-5 h-5" />
+      </button>
 
-        {/* Center: Omnibar with ⌘ K indicator */}
-        <div
-          onClick={onOpenCommandPalette}
-          className="flex-1 max-w-xl hidden md:flex items-center gap-3 px-4 py-2 rounded-2xl bg-[rgba(10,24,50,0.65)] border border-[rgba(125,190,255,0.16)] hover:border-[rgba(125,190,255,0.35)] text-slate-400 text-xs cursor-pointer transition-all shadow-inner group"
-        >
-          <Search className="w-4 h-4 text-cyan-400/80 group-hover:text-cyan-400 transition-colors" />
-          <span className="flex-1 text-slate-400 font-sans truncate">
-            Search apps, nodes, domains, logs, or ask the AI copilot...
+      {/* Brand */}
+      <button onClick={onNavigateHome} className="flex items-center gap-2.5 lg:min-w-[212px] pr-2 shrink-0 group" aria-label="Decentralized.Host home">
+        <BrandMark size={42} className="shrink-0 transition-transform group-hover:scale-105" />
+        <span className="hidden min-[400px]:flex flex-col items-start leading-none">
+          <span className="text-[16px] sm:text-[19px] font-extrabold tracking-tight text-white">
+            Decentralized<span className="text-white/95">.Host</span>
           </span>
-          <div className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[rgba(18,38,76,0.7)] border border-[rgba(125,190,255,0.2)] font-mono text-[10px] text-cyan-300">
-            <span>⌘</span>
-            <span>K</span>
-          </div>
+          <span className="mt-1 text-[9.5px] font-bold tracking-[0.2em] text-slate-300/80">YOUR DATA. YOUR RULES.</span>
+        </span>
+      </button>
+
+      {/* Omnibar */}
+      <button
+        onClick={onOpenCommandPalette}
+        className="hidden md:flex flex-1 max-w-[520px] items-center gap-3 px-4 h-11 rounded-2xl bg-[rgba(8,20,44,0.7)] border border-[rgba(125,190,255,0.28)] hover:border-cyan-400/50 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_0_20px_rgba(36,139,255,0.08)] transition-colors"
+      >
+        <Search className="w-[18px] h-[18px] text-slate-200" />
+        <span className="flex-1 text-[13px] text-slate-400 truncate">Search apps, nodes, domains, storage, or ask the AI copilot...</span>
+        <kbd className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/[0.06] border border-white/10 text-[11px] text-slate-300 font-sans">
+          ⌘ K
+        </kbd>
+      </button>
+
+      <div className="flex items-center gap-2 sm:gap-3 ml-auto">
+        {/* Theme indicator (dark-only for now; the control plane ships a single spatial theme) */}
+        <div
+          className="hidden sm:flex items-center gap-1.5 h-9 pl-2 pr-1 rounded-full bg-[rgba(8,20,44,0.7)] border border-[rgba(125,190,255,0.22)]"
+          title="Spatial dark theme"
+        >
+          <Sun className="w-4 h-4 text-slate-200" />
+          <span className="w-6 h-6 rounded-full bg-[radial-gradient(circle_at_35%_30%,#c7d2fe,#6366f1_60%,#312e81)] shadow-[0_0_10px_rgba(99,102,241,0.8)]" />
         </div>
 
-        {/* Right Cluster: Theme, Notifications, User Badge */}
-        <div className="flex items-center gap-3">
-          {/* Day / Night Toggle */}
+        <button
+          onClick={onOpenNotifications}
+          className="relative p-2 rounded-xl text-slate-200 hover:bg-white/[0.06] transition-colors"
+          aria-label={`Notifications${unreadNotificationsCount ? ` (${unreadNotificationsCount} unread)` : ''}`}
+        >
+          <Bell className="w-[22px] h-[22px]" />
+          {unreadNotificationsCount > 0 && (
+            <span className="absolute top-0.5 right-0.5 min-w-4 h-4 px-1 rounded-full bg-rose-500 text-[9.5px] font-bold text-white flex items-center justify-center shadow-[0_0_8px_#f43f5e]">
+              {unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount}
+            </span>
+          )}
+        </button>
+
+        <div className="relative">
           <button
-            onClick={() => setThemeDark(!themeDark)}
-            className="p-2 rounded-xl bg-[rgba(10,24,50,0.6)] border border-[rgba(125,190,255,0.16)] hover:border-[rgba(125,190,255,0.3)] text-slate-400 hover:text-slate-200 transition-all cursor-pointer"
-            title="Toggle theme"
+            onClick={() => setProfileOpen(!profileOpen)}
+            className="flex items-center gap-2.5 pl-1 pr-2 py-1 rounded-2xl hover:bg-white/[0.05] transition-colors"
+            aria-expanded={profileOpen}
           >
-            {themeDark ? <Moon className="w-4 h-4 text-cyan-400" /> : <Sun className="w-4 h-4 text-amber-400" />}
+            <span className="w-9 h-9 rounded-full bg-[linear-gradient(135deg,#6366f1,#8b5cf6)] flex items-center justify-center font-bold text-white text-[15px] shadow-[0_0_14px_rgba(139,92,246,0.6)]">
+              F
+            </span>
+            <span className="hidden sm:flex flex-col items-start leading-tight">
+              <span className="text-[13.5px] font-semibold text-white">Febin Francis</span>
+              <span className="text-[11px] text-slate-400">Owner</span>
+            </span>
+            <ChevronDown className="hidden sm:block w-4 h-4 text-slate-300" />
           </button>
 
-          {/* Notifications */}
-          <button
-            onClick={onOpenNotifications}
-            className="relative p-2 rounded-xl bg-[rgba(10,24,50,0.6)] border border-[rgba(125,190,255,0.16)] hover:border-[rgba(125,190,255,0.3)] text-slate-400 hover:text-slate-200 transition-all cursor-pointer"
-            title="Recent platform alerts"
-          >
-            <Bell className="w-4 h-4 text-slate-300" />
-            {unreadNotificationsCount > 0 && (
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 animate-ping" />
-            )}
-            {unreadNotificationsCount > 0 && (
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_8px_#f43f5e]" />
-            )}
-          </button>
-
-          {/* User profile dropdown matching design.md */}
-          <div className="relative">
-            <button
-              onClick={() => setProfileOpen(!profileOpen)}
-              className="flex items-center gap-2.5 pl-2 pr-3 py-1.5 rounded-2xl bg-[rgba(10,24,50,0.65)] border border-[rgba(125,190,255,0.16)] hover:border-[rgba(125,190,255,0.32)] transition-all cursor-pointer"
-            >
-              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-cyan-500 via-blue-600 to-indigo-600 flex items-center justify-center font-bold text-white text-xs shadow-[0_0_12px_rgba(32,221,247,0.4)]">
-                F
-              </div>
-              <div className="flex flex-col text-left leading-tight hidden sm:flex">
-                <span className="text-xs font-semibold text-white">Febin Francis</span>
-                <span className="text-[10px] text-cyan-400/90 font-mono">Owner</span>
-              </div>
-              <ChevronDown className="w-3.5 h-3.5 text-slate-400 ml-1" />
-            </button>
-
-            {profileOpen && (
-              <div className="absolute right-0 mt-2 w-60 rounded-2xl alien-glass-floating border border-[rgba(125,190,255,0.25)] shadow-2xl p-2 z-50 text-xs">
-                <div className="px-3 py-2 border-b border-[rgba(125,190,255,0.12)]">
-                  <div className="font-semibold text-white">Febin Francis</div>
-                  <div className="text-[11px] text-slate-400 font-mono">febin@decentralized.host</div>
-                  <div className="mt-1.5 flex items-center gap-1.5 text-[10px] text-emerald-400 font-mono">
-                    <Check className="w-3 h-3" />
-                    <span>Cryptographic Identity Verified</span>
-                  </div>
-                </div>
-
-                <div className="py-1">
-                  <button
-                    onClick={() => setProfileOpen(false)}
-                    className="w-full text-left px-3 py-2 text-slate-300 hover:bg-white/[0.06] rounded-xl flex items-center gap-2"
-                  >
-                    <User className="w-3.5 h-3.5 text-slate-400" />
-                    <span>Profile & Keyrings</span>
-                  </button>
-                  <button
-                    onClick={() => setProfileOpen(false)}
-                    className="w-full text-left px-3 py-2 text-slate-300 hover:bg-white/[0.06] rounded-xl flex items-center gap-2"
-                  >
-                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Audit & Permissions</span>
-                  </button>
-                  <button
-                    onClick={() => setProfileOpen(false)}
-                    className="w-full text-left px-3 py-2 text-rose-400 hover:bg-rose-950/30 rounded-xl flex items-center gap-2"
-                  >
-                    <LogOut className="w-3.5 h-3.5" />
-                    <span>Lock Session</span>
-                  </button>
+          {profileOpen && (
+            <div className="absolute right-0 mt-2 w-60 rounded-2xl alien-glass-floating p-2 z-50 text-xs">
+              <div className="px-3 py-2 border-b border-[rgba(125,190,255,0.12)]">
+                <div className="font-semibold text-white">Febin Francis</div>
+                <div className="text-[11px] text-slate-400">febin@decentralized.host</div>
+                <div className="mt-1.5 flex items-center gap-1.5 text-[10px] text-emerald-400">
+                  <Check className="w-3 h-3" />
+                  <span>Cryptographic Identity Verified</span>
                 </div>
               </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Operational State Strip: Desired / Observed / Evidence */}
-      <div className="flex flex-wrap items-center justify-between gap-2 px-3.5 py-1.5 rounded-xl bg-[rgba(8,18,38,0.85)] border border-[rgba(125,190,255,0.12)] text-[11px] font-mono text-slate-400">
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          <div className="flex items-center gap-1.5 text-emerald-400 font-semibold">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#10D981]" />
-            <span>CONTROL PLANE: ACTIVE</span>
-          </div>
-
-          <span className="text-slate-600 hidden sm:inline">|</span>
-
-          <div className="flex items-center gap-1.5">
-            <span className="text-slate-500 uppercase text-[10px]">Desired:</span>
-            <span className="text-slate-300 font-medium">10 Nodes · 12 Apps · 3× Quorum</span>
-          </div>
-
-          <span className="text-slate-600 hidden sm:inline">|</span>
-
-          <div className="flex items-center gap-1.5">
-            <span className="text-slate-500 uppercase text-[10px]">Observed:</span>
-            <span className="text-emerald-400 font-semibold">8 Online</span>
-            <span className="text-slate-600">/</span>
-            <span className="text-amber-400 font-semibold">1 Degraded</span>
-            <span className="text-slate-600">/</span>
-            <span className="text-slate-400">1 Offline</span>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5 text-cyan-300">
-            <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="hidden lg:inline">EVIDENCE:</span>
-            <span>QUAL-DH-2026-0925-A1</span>
-            <span className="text-emerald-400 font-semibold">(VERIFIED)</span>
-          </div>
-          <span className="text-slate-600 hidden sm:inline">|</span>
-          <CapabilityBadge state="LIVE" />
+              <div className="py-1">
+                <button onClick={() => setProfileOpen(false)} className="w-full text-left px-3 py-2 text-slate-300 hover:bg-white/[0.06] rounded-xl flex items-center gap-2">
+                  <User className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Profile & Keyrings</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setProfileOpen(false);
+                    onOpenAudit?.();
+                  }}
+                  className="w-full text-left px-3 py-2 text-slate-300 hover:bg-white/[0.06] rounded-xl flex items-center gap-2"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Audit & Evidence</span>
+                </button>
+                <button onClick={() => setProfileOpen(false)} className="w-full text-left px-3 py-2 text-rose-400 hover:bg-rose-950/30 rounded-xl flex items-center gap-2">
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span>Lock Session</span>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </header>

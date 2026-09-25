@@ -38,6 +38,7 @@ export const AppShell: React.FC = () => {
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [capabilities, setCapabilities] = useState<PlatformCapabilities | undefined>();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [recentEvents, setRecentEvents] = useState<PlatformEvent[]>([]);
 
   useEffect(() => {
@@ -63,43 +64,54 @@ export const AppShell: React.FC = () => {
       window.history.pushState(null, '', newPath);
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    setMobileNavOpen(false);
   };
 
   return (
-    <div className="min-h-screen spatial-cosmos-bg stars-field text-slate-100 flex flex-row font-sans selection:bg-cyan-500 selection:text-black relative">
-      {/* Background ambient lighting orbs */}
-      <div className="fixed top-[-100px] left-[20%] w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[140px] pointer-events-none -z-10" />
-      <div className="fixed top-[30%] right-[-100px] w-[600px] h-[600px] bg-violet-600/10 rounded-full blur-[160px] pointer-events-none -z-10" />
-      <div className="fixed bottom-[-100px] left-[30%] w-[500px] h-[500px] bg-cyan-500/08 rounded-full blur-[140px] pointer-events-none -z-10" />
+    <div className="min-h-screen spatial-cosmos-bg text-slate-100 font-sans selection:bg-cyan-500 selection:text-black relative">
+      {/* Deep-space backdrop: star field + nebula glow (Layer 0 in design.md) */}
+      <div className="fixed inset-0 stars-field opacity-70 pointer-events-none -z-10" />
+      <div className="fixed top-[-160px] left-[25%] w-[700px] h-[500px] bg-blue-600/15 rounded-full blur-[160px] pointer-events-none -z-10" />
+      <div className="fixed top-[20%] right-[-160px] w-[600px] h-[600px] bg-violet-600/15 rounded-full blur-[170px] pointer-events-none -z-10" />
+      <div className="fixed bottom-[-200px] left-[-100px] w-[600px] h-[500px] bg-cyan-500/10 rounded-full blur-[160px] pointer-events-none -z-10" />
 
-      {/* Persistent Left Sidebar */}
-      <Sidebar
-        currentRoute={currentRoute}
-        onRouteChange={(route) => handleNavigate(route)}
+      <TopBar
+        onOpenCommandPalette={() => setCommandPaletteOpen(true)}
+        capabilities={capabilities}
+        unreadNotificationsCount={recentEvents.filter((e) => e.severity === 'warn' || e.severity === 'error').length || Math.min(recentEvents.length, 2)}
+        onOpenNotifications={() => setNotificationsOpen(true)}
+        onNavigateHome={() => handleNavigate('dashboard')}
+        onOpenMobileNav={() => setMobileNavOpen(true)}
+        onOpenAudit={() => handleNavigate('evidence')}
       />
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Top Command Bar & Permanent Desired/Observed/Evidence Status */}
-        <TopBar
-          onOpenCommandPalette={() => setCommandPaletteOpen(true)}
-          capabilities={capabilities}
-          unreadNotificationsCount={recentEvents.length > 0 ? 1 : 0}
-          onOpenNotifications={() => setNotificationsOpen(true)}
-          onNavigateHome={() => handleNavigate('dashboard')}
-        />
+      <div className="flex">
+        <Sidebar currentRoute={currentRoute} onRouteChange={handleNavigate} />
+        {mobileNavOpen && (
+          <div className="lg:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm" onClick={() => setMobileNavOpen(false)}>
+            <Sidebar
+              mobile
+              currentRoute={currentRoute}
+              onRouteChange={(r, id) => {
+                setMobileNavOpen(false);
+                handleNavigate(r, id);
+              }}
+              onClose={() => setMobileNavOpen(false)}
+            />
+          </div>
+        )}
 
         {/* Dynamic Route View */}
-        <main className="flex-1 p-6 max-w-7xl w-full mx-auto">
+        <main className="flex-1 min-w-0 px-4 lg:px-5 pb-8 pt-1">
           {currentRoute === 'dashboard' && <DashboardView onNavigate={handleNavigate} />}
           {currentRoute === 'apps' && (
             <WebsitesAppsView onNavigate={handleNavigate} selectedAppId={selectedEntityId} />
           )}
-          {currentRoute === 'deploy' && <DeployView onNavigate={handleNavigate} />}
+          {currentRoute === 'deploy' && <DeployView onNavigate={handleNavigate} entityId={selectedEntityId} />}
           {currentRoute === 'nodes' && (
             <NodesView onNavigate={handleNavigate} selectedNodeId={selectedEntityId} />
           )}
-          {currentRoute === 'storage' && <StorageView onNavigate={handleNavigate} />}
+          {currentRoute === 'storage' && <StorageView onNavigate={handleNavigate} entityId={selectedEntityId} />}
           {currentRoute === 'domains' && <DomainsView onNavigate={handleNavigate} />}
           {currentRoute === 'security' && <SecurityView onNavigate={handleNavigate} />}
           {currentRoute === 'analytics' && <AnalyticsView onNavigate={handleNavigate} />}
