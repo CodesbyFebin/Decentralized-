@@ -1,0 +1,21 @@
+# Host-local sovereign policy. The control plane cannot change this file.
+# Every assignment is checked against it before anything executes.
+sovereign: true
+maxWorkloads: 40
+maxCPU: "32"
+maxMem: 128Gi
+acceptTiers: [local, trusted]
+denyImagesWithoutDigest: true
+# When true, only artifacts attested by a trusted publisher key run here.
+# "cluster-root" means the root key this host pinned when it joined.
+requireImageSignature: false
+trustedPublishers: [cluster-root]
+allowRuntimes: [process, docker]
+allowFederated: false
+allowExec: false
+# deny: keep admitted work, refuse new work while the control plane is stale.
+# stop: also stop admitted work while the control plane is stale.
+offlineAdmission: deny
+maxClockSkew: 30s
+freshWindow: 10s
+storageQuota: 10Gi

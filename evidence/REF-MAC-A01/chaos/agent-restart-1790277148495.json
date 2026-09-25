@@ -1,0 +1,52 @@
+{
+  "kind": "chaos-report",
+  "signer": "dh1bjtulwwvuuoekacve25espwffd",
+  "pub": "YJWKtmdwSx_E19iVMG7hU5upeOfH3WrKh-hlvsZSHfY",
+  "payload": {
+    "durationMs": 12201,
+    "environment": {
+      "arch": "amd64",
+      "cpus": "6",
+      "go": "go1.26.4",
+      "os": "darwin",
+      "topology": "1 control-plane member(s), 2 host(s), 0 edge(s)"
+    },
+    "evidence": [
+      "audit #15 19:12:32.606 assignment-sign app/web/r0: running on host-a: placed web/r0 on host-a; placed web/r1 on host-b (7dca8e6b1b1f)",
+      "audit #16 19:12:32.606 assignment-sign app/web/r1: running on host-b: placed web/r0 on host-a; placed web/r1 on host-b (0f22df90e521)",
+      "audit #19 19:12:34.318 workload-start app/web/r0: allowed/running: signature, capability, generation, digest and local policy allow (pid 7369) (14b9a657219d)",
+      "audit #20 19:12:34.400 workload-start app/web/r1: allowed/running: signature, capability, generation, digest and local policy allow (pid 7370) (f2a72968fa93)",
+      "audit #21 19:12:36.209 health-pass app/web/r1: HTTP 200 in 513µs (0bebccf23b9e)",
+      "audit #22 19:12:36.816 health-pass app/web/r0: HTTP 200 in 690µs (043890abba68)",
+      "audit chain verified: 22 entries, head 043890abba68"
+    ],
+    "id": "agent-restart-1790277148495",
+    "injection": "SIGKILL dh-noded only (workloads keep running) and restart it",
+    "invariant": "the restarted agent re-adopts every workload by PID and kernel start time without restarting it",
+    "measurements": {},
+    "observed": "1 workload(s) re-adopted with unchanged PIDs; ledger records re-adoption: true",
+    "recovery": [
+      {
+        "atMs": 0,
+        "event": "starting 1 control-plane member(s), 2 host(s), 0 edge(s)"
+      },
+      {
+        "atMs": 2853,
+        "event": "cluster ready"
+      },
+      {
+        "atMs": 6193,
+        "event": "SIGKILL dh-noded on host-a"
+      },
+      {
+        "atMs": 8198,
+        "event": "dh-noded restarted"
+      }
+    ],
+    "scenario": "agent-restart",
+    "started": 1790277148495,
+    "title": "Host agent restart",
+    "verdict": "PASS"
+  },
+  "sig": "AuBjAP1esQ3fTFCjNsPgsBvfKpSQfpuidSNjbzyMJ4TNUW-AHctKUjM7aqQvW283kKJGivckSeLQKjqX5onJAw"
+}

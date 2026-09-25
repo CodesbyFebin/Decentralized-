@@ -1,0 +1,25 @@
+=== attempt 1 at 2026-09-24T19:58:06Z: sh validation/pv1/tls-install.sh /Users/cyberteck/Desktop/Decentralized/decentralized.host/evidence/REF-MAC-A03/bin /Users/cyberteck/Desktop/Decentralized/decentralized.host/evidence/REF-MAC-A03/tls-install
+cluster pv: root key D5-X2srhzN4x8VJPE5ylLfmCbTp_GVTb9uhY5tMExyA (dh1wpenycrqlefktzhagtcbrqjyjy)
+root CA /Users/cyberteck/Desktop/Decentralized/decentralized.host/evidence/REF-MAC-A03/tls-install/op/pv/root-ca.pem
+Keep /Users/cyberteck/Desktop/Decentralized/decentralized.host/evidence/REF-MAC-A03/tls-install/op/pv/root/identity.key private: it is the trust anchor every host pins.
+bootstrapped dh1nwnu6iam3hxchqtrwmpvncas6m: cluster pv initialized
+member dh1duvqhxjwzkdgix5atubwbybbqe added (roster v2, 2 members)
+member dh1pmlrvpelo5xzhzpicbpzt22baa added (roster v3, 3 members)
+MEMBER                         SUFFRAGE  RAFT             API              STATE     INDEX  LEADER
+dh1nwnu6iam3hxchqtrwmpvncas6m  Voter     127.0.0.1:37801  127.0.0.1:37701  leader    9      *
+dh1duvqhxjwzkdgix5atubwbybbqe  Voter     127.0.0.1:37802  127.0.0.1:37702  follower  9      
+dh1pmlrvpelo5xzhzpicbpzt22baa  Voter     127.0.0.1:37803  127.0.0.1:37703  follower  0      
+roster v3, 3 member(s)
+join token written to /Users/cyberteck/Desktop/Decentralized/decentralized.host/evidence/REF-MAC-A03/tls-install/join1.token (single use, expires 2026-09-26T01:28:10+05:30)
+join token written to /Users/cyberteck/Desktop/Decentralized/decentralized.host/evidence/REF-MAC-A03/tls-install/join2.token (single use, expires 2026-09-26T01:28:10+05:30)
+host-1 approved; it may now admit work
+host-2 approved; it may now admit work
+web: created (generation 1)
+generation 1: 0/2 replicas observed running (admitted 0)
+generation 1: 0/2 replicas observed running (admitted 2)
+generation 1: 2/2 replicas observed running (admitted 2)
+rollout of web generation 1 complete
+NAME    ID                             STATUS  HEALTH  DOMAIN        MESH       ROLES  WORKLOADS  LAST OBSERVATION      MODE
+host-1  dh1kss32ukguci62tshfc3mfnqnz7  ready   live    local/phys-1  10.77.0.1  -      1          FRESH seq 6 (1s ago)  normal
+host-2  dh1q6l72gemfolgeufympw3g7cuwg  ready   live    local/phys-2  10.77.0.2  -      1          FRESH seq 6 (1s ago)  normal
+audit verified locally: 26 entries, head 3a763fd6154a, 1 signed checkpoint(s) by roster members

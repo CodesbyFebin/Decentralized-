@@ -1,0 +1,16 @@
+=== attempt 1 at 2026-09-24T19:07:07Z: /Users/cyberteck/Desktop/Decentralized/decentralized.host/evidence/REF-MAC-A01/bin/dh-conformance run -self
+dh/v1 conformance (suite v1) against go-reference (in process)
+  PASS canon               42 pass    0 fail    0 skip
+  PASS identity             9 pass    0 fail    0 skip
+  PASS digest               6 pass    0 fail    0 skip
+  PASS domain-hash          3 pass    0 fail    0 skip
+  PASS sign                 5 pass    0 fail    0 skip
+  PASS verify              14 pass    0 fail    0 skip
+  PASS audit-hash           2 pass    0 fail    0 skip
+  PASS audit-verify        12 pass    0 fail    0 skip
+  PASS capability-mint      3 pass    0 fail    0 skip
+  PASS capability-verify   26 pass    0 fail    0 skip
+  PASS chunk                8 pass    0 fail    0 skip
+  PASS merkle               6 pass    0 fail    0 skip
+
+136 pass, 0 fail, 0 skip in 56ms

@@ -1,0 +1,34 @@
+=== attempt 1 at 2026-09-24T14:32:09Z: go test -count=1 -race ./pkg/... ./cmd/... ./conformance/...
+?   	decentralized.host/pkg/api	[no test files]
+ok  	decentralized.host/pkg/audit	1.044s
+ok  	decentralized.host/pkg/canon	1.013s
+ok  	decentralized.host/pkg/capability	1.048s
+?   	decentralized.host/pkg/chaos	[no test files]
+?   	decentralized.host/pkg/cli	[no test files]
+ok  	decentralized.host/pkg/conformance	4.978s
+?   	decentralized.host/pkg/control	[no test files]
+?   	decentralized.host/pkg/devcluster	[no test files]
+?   	decentralized.host/pkg/edge	[no test files]
+ok  	decentralized.host/pkg/envelope	1.035s
+?   	decentralized.host/pkg/evidence	[no test files]
+?   	decentralized.host/pkg/identity	[no test files]
+ok  	decentralized.host/pkg/manifest	1.035s
+--- FAIL: TestGossipMembership (10.02s)
+    mesh_test.go:107: join contacted 0
+FAIL
+FAIL	decentralized.host/pkg/mesh	13.814s
+ok  	decentralized.host/pkg/node	6.381s
+?   	decentralized.host/pkg/peer	[no test files]
+ok  	decentralized.host/pkg/pki	1.060s
+ok  	decentralized.host/pkg/policy	1.018s
+?   	decentralized.host/pkg/runtime	[no test files]
+ok  	decentralized.host/pkg/scheduler	1.016s
+ok  	decentralized.host/pkg/storage	1.878s
+?   	decentralized.host/cmd/dh	[no test files]
+?   	decentralized.host/cmd/dh-beacon	[no test files]
+?   	decentralized.host/cmd/dh-conformance	[no test files]
+?   	decentralized.host/cmd/dh-control	[no test files]
+?   	decentralized.host/cmd/dh-noded	[no test files]
+?   	decentralized.host/conformance/vectors	[no test files]
+FAIL
+=== exit 1: exit status 1

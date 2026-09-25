@@ -1,0 +1,3 @@
+member dh1hcirbystygyk7vrtfnyepwibxk awaiting bootstrap or join; one-time code in /evidence/tls-install/cp1/bootstrap.code
+2026/09/24 14:43:08 dh-control awaiting bootstrap over TLS; certificate fingerprint sha256:0ed2f33739006d111864e4cbe482e006e8470922d58e2414cedc0811a53d3032 (also in /evidence/tls-install/cp1/bootstrap.fingerprint)
+2026/09/24 14:43:08 dh-control member dh1hcirbystygyk7vrtfnyepwibxk serving API on 127.0.0.1:37701 (raft 127.0.0.1:37801)

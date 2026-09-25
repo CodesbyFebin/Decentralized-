@@ -1,0 +1,107 @@
+{
+  "nodeId": "dh1kss32ukguci62tshfc3mfnqnz7",
+  "cluster": "pv",
+  "root": "D5-X2srhzN4x8VJPE5ylLfmCbTp_GVTb9uhY5tMExyA",
+  "rootCaCert": "-----BEGIN CERTIFICATE-----\nMIIBZzCCARmgAwIBAgIQIyGztpMIUzLv6nK3T5Dc/TAFBgMrZXAwMjEbMBkGA1UE\nChMSRGVjZW50cmFsaXplZC5Ib3N0MRMwEQYDVQQDEwpkaCByb290IHB2MB4XDTI2\nMDkyNDE4NTgwNloXDTQ2MDkyNDE5NTgwNlowMjEbMBkGA1UEChMSRGVjZW50cmFs\naXplZC5Ib3N0MRMwEQYDVQQDEwpkaCByb290IHB2MCowBQYDK2VwAyEAD5+X2srh\nzN4x8VJPE5ylLfmCbTp/GVTb9uhY5tMExyCjRTBDMA4GA1UdDwEB/wQEAwIChDAS\nBgNVHRMBAf8ECDAGAQH/AgEAMB0GA1UdDgQWBBSn3Czzi+71VV+ljrjb1umH1mt/\n2TAFBgMrZXADQQAlRD9wNLyp70hUyRUXTyYm8TNUbw0l9RxCBf9SZNLSs6UKUyDY\nl7ZP+EPFOL3yTir3KLkkRMsK4IcOa9M1cEYC\n-----END CERTIFICATE-----\n",
+  "endpoints": [
+    "127.0.0.1:37701",
+    "127.0.0.1:37702",
+    "127.0.0.1:37703"
+  ],
+  "tls": true,
+  "joinCap": "dhcap1.W3sia2luZCI6ImNhcGFiaWxpdHkiLCJwYXlsb2FkIjp7ImNhdmVhdHMiOnsiYWN0aW9ucyI6WyJub2RlLmpvaW4iXSwiYXVkaWVuY2UiOiIiLCJjcHVNYXhNaWxsaSI6MCwiZGlnZXN0IjoiIiwiZXhwaXJlcyI6MTc5MDM2NjI5MDA0MiwiZ2VuZXJhdGlvbiI6MCwibWVtTWF4Qnl0ZXMiOjAsIm5vbmNlIjoiMDE5NTMzN2E2OTYwN2NlYWNhZGFiOTY4NjFlMDM0MDYiLCJub3RCZWZvcmUiOjAsInJlc291cmNlcyI6WyJjbHVzdGVyL3B2Il19LCJuZXh0IjoiIiwibm90ZSI6ImpvaW4ifSwicHViIjoiRDUtWDJzcmh6TjR4OFZKUEU1eWxMZm1DYlRwX0dWVGI5dWhZNXRNRXh5QSIsInNpZyI6IkhHTWFlMUFZVDV3WnJoT0c0MU1pMnZrcm9OT3M5dmJsY2dRVXZRZTNwN2FyVE1SbG82blFUM05JdDZBV1lkM2I5Z1pfNG16R01VQ1FJNW5KZDZLTERBIiwic2lnbmVyIjoiZGgxd3BlbnljcnFsZWZrdHpoYWd0Y2JycWp5ankifV0",
+  "enrolled": true,
+  "lastIndex": 35,
+  "lastIssued": 1790279895582,
+  "seq": 6,
+  "admitted": {
+    "web/r0": {
+      "id": "web/r0",
+      "app": "web",
+      "replica": 0,
+      "generation": 1,
+      "runtime": "process",
+      "image": "dh-beacon@b3:6bfa9c6840733d30e588437b002cd94521d9777d878621fddf341bff00944c26",
+      "digest": "b3:6bfa9c6840733d30e588437b002cd94521d9777d878621fddf341bff00944c26",
+      "cpuMilli": 100,
+      "memBytes": 33554432,
+      "inst": {
+        "runtime": "process",
+        "pid": 11815,
+        "containerId": "",
+        "port": 54292,
+        "startedAt": 1790279893588,
+        "startToken": "1790279893.583946"
+      },
+      "health": {
+        "http": "/healthz",
+        "intervalMs": 1000,
+        "timeoutMs": 1000,
+        "failureThreshold": 3
+      },
+      "ports": [
+        {
+          "name": "http",
+          "container": 0,
+          "protocol": "http"
+        }
+      ],
+      "volumes": [],
+      "restarts": 0,
+      "lastState": "running",
+      "lastExit": 0,
+      "lastDetail": "",
+      "backoff": 0,
+      "admittedAt": 1790279893739,
+      "assignment": {
+        "id": "web/r0",
+        "app": "web",
+        "replica": 0,
+        "node": "dh1kss32ukguci62tshfc3mfnqnz7",
+        "generation": 1,
+        "desired": "running",
+        "runtime": "process",
+        "image": "dh-beacon@b3:6bfa9c6840733d30e588437b002cd94521d9777d878621fddf341bff00944c26",
+        "digest": "b3:6bfa9c6840733d30e588437b002cd94521d9777d878621fddf341bff00944c26",
+        "command": [],
+        "env": {},
+        "resources": {
+          "cpuMilli": 100,
+          "memBytes": 33554432
+        },
+        "ports": [
+          {
+            "name": "http",
+            "container": 0,
+            "protocol": "http"
+          }
+        ],
+        "health": {
+          "http": "/healthz",
+          "intervalMs": 1000,
+          "timeoutMs": 1000,
+          "failureThreshold": 3
+        },
+        "volumes": [],
+        "tiers": [
+          "trusted"
+        ],
+        "manifestHash": "b3:b5fd73781b91a91786f1274dc7f793f4992f72700fb8c6a11365633c35f86555",
+        "capability": "dhcap1.W3sia2luZCI6ImNhcGFiaWxpdHkiLCJwYXlsb2FkIjp7ImNhdmVhdHMiOnsiYWN0aW9ucyI6WyJ3b3JrbG9hZC4qIiwidm9sdW1lLioiLCJtZXNoLioiLCJlZGdlLioiLCJmZWRlcmF0aW9uLioiXSwiYXVkaWVuY2UiOiIiLCJjcHVNYXhNaWxsaSI6MCwiZGlnZXN0IjoiIiwiZXhwaXJlcyI6MCwiZ2VuZXJhdGlvbiI6MCwibWVtTWF4Qnl0ZXMiOjAsIm5vbmNlIjoiIiwibm90QmVmb3JlIjowLCJyZXNvdXJjZXMiOlsiKiJdfSwibmV4dCI6Ii1BX050N1JoaTZXMk5aU011bVk2WlNsLXJFM3djVmZINDFybUhUa2poVXciLCJub3RlIjoiY29udHJvbC1wbGFuZSBtZW1iZXIifSwicHViIjoiRDUtWDJzcmh6TjR4OFZKUEU1eWxMZm1DYlRwX0dWVGI5dWhZNXRNRXh5QSIsInNpZyI6ImJYYm1kdHRQTWhWaEhQeEdhRDJnY0NCdWNSZU5YcU9tNUp0cndiNHhjY1FhcGhpYTB0aDI5OTFuMndzd09Sb1VlZF8yRGIzZ3Z6enQzUDRoNE1fSEJBIiwic2lnbmVyIjoiZGgxd3BlbnljcnFsZWZrdHpoYWd0Y2JycWp5ankifSx7ImtpbmQiOiJjYXBhYmlsaXR5IiwicGF5bG9hZCI6eyJjYXZlYXRzIjp7ImFjdGlvbnMiOlsid29ya2xvYWQuYWRtaXQiXSwiYXVkaWVuY2UiOiJkaDFrc3MzMnVrZ3VjaTYydHNoZmMzbWZucW56NyIsImNwdU1heE1pbGxpIjoxMDAsImRpZ2VzdCI6ImIzOjZiZmE5YzY4NDA3MzNkMzBlNTg4NDM3YjAwMmNkOTQ1MjFkOTc3N2Q4Nzg2MjFmZGRmMzQxYmZmMDA5NDRjMjYiLCJleHBpcmVzIjoxNzkwMzY2MjkyNDAzLCJnZW5lcmF0aW9uIjoxLCJtZW1NYXhCeXRlcyI6MzM1NTQ0MzIsIm5vbmNlIjoiIiwibm90QmVmb3JlIjoxNzkwMjc5ODMyNDAzLCJyZXNvdXJjZXMiOlsiYXBwL3dlYi9yMCJdfSwibmV4dCI6IiIsIm5vdGUiOiJhc3NpZ25tZW50IHdlYi9yMCJ9LCJwdWIiOiItQV9OdDdSaGk2VzJOWlNNdW1ZNlpTbC1yRTN3Y1ZmSDQxcm1IVGtqaFV3Iiwic2lnIjoiQ3FRcGlubHc4WXdveFlGY3hIazVNRHMtdWkteFpuSDh4ZXhCTzR2bDFfbGNpQ29VdlpyTHNtbWtRMFI1OUx2eFBacEZYSHFudV9KX3ZsUkRnQUdFQnciLCJzaWduZXIiOiJkaDFud251NmlhbTNoeGNocXRyd21wdm5jYXM2bSJ9XQ",
+        "federation": null,
+        "issued": 1790279892403
+      },
+      "stopped": false
+    }
+  },
+  "meshPorts": {
+    "web/r0": 20000
+  },
+  "nextMesh": 20001,
+  "volumes": {},
+  "decisions": {
+    "web/r0": "1|true|false|ADMITTED"
+  },
+  "mode": "normal",
+  "retiring": null
+}

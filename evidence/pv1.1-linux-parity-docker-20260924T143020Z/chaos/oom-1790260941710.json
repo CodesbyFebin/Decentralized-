@@ -1,0 +1,27 @@
+{
+  "kind": "chaos-report",
+  "signer": "dh1yuddwefxapnm7vzneqynsvrtgo",
+  "pub": "P8MmTyvUAb-zQ9j2CqDwP4kb3AjQW6M3zKzAjw5b1Dw",
+  "payload": {
+    "durationMs": 0,
+    "environment": {
+      "arch": "amd64",
+      "cpus": "2",
+      "go": "go1.26.8",
+      "os": "linux",
+      "topology": "1 control-plane member(s), 1 host(s), 0 edge(s)"
+    },
+    "evidence": null,
+    "id": "oom-1790260941710",
+    "injection": "run a container limited to 32 MiB that allocates without bound",
+    "invariant": "the container runtime kills it (OOMKilled=true), the host reports oom-killed from runtime evidence, audits it, and restarts it with backoff",
+    "measurements": {},
+    "observed": "prerequisite docker unavailable: docker daemon not reachable",
+    "recovery": null,
+    "scenario": "oom",
+    "started": 1790260941710,
+    "title": "Out-of-memory kill (Docker runtime)",
+    "verdict": "SKIP"
+  },
+  "sig": "UvOVTIwFBtEPVrZ9XJllfDovU1GKIuC-bd07GZ0YHJb6dCI3Sii2wAPkshFfgxhkJSFkXFXI2OnwFAiwXaKdCQ"
+}

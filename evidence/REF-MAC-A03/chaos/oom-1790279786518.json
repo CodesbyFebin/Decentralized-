@@ -1,0 +1,49 @@
+{
+  "kind": "chaos-report",
+  "signer": "dh1c3rrdae6kowfxjyhfvokglhxga",
+  "pub": "mJsJl0tR1FHe_P2QbYXqhi4_h6v4MgLyxIKBoBacmQg",
+  "payload": {
+    "durationMs": 40926,
+    "environment": {
+      "arch": "amd64",
+      "cpus": "6",
+      "go": "go1.26.4",
+      "os": "darwin",
+      "topology": "1 control-plane member(s), 1 host(s), 0 edge(s)"
+    },
+    "evidence": [
+      "audit #9 19:56:33.738 assignment-sign app/hog/r0: running on host-a: placed hog/r0 on host-a (2b770bd63eb6)",
+      "audit #10 19:56:38.173 workload-start app/hog/r0: allowed/running: signature, capability, generation, digest and local policy allow (pid 49155) (container be7cc22fef16) (e39ce7455268)",
+      "audit #16 19:57:07.197 workload-oom app/hog/r0: allowed/oom-killed: already admitted; digest and policy unchanged (pid 49677) (container d943c55a103b) (9d9168e821b7)",
+      "audit chain verified: 17 entries, head 412460830bb2"
+    ],
+    "id": "oom-1790279786518",
+    "injection": "run a container limited to 32 MiB that allocates without bound",
+    "invariant": "the container runtime kills it (OOMKilled=true), the host reports oom-killed from runtime evidence, audits it, and restarts it with backoff",
+    "measurements": {},
+    "observed": "container OOM-killed by the runtime under a 32 MiB limit; reported and audited: true; restarted with backoff",
+    "recovery": [
+      {
+        "atMs": 106,
+        "event": "starting 1 control-plane member(s), 1 host(s), 0 edge(s)"
+      },
+      {
+        "atMs": 2716,
+        "event": "cluster ready"
+      },
+      {
+        "atMs": 6272,
+        "event": "using busybox@sha256:73aaf090f3d85aa34ee199857f03fa3a95c8ede2ffd4cc2cdb5b94e566b11662"
+      },
+      {
+        "atMs": 40878,
+        "event": "observed OOM-KILLED on host-a: already admitted; digest and policy unchanged"
+      }
+    ],
+    "scenario": "oom",
+    "started": 1790279786518,
+    "title": "Out-of-memory kill (Docker runtime)",
+    "verdict": "PASS"
+  },
+  "sig": "Wdo_mtpfsqCGezW5gVz4wjaJmrbJ5Rt5mL60mcn4yG3OnEuOOtHXWNh0koHMj7M8c7pwrXQn-COQcAvfeDbgDw"
+}

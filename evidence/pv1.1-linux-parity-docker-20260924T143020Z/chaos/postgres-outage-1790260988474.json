@@ -1,0 +1,27 @@
+{
+  "kind": "chaos-report",
+  "signer": "dh1yuddwefxapnm7vzneqynsvrtgo",
+  "pub": "P8MmTyvUAb-zQ9j2CqDwP4kb3AjQW6M3zKzAjw5b1Dw",
+  "payload": {
+    "durationMs": 0,
+    "environment": {
+      "arch": "amd64",
+      "cpus": "2",
+      "go": "go1.26.8",
+      "os": "linux",
+      "topology": "1 control-plane member(s), 1 host(s), 0 edge(s)"
+    },
+    "evidence": null,
+    "id": "postgres-outage-1790260988474",
+    "injection": "stop the Postgres evidence mirror, keep operating, restart it",
+    "invariant": "while Postgres is down the console reports JOURNAL ONLY (never DB COMMITTED), writes still commit through raft, and the mirror catches up to DB COMMITTED after recovery",
+    "measurements": {},
+    "observed": "prerequisite docker unavailable: docker daemon not reachable",
+    "recovery": null,
+    "scenario": "postgres-outage",
+    "started": 1790260988474,
+    "title": "Evidence database outage",
+    "verdict": "SKIP"
+  },
+  "sig": "HC7guJkLch-7IYn1TgRMLRsBAEUONUDDlTBgxydBXxb8Vsb7zHJEhcnCQUks072uTfMVY2sf3hu4tXpHRqpkCA"
+}

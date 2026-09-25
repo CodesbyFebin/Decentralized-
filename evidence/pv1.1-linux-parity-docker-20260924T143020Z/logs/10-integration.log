@@ -1,0 +1,89 @@
+=== attempt 1 at 2026-09-24T14:33:59Z: go test -count=1 -timeout 40m -v ./tests/integration/...
+=== RUN   TestM1SovereignRuntime
+=== RUN   TestM1SovereignRuntime/identical_desired_state_does_not_advance_the_generation
+=== RUN   TestM1SovereignRuntime/replayed_observation_is_rejected_with_the_sequence_numbers
+=== RUN   TestM1SovereignRuntime/observation_signed_with_another_key_is_rejected
+=== RUN   TestM1SovereignRuntime/tampered_observation_field_is_rejected
+=== RUN   TestM1SovereignRuntime/freeze_holds_admitted_work_and_refuses_new_work
+=== RUN   TestM1SovereignRuntime/control-plane_outage_is_not_workload_outage
+=== RUN   TestM1SovereignRuntime/revocation_blocks_new_work_without_killing_admitted_work
+=== RUN   TestM1SovereignRuntime/audit_chain_verifies_and_tampering_is_detected_offline
+=== RUN   TestM1SovereignRuntime/host_ledger_is_authoritative,_chained_and_signed
+--- PASS: TestM1SovereignRuntime (26.80s)
+    --- PASS: TestM1SovereignRuntime/identical_desired_state_does_not_advance_the_generation (0.01s)
+    --- PASS: TestM1SovereignRuntime/replayed_observation_is_rejected_with_the_sequence_numbers (0.01s)
+    --- PASS: TestM1SovereignRuntime/observation_signed_with_another_key_is_rejected (0.00s)
+    --- PASS: TestM1SovereignRuntime/tampered_observation_field_is_rejected (0.00s)
+    --- PASS: TestM1SovereignRuntime/freeze_holds_admitted_work_and_refuses_new_work (3.97s)
+    --- PASS: TestM1SovereignRuntime/control-plane_outage_is_not_workload_outage (14.86s)
+    --- PASS: TestM1SovereignRuntime/revocation_blocks_new_work_without_killing_admitted_work (0.92s)
+    --- PASS: TestM1SovereignRuntime/audit_chain_verifies_and_tampering_is_detected_offline (0.01s)
+    --- PASS: TestM1SovereignRuntime/host_ledger_is_authoritative,_chained_and_signed (0.00s)
+=== RUN   TestM2StorageSurvivesHostLoss
+    m2_test.go:103: committed b3:80f092221d5f on [host-b host-c host-a] (primary host-b)
+    m2_test.go:109: killed host-b and 1 workload(s)
+    m2_test.go:142: replica restored on host-a from b3:80f092221d5f; 3145728 bytes identical
+=== RUN   TestM2StorageSurvivesHostLoss/interrupted_write_never_corrupts_committed_data
+    m2_test.go:186: killed host-a mid-write (pending snapshot seen: true; committed at kill b3:80f092221d5f)
+    m2_test.go:215: interrupted write was not committed; committed state preserved (outcome: rolled back to b3:80f092221d5f)
+=== RUN   TestM2StorageSurvivesHostLoss/anti-entropy_repairs_a_corrupted_replica_chunk_with_evidence
+    m2_test.go:240: corrupted b3:d7fa8a1f9b43339eed67a2c657205deeacaba4ef9285e2a0146c5b25ae066e45 on edge-1
+--- PASS: TestM2StorageSurvivesHostLoss (40.15s)
+    --- PASS: TestM2StorageSurvivesHostLoss/interrupted_write_never_corrupts_committed_data (14.10s)
+    --- PASS: TestM2StorageSurvivesHostLoss/anti-entropy_repairs_a_corrupted_replica_chunk_with_evidence (2.81s)
+=== RUN   TestM3TrustAndMesh
+=== RUN   TestM3TrustAndMesh/key_rotation_keeps_the_identity_and_the_workloads
+=== RUN   TestM3TrustAndMesh/revoked_host_is_cut_from_the_mesh_but_keeps_admitted_work
+=== RUN   TestM3TrustAndMesh/emergency_key_revocation_rejects_the_host's_signatures
+=== RUN   TestM3TrustAndMesh/root_rotation_is_followed_by_hosts_that_pinned_the_old_root
+--- PASS: TestM3TrustAndMesh (43.05s)
+    --- PASS: TestM3TrustAndMesh/key_rotation_keeps_the_identity_and_the_workloads (0.95s)
+    --- PASS: TestM3TrustAndMesh/revoked_host_is_cut_from_the_mesh_but_keeps_admitted_work (16.85s)
+    --- PASS: TestM3TrustAndMesh/emergency_key_revocation_rejects_the_host's_signatures (10.11s)
+    --- PASS: TestM3TrustAndMesh/root_rotation_is_followed_by_hosts_that_pinned_the_old_root (0.93s)
+=== RUN   TestM4EdgeTLSAndFailover
+=== RUN   TestM4EdgeTLSAndFailover/HTTPS_with_a_certificate_chained_to_the_ACME_CA,_round-robin_over_three_replicas
+=== RUN   TestM4EdgeTLSAndFailover/a_hung_replica_is_ejected_and_requests_keep_succeeding
+    m4_test.go:203: 238 requests, 0 failures while replica web/r0 was hung and ejected
+=== RUN   TestM4EdgeTLSAndFailover/scale-down_drains_the_replica_before_it_leaves_the_routing_table
+    m4_test.go:231: note: the draining transition was shorter than one observation interval (no audit entry); removal verified
+=== RUN   TestM4EdgeTLSAndFailover/edge_failover:_losing_an_edge_does_not_lose_the_service
+--- PASS: TestM4EdgeTLSAndFailover (27.31s)
+    --- PASS: TestM4EdgeTLSAndFailover/HTTPS_with_a_certificate_chained_to_the_ACME_CA,_round-robin_over_three_replicas (0.03s)
+    --- PASS: TestM4EdgeTLSAndFailover/a_hung_replica_is_ejected_and_requests_keep_succeeding (16.00s)
+    --- PASS: TestM4EdgeTLSAndFailover/scale-down_drains_the_replica_before_it_leaves_the_routing_table (1.87s)
+    --- PASS: TestM4EdgeTLSAndFailover/edge_failover:_losing_an_edge_does_not_lose_the_service (0.05s)
+=== RUN   TestM5HighlyAvailableControlPlane
+    m5_test.go:92: timed out after 20s waiting for edge routes all replicas
+    harness_test.go:89: ---- cp-1.log ----
+        member dh1w2ykapw2zma2yyfnvwzkc3mly5 awaiting bootstrap or join; one-time code in /tmp/TestM5HighlyAvailableControlPlane1308624686/001/cp-1/bootstrap.code
+        2026/09/24 14:36:30 dh-control member dh1w2ykapw2zma2yyfnvwzkc3mly5 serving API on 127.0.0.1:26001 (raft 127.0.0.1:26101)
+    harness_test.go:89: ---- cp-2.log ----
+        member dh1xkn6wauhhd6a7jq6vstcljutvp awaiting bootstrap or join; one-time code in /tmp/TestM5HighlyAvailableControlPlane1308624686/001/cp-2/bootstrap.code
+        2026/09/24 14:36:30 dh-control member dh1xkn6wauhhd6a7jq6vstcljutvp serving API on 127.0.0.1:26002 (raft 127.0.0.1:26102)
+    harness_test.go:89: ---- cp-3.log ----
+        member dh1gtuzyu5pfmqjut37nxu4vdddwu awaiting bootstrap or join; one-time code in /tmp/TestM5HighlyAvailableControlPlane1308624686/001/cp-3/bootstrap.code
+        2026/09/24 14:36:30 dh-control member dh1gtuzyu5pfmqjut37nxu4vdddwu serving API on 127.0.0.1:26003 (raft 127.0.0.1:26103)
+    harness_test.go:89: ---- edge-1.log ----
+        2026/09/24 14:36:31 dh-noded[edge-1] host dh1wqsmturz27cuhgx736xyktmpds (edge-1) running; root Crj0Szltlinn; control plane [127.0.0.1:26001 127.0.0.1:26002 127.0.0.1:26003]
+    harness_test.go:89: ---- host-a.log ----
+        2026/09/24 14:36:31 dh-noded[host-a] host dh1utaklnb2axnn5n7v5zyczh6h4e (host-a) running; root Crj0Szltlinn; control plane [127.0.0.1:26001 127.0.0.1:26002 127.0.0.1:26003]
+    harness_test.go:89: ---- host-b.log ----
+        2026/09/24 14:36:31 dh-noded[host-b] host dh1vpwjvbsnii4llwiaar5ja7jc77 (host-b) running; root Crj0Szltlinn; control plane [127.0.0.1:26001 127.0.0.1:26002 127.0.0.1:26003]
+    harness_test.go:89: ---- host-c.log ----
+        2026/09/24 14:36:31 dh-noded[host-c] host dh1ggf6vgb7aw7hqs3jswafe67tou (host-c) running; root Crj0Szltlinn; control plane [127.0.0.1:26001 127.0.0.1:26002 127.0.0.1:26003]
+--- FAIL: TestM5HighlyAvailableControlPlane (26.39s)
+=== RUN   TestM7Federation
+=== RUN   TestM7Federation/placement_over_quota_is_refused_by_the_grantor
+=== RUN   TestM7Federation/cross-cluster_placement_runs_under_the_grantor's_own_authority_and_host_policy
+=== RUN   TestM7Federation/revocation_by_the_grantor_stops_the_work_there_and_is_visible_to_the_grantee
+--- PASS: TestM7Federation (17.71s)
+    --- PASS: TestM7Federation/placement_over_quota_is_refused_by_the_grantor (3.04s)
+    --- PASS: TestM7Federation/cross-cluster_placement_runs_under_the_grantor's_own_authority_and_host_policy (4.92s)
+    --- PASS: TestM7Federation/revocation_by_the_grantor_stops_the_work_there_and_is_visible_to_the_grantee (4.01s)
+=== RUN   TestTLSEndToEnd
+--- PASS: TestTLSEndToEnd (8.25s)
+FAIL
+FAIL	decentralized.host/tests/integration	193.023s
+FAIL
+=== exit 1: exit status 1

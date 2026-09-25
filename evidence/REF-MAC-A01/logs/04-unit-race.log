@@ -1,0 +1,29 @@
+=== attempt 1 at 2026-09-24T19:06:27Z: go test -count=1 -race ./pkg/... ./cmd/... ./conformance/...
+?   	decentralized.host/pkg/api	[no test files]
+ok  	decentralized.host/pkg/audit	1.671s
+ok  	decentralized.host/pkg/canon	1.851s
+ok  	decentralized.host/pkg/capability	2.281s
+?   	decentralized.host/pkg/chaos	[no test files]
+?   	decentralized.host/pkg/cli	[no test files]
+ok  	decentralized.host/pkg/conformance	5.629s
+?   	decentralized.host/pkg/control	[no test files]
+?   	decentralized.host/pkg/devcluster	[no test files]
+?   	decentralized.host/pkg/edge	[no test files]
+ok  	decentralized.host/pkg/envelope	1.784s
+ok  	decentralized.host/pkg/evidence	2.064s
+?   	decentralized.host/pkg/identity	[no test files]
+ok  	decentralized.host/pkg/manifest	1.632s
+ok  	decentralized.host/pkg/mesh	20.390s
+ok  	decentralized.host/pkg/node	9.926s
+?   	decentralized.host/pkg/peer	[no test files]
+ok  	decentralized.host/pkg/pki	2.158s
+ok  	decentralized.host/pkg/policy	2.131s
+?   	decentralized.host/pkg/runtime	[no test files]
+ok  	decentralized.host/pkg/scheduler	2.054s
+ok  	decentralized.host/pkg/storage	2.241s
+?   	decentralized.host/cmd/dh	[no test files]
+?   	decentralized.host/cmd/dh-beacon	[no test files]
+?   	decentralized.host/cmd/dh-conformance	[no test files]
+?   	decentralized.host/cmd/dh-control	[no test files]
+?   	decentralized.host/cmd/dh-noded	[no test files]
+?   	decentralized.host/conformance/vectors	[no test files]

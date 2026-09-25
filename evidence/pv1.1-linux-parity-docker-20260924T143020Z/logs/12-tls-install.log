@@ -1,0 +1,25 @@
+=== attempt 1 at 2026-09-24T14:43:08Z: sh validation/pv1/tls-install.sh /evidence/bin /evidence/tls-install
+cluster pv: root key lhcbHqgf_6jMwcM1adMaBaQIaBYbr53sOSjTO8UAfjw (dh1gql4xxls2775x6qeal3x2ii3yn)
+root CA /evidence/tls-install/op/pv/root-ca.pem
+Keep /evidence/tls-install/op/pv/root/identity.key private: it is the trust anchor every host pins.
+bootstrapped dh1hcirbystygyk7vrtfnyepwibxk: cluster pv initialized
+member dh142yomqpcihc6skczluvmgth4w4 added (roster v2, 2 members)
+member dh1oiz772czdgbnm77pnsyewhq4vu added (roster v3, 3 members)
+MEMBER                         SUFFRAGE  RAFT             API              STATE     INDEX  LEADER
+dh1hcirbystygyk7vrtfnyepwibxk  Voter     127.0.0.1:37801  127.0.0.1:37701  leader    6      *
+dh142yomqpcihc6skczluvmgth4w4  Voter     127.0.0.1:37802  127.0.0.1:37702  follower  6      
+dh1oiz772czdgbnm77pnsyewhq4vu  Voter     127.0.0.1:37803  127.0.0.1:37703  follower  6      
+roster v3, 3 member(s)
+join token written to /evidence/tls-install/join1.token (single use, expires 2026-09-25T14:43:10Z)
+join token written to /evidence/tls-install/join2.token (single use, expires 2026-09-25T14:43:10Z)
+host-1 approved; it may now admit work
+host-2 approved; it may now admit work
+web: created (generation 1)
+generation 1: 0/2 replicas observed running (admitted 0)
+generation 1: 0/2 replicas observed running (admitted 2)
+generation 1: 2/2 replicas observed running (admitted 2)
+rollout of web generation 1 complete
+NAME    ID                             STATUS  HEALTH  DOMAIN        MESH       ROLES  WORKLOADS  LAST OBSERVATION      MODE
+host-1  dh1f5tok7aet5ygx5m62cjck4pqtb  ready   live    local/phys-1  10.77.0.1  -      1          FRESH seq 5 (1s ago)  normal
+host-2  dh1x5i3g2oykifvjipf7a3r2ydfme  ready   live    local/phys-2  10.77.0.2  -      1          FRESH seq 5 (1s ago)  normal
+audit verified locally: 24 entries, head 98fb9d48dc01, 1 signed checkpoint(s) by roster members

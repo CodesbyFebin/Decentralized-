@@ -1,0 +1,76 @@
+{
+  "kind": "chaos-report",
+  "signer": "dh1yuddwefxapnm7vzneqynsvrtgo",
+  "pub": "P8MmTyvUAb-zQ9j2CqDwP4kb3AjQW6M3zKzAjw5b1Dw",
+  "payload": {
+    "durationMs": 14735,
+    "environment": {
+      "arch": "amd64",
+      "cpus": "2",
+      "go": "go1.26.8",
+      "os": "linux",
+      "topology": "3 control-plane member(s), 3 host(s), 1 edge(s)"
+    },
+    "evidence": [
+      "failed request 14:42:34.060: HTTP 503 no healthy endpoint for web.chaos.test (all replicas ejected, draining or unobserved) (upstream )",
+      "failed request edge routing table at first failure: {\"certs\":null,\"errors\":1,\"httpAddr\":\"127.0.0.1:45403\",\"httpsAddr\":\"127.0.0.1:45453\",\"requests\":138,\"routes\":[{\"app\":\"web\",\"endpoints\":[{\"assignment\":\"web/r0\",\"failures\":1,\"inFlight\":0,\"latencyUs\":1390,\"node\":\"dh17jpkoypngxr2rw54alskyfkt52\",\"reason\":\"control plane marked the replica draining; no new requests\",\"served\":9,\"since\":1790260952095,\"state\":\"draining\"},{\"assignment\":\"web/r1\",\"failures\":1,\"inFlight\":0,\"latencyUs\":1241,\"node\":\"dh1dgd2padstxmloau4teb4hn32cn\",\"reason\":\"request failed: read tcp 10.77.0.4:37744: connection reset by peer\",\"served\":46,\"since\":1790260953062,\"state\":\"ejected\"},{\"assignment\":\"web/r2\",\"failures\":1,\"inFlight\":0,\"latencyUs\":1595,\"node\":\"dh15xzyhnbzy6yruwi7umwknkgzzj\",\"reason\":\"request failed: EOF\",\"served\":82,\"since\":1790260954060,\"state\":\"ejected\"}],\"host\":\"web.chaos.test\"}]}",
+      "failed request 14:42:34.087: HTTP 503 no healthy endpoint for web.chaos.test (all replicas ejected, draining or unobserved) (upstream )",
+      "audit #2 14:42:22.812 roster-update cluster/chaos: roster v2: dh1pcw74aqvxxngk65dbg666nawhg, dh1vn7zwuzteteh7xlxcizualrikz (4aed971bbd79)",
+      "audit #3 14:42:22.839 roster-update cluster/chaos: roster v3: dh1pcw74aqvxxngk65dbg666nawhg, dh1vn7zwuzteteh7xlxcizualrikz, dh1olwlwyutvphjmlhtdld7dxjzd4 (8ee6632b79cd)",
+      "audit #27 14:42:25.074 assignment-sign app/web/r0: running on host-a: placed web/r0 on host-a; placed web/r1 on host-b; placed web/r2 on host-c (6c7e547ef6cf)",
+      "audit #28 14:42:25.074 assignment-sign app/web/r1: running on host-b: placed web/r0 on host-a; placed web/r1 on host-b; placed web/r2 on host-c (e5c54e3c4799)",
+      "audit #29 14:42:25.074 assignment-sign app/web/r2: running on host-c: placed web/r0 on host-a; placed web/r1 on host-b; placed web/r2 on host-c (917ed616a98c)",
+      "audit #33 14:42:27.350 workload-start app/web/r2: allowed/running: signature, capability, generation, digest and local policy allow (pid 14074) (acb337a02f9d)",
+      "audit #34 14:42:28.171 workload-start app/web/r0: allowed/running: signature, capability, generation, digest and local policy allow (pid 14079) (382b06d3dd8b)",
+      "audit #35 14:42:28.204 workload-start app/web/r1: allowed/running: signature, capability, generation, digest and local policy allow (pid 14084) (e8d70ada001a)",
+      "audit #37 14:42:30.789 assignment-sign app/web/r0: running on host-a: rolling update waiting for maxUnavailable budget; rolling web/r0 to generation 2 (5c7486899ce0)",
+      "audit #38 14:42:31.103 route-ejected route/web.chaos.test: web/r0 on host-a: routing → ejected (request failed: read tcp 10.77.0.4:49605: connection reset by peer) (05c1f0acdf22)",
+      "audit #40 14:42:32.787 assignment-sign app/web/r1: running on host-b: rolling update waiting for maxUnavailable budget; rolling web/r1 to generation 2 (5f97d945bcf0)",
+      "audit #41 14:42:33.114 route-draining route/web.chaos.test: web/r0 on host-a: ejected → draining (control plane marked the replica draining; no new requests) (a3f4dcb0e6a3)",
+      "audit #42 14:42:33.126 route-ejected route/web.chaos.test: web/r1 on host-b: routing → ejected (request failed: read tcp 10.77.0.4:37744: connection reset by peer) (6141bb3a4447)",
+      "audit #44 14:42:33.786 assignment-sign app/web/r2: running on host-c: rolling web/r2 to generation 2 (ed1727a0ab24)",
+      "audit #45 14:42:34.106 route-routing route/web.chaos.test: web/r0 on host-a: draining → routing (edge probe over WireGuard passed (HTTP 200)) (9ed990b5915a)",
+      "audit #46 14:42:34.106 route-draining route/web.chaos.test: web/r1 on host-b: ejected → draining (control plane marked the replica draining; no new requests) (18b77edfc40a)",
+      "audit #47 14:42:34.106 route-ejected route/web.chaos.test: web/r2 on host-c: routing → ejected (request failed: EOF) (70aa24635674)",
+      "audit #49 14:42:35.106 route-routing route/web.chaos.test: web/r1 on host-b: draining → routing (edge probe over WireGuard passed (HTTP 200)) (2b6a6e457cec)",
+      "audit #50 14:42:35.106 route-draining route/web.chaos.test: web/r2 on host-c: ejected → draining (control plane marked the replica draining; no new requests) (4c16eedeb301)",
+      "audit #51 14:42:36.109 route-routing route/web.chaos.test: web/r2 on host-c: draining → routing (edge probe over WireGuard passed (HTTP 200)) (0b4b86f2fdc9)",
+      "audit chain verified: 51 entries, head 0b4b86f2fdc9"
+    ],
+    "id": "interrupted-deployment-1790260941712",
+    "injection": "apply a new generation and SIGKILL the raft leader as soon as the first replica has rolled",
+    "invariant": "the new leader resumes the rollout, it completes, and requests keep succeeding (maxUnavailable respected)",
+    "measurements": {
+      "requests_failed": "2",
+      "requests_ok": "222"
+    },
+    "observed": "rollout resumed by the new leader and completed; 222/224 requests OK — 2 requests failed during the interrupted rollout",
+    "recovery": [
+      {
+        "atMs": 0,
+        "event": "starting 3 control-plane member(s), 3 host(s), 1 edge(s)"
+      },
+      {
+        "atMs": 2644,
+        "event": "cluster ready"
+      },
+      {
+        "atMs": 8573,
+        "event": "generation 2 applied"
+      },
+      {
+        "atMs": 9813,
+        "event": "SIGKILL leader cp-1 mid-rollout"
+      },
+      {
+        "atMs": 12727,
+        "event": "all replicas at generation 2"
+      }
+    ],
+    "scenario": "interrupted-deployment",
+    "started": 1790260941712,
+    "title": "Leader crash during a rolling update",
+    "verdict": "FAIL"
+  },
+  "sig": "hzbOaz12G3KLqKx47UA4VfE_W9hz4v49RoR7063IiQH5SeSZRK2n2tgsv31oSPRVrXhh-JRXqtT6PirgihutBw"
+}

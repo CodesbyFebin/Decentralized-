@@ -1,0 +1,64 @@
+{
+  "kind": "chaos-report",
+  "signer": "dh1nxobuuvqblljmn55hxzm3l2kab",
+  "pub": "zf0L_5EsJAFqesT4AfN05oOTiKMjUptKzhWmqKzE7Aw",
+  "payload": {
+    "durationMs": 53449,
+    "environment": {
+      "arch": "amd64",
+      "cpus": "6",
+      "go": "go1.26.4",
+      "os": "darwin",
+      "topology": "1 control-plane member(s), 3 host(s), 1 edge(s)"
+    },
+    "evidence": [
+      "audit #23 19:28:18.022 assignment-sign app/web/r0: running on host-a: placed web/r0 on host-a; placed web/r1 on host-b; placed web/r2 on host-c (c87c61287299)",
+      "audit #24 19:28:18.022 assignment-sign app/web/r1: running on host-b: placed web/r0 on host-a; placed web/r1 on host-b; placed web/r2 on host-c (89a30602a09e)",
+      "audit #25 19:28:18.022 assignment-sign app/web/r2: running on host-c: placed web/r0 on host-a; placed web/r1 on host-b; placed web/r2 on host-c (3a97f76c6391)",
+      "audit #29 19:28:19.788 workload-start app/web/r0: allowed/running: signature, capability, generation, digest and local policy allow (pid 8929) (52ca35e8d6e6)",
+      "audit #30 19:28:19.824 workload-start app/web/r1: allowed/running: signature, capability, generation, digest and local policy allow (pid 8930) (d563e81778ae)",
+      "audit #31 19:28:19.986 workload-start app/web/r2: allowed/running: signature, capability, generation, digest and local policy allow (pid 8931) (329f3d858627)",
+      "audit #32 19:28:21.596 health-pass app/web/r0: HTTP 200 in 402µs (70a63abbd763)",
+      "audit #33 19:28:21.632 health-pass app/web/r1: HTTP 200 in 519µs (99b0b1cdea22)",
+      "audit #34 19:28:21.773 health-pass app/web/r2: HTTP 200 in 533µs (f33d04218352)",
+      "audit chain verified: 34 entries, head f33d04218352"
+    ],
+    "id": "packet-chaos-1790278093907",
+    "injection": "on every WireGuard path: 5% loss, 10% duplication, 10% reordering, +40ms delay for 20s",
+    "invariant": "WireGuard and TCP absorb the faults: no request fails, the measured mesh RTT reflects the injected delay, and it returns to baseline when faults are cleared",
+    "measurements": {
+      "baseline_mesh_rtt_us": "2132 (mean of 16 host-measured samples)",
+      "faulted_mesh_rtt_us": "133543 (mean of 16 samples)",
+      "proxy_packets": "map[dropped:107 duplicated:196 forwarded:15129 reordered:195]",
+      "recovered_mesh_rtt_us": "1874 (mean of 16 samples)",
+      "request_latency_p50_ms": "1.4",
+      "request_latency_p99_ms": "490.6",
+      "requests_failed": "0",
+      "requests_ok": "687"
+    },
+    "observed": "RTT 2132µs → 133543µs under faults → 1874µs after; 687/687 requests OK (p50 1ms, p99 491ms)",
+    "recovery": [
+      {
+        "atMs": 0,
+        "event": "starting 1 control-plane member(s), 3 host(s), 1 edge(s)"
+      },
+      {
+        "atMs": 3492,
+        "event": "cluster ready"
+      },
+      {
+        "atMs": 19425,
+        "event": "faults on: loss 5%, dup 10%, reorder 10%, delay 40ms"
+      },
+      {
+        "atMs": 41433,
+        "event": "faults cleared"
+      }
+    ],
+    "scenario": "packet-chaos",
+    "started": 1790278093907,
+    "title": "Packet loss, duplication, reordering and delay",
+    "verdict": "PASS"
+  },
+  "sig": "uf4DRegvg_7STPyXASkmQ7O8cyRwPg_W1IU2Jg73NxoMVnoAx5k7dxoOWlsG8lflOmvnGBSPuMyBlAsHfCIQBA"
+}

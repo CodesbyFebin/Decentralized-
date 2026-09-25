@@ -14,10 +14,15 @@ wg.key
 bootstrap.code
 bootstrap.fingerprint
 
-# Sealed evidence run directories are large (binaries) and hold throwaway
-# test-cluster keys; they ship as release assets, not in git. The index and
-# attempt history are tracked.
-/evidence/*/
+# Evidence: sealed attempt directories are tracked in full, because a record
+# only verifies if every hashed file is present, including the throwaway keys
+# of its destroyed test clusters. The validator's signing key is never tracked.
+/evidence/*
 !/evidence/INDEX.md
 !/evidence/PV1-S1-HISTORY.md
+!/evidence/REF-MAC-A01/
+!/evidence/REF-MAC-A02/
+!/evidence/REF-MAC-A03/
+!/evidence/pv1.1-linux-parity-docker-20260924T143020Z/
+!/evidence/*/**/*.key
 /chaos-reports/runner/

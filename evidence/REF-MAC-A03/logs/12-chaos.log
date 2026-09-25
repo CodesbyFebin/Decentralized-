@@ -1,0 +1,133 @@
+=== attempt 1 at 2026-09-24T19:51:29Z: /Users/cyberteck/Desktop/Decentralized/decentralized.host/evidence/REF-MAC-A03/bin/dh chaos run --scenario all --out /Users/cyberteck/Desktop/Decentralized/decentralized.host/evidence/REF-MAC-A03/chaos
+▶ leader-crash — Control-plane leader crash
+         0ms  starting 3 control-plane member(s), 3 host(s), 1 edge(s)
+      6316ms  cluster ready
+     11103ms  SIGKILL leader cp-1
+     12449ms  cp-2 elected leader
+     12659ms  write committed through the new leader
+     14748ms  old leader restarted
+  PASS in 15s: new leader in 1346 ms; 210/210 requests succeeded during failover; audit 35 → 38 verified
+▶ cp-total-outage — Total control-plane outage
+         0ms  starting 1 control-plane member(s), 2 host(s), 1 edge(s)
+      3570ms  cluster ready
+      8473ms  SIGKILL cp-1
+     18953ms  host-a entered offline-hold: control plane unreachable or stale: control plane unreachable: Post "http://127.0.0.1:3200…
+     28955ms  workloads verified running with unchanged PIDs during the outage
+     28960ms  cp-1 restarted
+     31184ms  hosts reporting again
+  PASS in 33s: offline-hold entered, workloads untouched, 916/916 requests OK during outage, buffered observations flushed: true
+▶ host-crash — Host crash
+         0ms  starting 1 control-plane member(s), 4 host(s), 1 edge(s)
+      3745ms  cluster ready
+      9693ms  killed host-a and 1 workload(s)
+     16158ms  host-a marked lost
+     26658ms  replica 0 running on host-d
+  PASS in 29s: host-a lost after 6.478s, replica running elsewhere after 16.978s; 671/671 requests OK
+▶ agent-restart — Host agent restart
+         0ms  starting 1 control-plane member(s), 2 host(s), 0 edge(s)
+      2895ms  cluster ready
+      5086ms  SIGKILL dh-noded on host-a
+      7091ms  dh-noded restarted
+  PASS in 11s: 1 workload(s) re-adopted with unchanged PIDs; ledger records re-adoption: true
+▶ journal-corruption — Host ledger corruption
+         0ms  starting 1 control-plane member(s), 2 host(s), 0 edge(s)
+      2726ms  cluster ready
+      4905ms  rewrote journal entry at line 3 of 4 on host-b (ledger head was 4)
+      5214ms  host-b mode ledger-corrupt: event-hash mismatch at seq 3
+      7084ms  new replica refused with LEDGER_CORRUPT
+      7667ms  operator sealed the journal: sealed /Users/cyberteck/Desktop/Decentralized/decentralized.host/evidence/REF-MAC-A03/chaos/journal-corruption-1790279580617/host-b/journal.jsonl.sealed-1790279588262
+      9193ms  host-b admits work again on a new, verifying chain
+  PASS in 9s: break named (event-hash mismatch at seq 3); new work refused with LEDGER_CORRUPT; after an operator seal the host admitted the replica
+▶ network-partition — Network partition of one host
+         0ms  starting 1 control-plane member(s), 4 host(s), 1 edge(s)
+      3404ms  cluster ready
+      7491ms  isolated host-a (WireGuard dropped both ways, control-plane channel cut)
+     16413ms  control plane marked host-a lost
+     27214ms  replica 0 running on host-d
+     27216ms  isolated host mode offline-hold, original workload alive: true
+     32492ms  partition healed
+     33774ms  old instance on host-a stopped by a signed stop; 3 replicas running
+  PASS in 34s: gossip suspect 0s, lost 8.944s, rescheduled 19.744s; converged after heal; 914/914 requests OK
+▶ packet-chaos — Packet loss, duplication, reordering and delay
+         0ms  starting 1 control-plane member(s), 3 host(s), 1 edge(s)
+      3489ms  cluster ready
+     19333ms  faults on: loss 5%, dup 10%, reorder 10%, delay 40ms
+     41340ms  faults cleared
+  PASS in 53s: RTT 3135µs → 121894µs under faults → 1591µs after; 689/689 requests OK (p50 1ms, p99 458ms)
+▶ clock-skew — Host clock skew
+         0ms  starting 1 control-plane member(s), 2 host(s), 0 edge(s)
+      2969ms  cluster ready
+      5983ms  host-a clock offset +120000ms
+      6896ms  detected: bundle is 120003ms old on arrival: host clock ahead or plane slow; holding admitted work
+      6918ms  host-a clock offset -120000ms
+      6920ms  detected: bundle is 120003ms old on arrival: host clock ahead or plane slow; holding admitted work
+      6961ms  host-b clock offset -120000ms; scaling to 2
+      7918ms  new work refused on host-b with CLOCK_SKEW
+      7939ms  clocks restored
+  PASS in 10s: skew detected in both directions from bundle timestamps; admitted workload (pid 11418) held; new work refused with CLOCK_SKEW; both replicas running after correction
+▶ stale-generation — Rollout while a host is cut off
+         0ms  starting 1 control-plane member(s), 3 host(s), 1 edge(s)
+      3578ms  cluster ready
+      8554ms  host-b cut from the control plane
+      8597ms  applied generation 2: web: template changed; rolling update to a new generation (generation 2)
+     26471ms  cut-off host still runs generation 1 (stale evidence shown: true)
+     26502ms  healed
+  PASS in 31s: cut-off host held generation 1 until healed; rollout completed; 817/817 requests OK
+▶ replay-forgery — Replayed, forged and tampered observations
+         0ms  starting 1 control-plane member(s), 2 host(s), 0 edge(s)
+      2936ms  cluster ready
+      6304ms  replay → {"results":[{"seq":5,"status":"rejected","reason":"replay detected: seq 5, last accepted 5"}]}
+
+      6306ms  foreign key → {"results":[{"seq":1000005,"status":"rejected","reason":"wrong host key"}]}
+
+      6307ms  tampered → {"results":[{"seq":5,"status":"rejected","reason":"signature does not verify"}]}
+
+  PASS in 6s: replay, foreign-key and tampered observations rejected with specific reasons; state unchanged
+▶ revoked-host — Host revocation under traffic
+         0ms  starting 1 control-plane member(s), 4 host(s), 1 edge(s)
+      4059ms  cluster ready
+      9335ms  revoked host-c
+     14266ms  replica 2 running on another host; host-c removed from routing
+  PASS in 17s: revoked host removed from routing and mesh; replica rescheduled; 223/223 requests OK; 0 routed to the revoked host after removal: true
+▶ storage-replica-loss — Loss of a storage replica
+         0ms  starting 1 control-plane member(s), 4 host(s), 1 edge(s)
+      3558ms  cluster ready
+     14499ms  deleted all stored objects on host-d
+  PASS in 19s: 28 object(s) repaired on host-d with verified evidence in 3987 ms; data identical
+▶ disk-full — Disk full on a replica (injected ENOSPC)
+         0ms  starting 1 control-plane member(s), 4 host(s), 1 edge(s)
+      3467ms  cluster ready
+     14463ms  ENOSPC injected on edge-1
+     18225ms  reported DEGRADED: 2/3 replicas verified; anti-entropy is repairing
+     18246ms  ENOSPC cleared
+  PASS in 19s: volume shown DEGRADED while edge-1 was full (DEGRADED: 2/3 replicas verified; anti-entropy is repairing); HEALTHY after recovery; data intact
+▶ oom — Out-of-memory kill (Docker runtime)
+       106ms  starting 1 control-plane member(s), 1 host(s), 0 edge(s)
+      2716ms  cluster ready
+      6272ms  using busybox@sha256:73aaf090f3d85aa34ee199857f03fa3a95c8ede2ffd4cc2cdb5b94e566b11662
+     40878ms  observed OOM-KILLED on host-a: already admitted; digest and policy unchanged
+  PASS in 41s: container OOM-killed by the runtime under a 32 MiB limit; reported and audited: true; restarted with backoff
+▶ interrupted-deployment — Leader crash during a rolling update
+         0ms  starting 3 control-plane member(s), 3 host(s), 1 edge(s)
+      6435ms  cluster ready
+     10847ms  generation 2 applied
+     11888ms  SIGKILL leader cp-1 mid-rollout
+     15800ms  all replicas at generation 2
+  PASS in 18s: rollout resumed by the new leader and completed; 275/275 requests OK
+▶ interrupted-storage-write — Host killed during a storage write
+         0ms  starting 1 control-plane member(s), 4 host(s), 1 edge(s)
+      3930ms  cluster ready
+     18281ms  killed host-a while the snapshot was pending
+  PASS in 29s: committed data intact; interrupted write absent (rolled back to the committed snapshot)
+▶ postgres-outage — Evidence database outage
+      3557ms  postgres container dh-chaos-pg-47000 ready
+      3557ms  starting 1 control-plane member(s), 1 host(s), 0 edge(s)
+      6384ms  cluster ready
+      6688ms  mirror reports DB COMMITTED
+      6992ms  postgres stopped
+      7119ms  3 writes committed through raft with the database down
+      7120ms  console: JOURNAL ONLY (database mirror at seq 7 of 10: )
+      7554ms  postgres started
+  PASS in 9s: DB COMMITTED → JOURNAL ONLY while down (writes kept committing) → DB COMMITTED with audit seq 11 of 11 mirrored
+
+17 PASS, 0 FAIL, 0 SKIP — signed reports in /Users/cyberteck/Desktop/Decentralized/decentralized.host/evidence/REF-MAC-A03/chaos (runner key dh1c3rrdae6kowfxjyhfvokglhxga)

@@ -1,0 +1,73 @@
+{
+  "kind": "chaos-report",
+  "signer": "dh1yuddwefxapnm7vzneqynsvrtgo",
+  "pub": "P8MmTyvUAb-zQ9j2CqDwP4kb3AjQW6M3zKzAjw5b1Dw",
+  "payload": {
+    "durationMs": 31402,
+    "environment": {
+      "arch": "amd64",
+      "cpus": "2",
+      "go": "go1.26.8",
+      "os": "linux",
+      "topology": "1 control-plane member(s), 2 host(s), 1 edge(s)"
+    },
+    "evidence": [
+      "audit #19 14:37:41.341 assignment-sign app/web/r0: running on host-a: placed web/r0 on host-a; placed web/r1 on host-b (d5cdbfb83278)",
+      "audit #20 14:37:41.341 assignment-sign app/web/r1: running on host-b: placed web/r0 on host-a; placed web/r1 on host-b (99a586ab96ec)",
+      "audit #23 14:37:44.199 workload-start app/web/r0: allowed/running: signature, capability, generation, digest and local policy allow (pid 13169) (9fd7541437ea)",
+      "audit #24 14:37:44.209 workload-start app/web/r1: allowed/running: signature, capability, generation, digest and local policy allow (pid 13170) (f661bf91ca58)",
+      "audit #26 14:38:07.041 host-mode node/dh1rumntewp4zyj5g7adb4fdkf2r4: offline-hold: control plane unreachable or stale: control plane unreachable: Post \"http://127.0.0.1:32001/v1/bundle\": di… (1fdb0ac05029)",
+      "audit #28 14:38:07.051 host-mode node/dh1rumntewp4zyj5g7adb4fdkf2r4: normal:  (5796f074a37a)",
+      "audit #30 14:38:07.063 host-mode node/dh1qtj2ma5yzsfxywzipkve6oax4i: offline-hold: control plane unreachable or stale: control plane unreachable: Post \"http://127.0.0.1:32001/v1/bundle\": di… (36c5786cdf7c)",
+      "audit #32 14:38:07.067 host-mode node/dh1qtj2ma5yzsfxywzipkve6oax4i: normal:  (b05605d5cc44)",
+      "audit #33 14:38:07.341 host-mode node/dh1j6mfam3slqzteozpejcm7coys3: offline-hold: control plane unreachable or stale: control plane unreachable: Post \"http://127.0.0.1:32001/v1/bundle\": di… (d71d3b57f8d3)",
+      "audit #34 14:38:07.345 host-mode node/dh1j6mfam3slqzteozpejcm7coys3: normal:  (6c5295e443a0)",
+      "audit chain verified: 34 entries, head 6c5295e443a0"
+    ],
+    "id": "cp-total-outage-1790260657773",
+    "injection": "SIGKILL every control-plane member for 15s, then restart",
+    "invariant": "hosts enter offline-hold, admitted workloads keep running with the same PIDs, no request fails, buffered observations are delivered after recovery",
+    "measurements": {
+      "host-a_outbox": "2",
+      "host-b_outbox": "2",
+      "requests_failed": "0",
+      "requests_ok": "862"
+    },
+    "observed": "offline-hold entered, workloads untouched, 862/862 requests OK during outage, buffered observations flushed: true",
+    "recovery": [
+      {
+        "atMs": 0,
+        "event": "starting 1 control-plane member(s), 2 host(s), 1 edge(s)"
+      },
+      {
+        "atMs": 2831,
+        "event": "cluster ready"
+      },
+      {
+        "atMs": 7848,
+        "event": "SIGKILL cp-1"
+      },
+      {
+        "atMs": 18390,
+        "event": "host-a entered offline-hold: control plane unreachable or stale: control plane unreachable: Post \"http://127.0.0.1:3200…"
+      },
+      {
+        "atMs": 28394,
+        "event": "workloads verified running with unchanged PIDs during the outage"
+      },
+      {
+        "atMs": 28399,
+        "event": "cp-1 restarted"
+      },
+      {
+        "atMs": 29381,
+        "event": "hosts reporting again"
+      }
+    ],
+    "scenario": "cp-total-outage",
+    "started": 1790260657773,
+    "title": "Total control-plane outage",
+    "verdict": "PASS"
+  },
+  "sig": "Hwx7uDUm1bYUGc3rtSw83SEdteh36gKAcHLYaMay1t0u6v_OszHj_D6MFu682CedaDQKoTR6xLSmb1Cnzp9zDw"
+}

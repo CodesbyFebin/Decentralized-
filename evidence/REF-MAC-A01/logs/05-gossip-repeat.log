@@ -1,0 +1,2 @@
+=== attempt 1 at 2026-09-24T19:06:52Z: go test -race -count=20 -run TestGossipMembership ./pkg/mesh
+ok  	decentralized.host/pkg/mesh	11.907s

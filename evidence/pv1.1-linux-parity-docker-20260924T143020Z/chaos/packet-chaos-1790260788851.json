@@ -1,0 +1,45 @@
+{
+  "kind": "chaos-report",
+  "signer": "dh1yuddwefxapnm7vzneqynsvrtgo",
+  "pub": "P8MmTyvUAb-zQ9j2CqDwP4kb3AjQW6M3zKzAjw5b1Dw",
+  "payload": {
+    "durationMs": 36322,
+    "environment": {
+      "arch": "amd64",
+      "cpus": "2",
+      "go": "go1.26.8",
+      "os": "linux",
+      "topology": "1 control-plane member(s), 3 host(s), 1 edge(s)"
+    },
+    "evidence": [
+      "audit #23 14:39:51.902 assignment-sign app/web/r0: running on host-a: placed web/r0 on host-a; placed web/r1 on host-b; placed web/r2 on edge-1 (82e666d1bf6a)",
+      "audit #24 14:39:51.902 assignment-sign app/web/r1: running on host-b: placed web/r0 on host-a; placed web/r1 on host-b; placed web/r2 on edge-1 (08053da766b3)",
+      "audit #25 14:39:51.902 assignment-sign app/web/r2: running on edge-1: placed web/r0 on host-a; placed web/r1 on host-b; placed web/r2 on edge-1 (5ba7c1c41643)",
+      "audit #29 14:39:54.921 workload-start app/web/r0: allowed/running: signature, capability, generation, digest and local policy allow (pid 13568) (3af7fa0bc8b5)",
+      "audit #30 14:39:54.946 workload-start app/web/r1: allowed/running: signature, capability, generation, digest and local policy allow (pid 13573) (1180546f61ee)",
+      "audit #31 14:39:54.959 workload-start app/web/r2: allowed/running: signature, capability, generation, digest and local policy allow (pid 13576) (544c081ad1c9)",
+      "audit #32 14:39:57.792 route-ejected route/web.chaos.test: web/r2 on edge-1: pending → ejected (2 consecutive edge probes failed: Get \"http://10.77.0.3:20000/healthz\": EOF) (c33f4ee24c19)",
+      "audit chain verified: 32 entries, head c33f4ee24c19"
+    ],
+    "id": "packet-chaos-1790260788851",
+    "injection": "on every WireGuard path: 5% loss, 10% duplication, 10% reordering, +40ms delay for 20s",
+    "invariant": "WireGuard and TCP absorb the faults: no request fails, the measured mesh RTT reflects the injected delay, and it returns to baseline when faults are cleared",
+    "measurements": {},
+    "observed": "timed out after 30s waiting for edge routing 3 endpoint(s) for web.chaos.test",
+    "recovery": [
+      {
+        "atMs": 0,
+        "event": "starting 1 control-plane member(s), 3 host(s), 1 edge(s)"
+      },
+      {
+        "atMs": 2233,
+        "event": "cluster ready"
+      }
+    ],
+    "scenario": "packet-chaos",
+    "started": 1790260788851,
+    "title": "Packet loss, duplication, reordering and delay",
+    "verdict": "FAIL"
+  },
+  "sig": "1WXZKawMIr-Q8gidxOAAgjL6MvhNlvjHIQc4sI2dSAfSfUv_mvAk0-pr__DFEsO1wUm__xzxZ5M5R_zxUdrhBg"
+}

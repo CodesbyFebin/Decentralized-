@@ -1,0 +1,66 @@
+{
+  "kind": "chaos-report",
+  "signer": "dh1c3rrdae6kowfxjyhfvokglhxga",
+  "pub": "mJsJl0tR1FHe_P2QbYXqhi4_h6v4MgLyxIKBoBacmQg",
+  "payload": {
+    "durationMs": 9193,
+    "environment": {
+      "arch": "amd64",
+      "cpus": "6",
+      "go": "go1.26.4",
+      "os": "darwin",
+      "topology": "1 control-plane member(s), 2 host(s), 0 edge(s)"
+    },
+    "evidence": [
+      "audit #15 19:53:03.672 assignment-sign app/web/r0: running on host-a: placed web/r0 on host-a (75dc10c565ce)",
+      "audit #17 19:53:05.343 workload-start app/web/r0: allowed/running: signature, capability, generation, digest and local policy allow (pid 11282) (5b6355b98c0f)",
+      "audit #18 19:53:05.603 host-mode node/dh1svkwvcpmcrzh7pyoeyxg37qlxr: ledger-corrupt: event-hash mismatch at seq 3 (fcc089037db6)",
+      "audit #20 19:53:06.660 assignment-sign app/web/r1: running on host-b: placed web/r1 on host-b (40f868df7671)",
+      "audit #21 19:53:07.169 health-pass app/web/r0: HTTP 200 in 452µs (6dd8fc264e40)",
+      "audit #22 19:53:07.606 node-refuse app/web/r1: refused/unknown: host ledger failed verification; refusing new work until an operator inspects it (1296580cce13)",
+      "audit #24 19:53:08.420 host-mode node/dh1svkwvcpmcrzh7pyoeyxg37qlxr: normal:  (f8c472f87089)",
+      "audit #25 19:53:09.636 workload-start app/web/r1: allowed/running: signature, capability, generation, digest and local policy allow (pid 11292) (5b4800e2fc45)",
+      "audit chain verified: 25 entries, head 5b4800e2fc45"
+    ],
+    "id": "journal-corruption-1790279580617",
+    "injection": "stop a host agent, flip bytes inside one entry of its hash-chained journal, restart it",
+    "invariant": "the host detects the named break, enters ledger-corrupt mode, keeps admitted work, refuses new work, and never appends to the broken chain; after the local operator seals the journal (kept byte-for-byte) the host admits work again and its new chain records the break",
+    "measurements": {},
+    "observed": "break named (event-hash mismatch at seq 3); new work refused with LEDGER_CORRUPT; after an operator seal the host admitted the replica",
+    "recovery": [
+      {
+        "atMs": 0,
+        "event": "starting 1 control-plane member(s), 2 host(s), 0 edge(s)"
+      },
+      {
+        "atMs": 2726,
+        "event": "cluster ready"
+      },
+      {
+        "atMs": 4905,
+        "event": "rewrote journal entry at line 3 of 4 on host-b (ledger head was 4)"
+      },
+      {
+        "atMs": 5214,
+        "event": "host-b mode ledger-corrupt: event-hash mismatch at seq 3"
+      },
+      {
+        "atMs": 7084,
+        "event": "new replica refused with LEDGER_CORRUPT"
+      },
+      {
+        "atMs": 7667,
+        "event": "operator sealed the journal: sealed /Users/cyberteck/Desktop/Decentralized/decentralized.host/evidence/REF-MAC-A03/chaos/journal-corruption-1790279580617/host-b/journal.jsonl.sealed-1790279588262"
+      },
+      {
+        "atMs": 9193,
+        "event": "host-b admits work again on a new, verifying chain"
+      }
+    ],
+    "scenario": "journal-corruption",
+    "started": 1790279580617,
+    "title": "Host ledger corruption",
+    "verdict": "PASS"
+  },
+  "sig": "c2Pk5TXnZnfIxEaCYNvJusXhzCwWuqC67EDZJXPH-JLyZd-04deWBrBPB3IXDQP7fKMvW6g3Ok3RslJ2YXGQAg"
+}

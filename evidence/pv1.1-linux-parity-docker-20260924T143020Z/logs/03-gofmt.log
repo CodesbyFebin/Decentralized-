@@ -1,0 +1,1 @@
+=== attempt 1 at 2026-09-24T14:32:08Z: sh -c test -z "$(gofmt -l cmd pkg tests conformance web)"

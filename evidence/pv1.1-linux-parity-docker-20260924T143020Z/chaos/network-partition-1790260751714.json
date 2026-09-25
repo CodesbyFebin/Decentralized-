@@ -1,0 +1,85 @@
+{
+  "kind": "chaos-report",
+  "signer": "dh1yuddwefxapnm7vzneqynsvrtgo",
+  "pub": "P8MmTyvUAb-zQ9j2CqDwP4kb3AjQW6M3zKzAjw5b1Dw",
+  "payload": {
+    "durationMs": 35303,
+    "environment": {
+      "arch": "amd64",
+      "cpus": "2",
+      "go": "go1.26.8",
+      "os": "linux",
+      "topology": "1 control-plane member(s), 4 host(s), 1 edge(s)"
+    },
+    "evidence": [
+      "audit #27 14:39:15.030 assignment-sign app/web/r0: running on host-c: placed web/r0 on host-c; placed web/r1 on host-a; placed web/r2 on host-d (65fc688033f9)",
+      "audit #28 14:39:15.030 assignment-sign app/web/r1: running on host-a: placed web/r0 on host-c; placed web/r1 on host-a; placed web/r2 on host-d (f6a106b8badf)",
+      "audit #29 14:39:15.030 assignment-sign app/web/r2: running on host-d: placed web/r0 on host-c; placed web/r1 on host-a; placed web/r2 on host-d (41e3d6c5470a)",
+      "audit #33 14:39:18.161 workload-start app/web/r0: allowed/running: signature, capability, generation, digest and local policy allow (pid 13480) (03ee6320857c)",
+      "audit #34 14:39:18.177 workload-start app/web/r1: allowed/running: signature, capability, generation, digest and local policy allow (pid 13484) (965c1ca2ec4f)",
+      "audit #35 14:39:18.210 workload-start app/web/r2: allowed/running: signature, capability, generation, digest and local policy allow (pid 13490) (899135603fa9)",
+      "audit #36 14:39:21.031 route-routing route/web.chaos.test: web/r0 on host-c: pending → routing (edge probe over WireGuard passed (HTTP 200)) (5105c3bdce93)",
+      "audit #37 14:39:21.031 route-routing route/web.chaos.test: web/r2 on host-d: pending → routing (edge probe over WireGuard passed (HTTP 200)) (a80130bbdb29)",
+      "audit #38 14:39:23.031 route-ejected route/web.chaos.test: web/r0 on host-c: routing → ejected (request failed: context deadline exceeded) (6c06b3b28c28)",
+      "audit #39 14:39:29.769 node-lost node/dh1l5irqx3dgyozoygqbxbrfzziau: no signed observation for 8s; replicas will be rescheduled, admitted work on the host is not assumed dead (a93bd603c4e6)",
+      "audit #40 14:39:30.771 assignment-sign app/web/r0: running on edge-1: moved web/r0 from host-c to edge-1; placed web/r0 on edge-1 (0ac935b7cd0a)",
+      "audit #41 14:39:30.771 assignment-stop app/web/r0: stopped on host-c: moved web/r0 from host-c to edge-1; placed web/r0 on edge-1 (5075240936ce)",
+      "audit #43 14:39:32.191 workload-start app/web/r0: allowed/running: signature, capability, generation, digest and local policy allow (pid 13496) (560d667c2c6c)",
+      "audit #44 14:39:32.191 route-draining route/web.chaos.test: web/r0 on host-c: ejected → draining (control plane marked the replica draining; no new requests) (4db82be489dc)",
+      "audit #45 14:39:34.034 route-ejected route/web.chaos.test: web/r0 on edge-1: draining → ejected (2 consecutive edge probes failed: Get \"http://10.77.0.4:20000/healthz\": EOF) (e369a7967d78)",
+      "audit chain verified: 45 entries, head e369a7967d78"
+    ],
+    "id": "network-partition-1790260751714",
+    "injection": "drop every WireGuard packet to and from one host at the fault proxies and cut its control-plane channel for 25s, then heal",
+    "invariant": "the isolated host keeps its admitted workload, gossip suspects it, the control plane marks it lost and reschedules, no request fails, and after healing the cluster converges to exactly the desired replicas",
+    "measurements": {
+      "converged_after_heal_ms": "957",
+      "gossip_suspect_ms": "0",
+      "marked_lost_ms": "8920",
+      "proxy_packets": "map[dropped:487 duplicated:0 forwarded:21328 reordered:0]",
+      "requests_failed": "0",
+      "requests_ok": "886",
+      "rescheduled_ms": "11387"
+    },
+    "observed": "gossip suspect 0s, lost 8.921s, rescheduled 11.387s; converged after heal; 886/886 requests OK",
+    "recovery": [
+      {
+        "atMs": 0,
+        "event": "starting 1 control-plane member(s), 4 host(s), 1 edge(s)"
+      },
+      {
+        "atMs": 2642,
+        "event": "cluster ready"
+      },
+      {
+        "atMs": 9346,
+        "event": "isolated host-c (WireGuard dropped both ways, control-plane channel cut)"
+      },
+      {
+        "atMs": 18263,
+        "event": "control plane marked host-c lost"
+      },
+      {
+        "atMs": 20730,
+        "event": "replica 0 running on edge-1"
+      },
+      {
+        "atMs": 20732,
+        "event": "isolated host mode offline-hold, original workload alive: true"
+      },
+      {
+        "atMs": 34346,
+        "event": "partition healed"
+      },
+      {
+        "atMs": 35280,
+        "event": "old instance on host-c stopped by a signed stop; 3 replicas running"
+      }
+    ],
+    "scenario": "network-partition",
+    "started": 1790260751714,
+    "title": "Network partition of one host",
+    "verdict": "PASS"
+  },
+  "sig": "UucrX3OVJIHq9YASpRdh2M-oJ1tKvsxpTisOHEmdYxgazSqI9E4Dtc3Fvq-MHgz_sD_sZhTXMkTcLl_YyLqVBw"
+}

@@ -1,0 +1,68 @@
+{
+  "kind": "chaos-report",
+  "signer": "dh1c3rrdae6kowfxjyhfvokglhxga",
+  "pub": "mJsJl0tR1FHe_P2QbYXqhi4_h6v4MgLyxIKBoBacmQg",
+  "payload": {
+    "durationMs": 17277,
+    "environment": {
+      "arch": "amd64",
+      "cpus": "6",
+      "go": "go1.26.4",
+      "os": "darwin",
+      "topology": "1 control-plane member(s), 4 host(s), 1 edge(s)"
+    },
+    "evidence": [
+      "audit #27 19:55:34.244 assignment-sign app/web/r0: running on host-a: placed web/r0 on host-a; placed web/r1 on host-b; placed web/r2 on host-c (d1f2e8b6f1c8)",
+      "audit #28 19:55:34.244 assignment-sign app/web/r1: running on host-b: placed web/r0 on host-a; placed web/r1 on host-b; placed web/r2 on host-c (45ce4de7c2b2)",
+      "audit #29 19:55:34.244 assignment-sign app/web/r2: running on host-c: placed web/r0 on host-a; placed web/r1 on host-b; placed web/r2 on host-c (2026fd4ae881)",
+      "audit #33 19:55:36.066 workload-start app/web/r0: allowed/running: signature, capability, generation, digest and local policy allow (pid 11508) (13040b7cce68)",
+      "audit #34 19:55:36.225 workload-start app/web/r1: allowed/running: signature, capability, generation, digest and local policy allow (pid 11509) (1e3951f4d57a)",
+      "audit #35 19:55:36.364 workload-start app/web/r2: allowed/running: signature, capability, generation, digest and local policy allow (pid 11510) (08a650139a88)",
+      "audit #36 19:55:37.888 health-pass app/web/r0: HTTP 200 in 517µs (46e35cfcf512)",
+      "audit #37 19:55:37.990 health-pass app/web/r1: HTTP 200 in 583µs (b4e3e263cd42)",
+      "audit #38 19:55:38.172 health-pass app/web/r2: HTTP 200 in 335µs (1f893c0c5223)",
+      "audit #39 19:55:38.426 node-revoke node/dh1dam6qjrb5zre5u6f5tfbvqeeyr: host-c revoked (chaos). New admission blocked; admitted processes are not killed by this record. (27810b02456e)",
+      "audit #40 19:55:38.469 assignment-sign app/web/r2: running on host-d: placed web/r2 on host-d (576c1b896745)",
+      "audit #43 19:55:39.764 workload-start app/web/r2: allowed/running: signature, capability, generation, digest and local policy allow (pid 11514) (3f862fe5f579)",
+      "audit #44 19:55:40.116 route-draining route/web.chaos.test: web/r2 on host-c: routing → draining (removed from routing table; finishing in-flight requests) (cf6c7c14e20f)",
+      "audit #45 19:55:41.116 route-routing route/web.chaos.test: web/r2 on host-d: draining → routing (edge probe over WireGuard passed (HTTP 200)) (3722f2600d13)",
+      "audit #46 19:55:41.589 health-pass app/web/r2: HTTP 200 in 707µs (c3673cb38821)",
+      "audit #47 19:55:41.633 assignment-stop app/web/r2: stopped on host-c: moved web/r2 from host-c to host-d (fdcd2ed01763)",
+      "audit #48 19:55:42.228 workload-stop app/web/r2: allowed/stopped: signed stop accepted (0afa95afe293)",
+      "audit chain verified: 48 entries, head 0afa95afe293"
+    ],
+    "id": "revoked-host-1790279729132",
+    "injection": "revoke a host that serves a replica while traffic flows",
+    "invariant": "the revoked host keeps its admitted workload but is removed from the mesh and the edge routing table, the replica is rescheduled, and no request fails",
+    "measurements": {
+      "requests_failed": "0",
+      "requests_ok": "223",
+      "reschedule_ms": "4930",
+      "served_by_revoked_after_removal": "0"
+    },
+    "observed": "revoked host removed from routing and mesh; replica rescheduled; 223/223 requests OK; 0 routed to the revoked host after removal: true",
+    "recovery": [
+      {
+        "atMs": 0,
+        "event": "starting 1 control-plane member(s), 4 host(s), 1 edge(s)"
+      },
+      {
+        "atMs": 4059,
+        "event": "cluster ready"
+      },
+      {
+        "atMs": 9335,
+        "event": "revoked host-c"
+      },
+      {
+        "atMs": 14266,
+        "event": "replica 2 running on another host; host-c removed from routing"
+      }
+    ],
+    "scenario": "revoked-host",
+    "started": 1790279729132,
+    "title": "Host revocation under traffic",
+    "verdict": "PASS"
+  },
+  "sig": "WFU1uKilGGTvM-_95ydcY0JUN0HLfWFkZOhAhIlipZVe2tUpaULQUZi5OPD_DOQQ9vagoA9NU3u8SB5IgFLdAA"
+}

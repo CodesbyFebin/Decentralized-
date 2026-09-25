@@ -1,0 +1,1 @@
+2026-09-25T00:47:53.175+0530 [WARN]  raft: failed to get previous log: previous-index=12 last-index=0 error="log not found"

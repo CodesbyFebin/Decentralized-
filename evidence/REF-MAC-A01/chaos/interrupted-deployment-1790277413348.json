@@ -1,0 +1,71 @@
+{
+  "kind": "chaos-report",
+  "signer": "dh1bjtulwwvuuoekacve25espwffd",
+  "pub": "YJWKtmdwSx_E19iVMG7hU5upeOfH3WrKh-hlvsZSHfY",
+  "payload": {
+    "durationMs": 19097,
+    "environment": {
+      "arch": "amd64",
+      "cpus": "6",
+      "go": "go1.26.4",
+      "os": "darwin",
+      "topology": "3 control-plane member(s), 3 host(s), 1 edge(s)"
+    },
+    "evidence": [
+      "audit #3 19:16:54.837 roster-update cluster/chaos: roster v2: dh1vu5qcpmk64se6qwmxrv5nd4bay, dh1jgvq4ur5t7tv2e5h4tiigpv3sz (76118214cf85)",
+      "audit #5 19:16:55.166 roster-update cluster/chaos: roster v3: dh1vu5qcpmk64se6qwmxrv5nd4bay, dh1jgvq4ur5t7tv2e5h4tiigpv3sz, dh1rj3mzcmgym25xwuiqjjorzp4ik (4103b9de9b21)",
+      "audit #27 19:16:59.613 assignment-sign app/web/r0: running on host-a: placed web/r0 on host-a; placed web/r1 on host-b; placed web/r2 on host-c (9d7624b5e159)",
+      "audit #28 19:16:59.613 assignment-sign app/web/r1: running on host-b: placed web/r0 on host-a; placed web/r1 on host-b; placed web/r2 on host-c (daf6052b54fd)",
+      "audit #29 19:16:59.613 assignment-sign app/web/r2: running on host-c: placed web/r0 on host-a; placed web/r1 on host-b; placed web/r2 on host-c (8ef2ded28b87)",
+      "audit #33 19:17:01.141 workload-start app/web/r1: allowed/running: signature, capability, generation, digest and local policy allow (pid 7777) (72555dfc870b)",
+      "audit #34 19:17:01.345 workload-start app/web/r2: allowed/running: signature, capability, generation, digest and local policy allow (pid 7778) (984f342e417c)",
+      "audit #35 19:17:02.888 health-pass app/web/r1: HTTP 200 in 338µs (d162fa1d93e7)",
+      "audit #36 19:17:03.090 health-pass app/web/r2: HTTP 200 in 464µs (946613ea7fe2)",
+      "audit #37 19:17:03.571 workload-start app/web/r0: allowed/running: signature, capability, generation, digest and local policy allow (pid 7781) (009dfd6adff8)",
+      "audit #39 19:17:05.397 health-pass app/web/r0: HTTP 200 in 377µs (60fe7b57a236)",
+      "audit #40 19:17:05.480 assignment-sign app/web/r0: running on host-a: rolling update waiting for maxUnavailable budget; rolling web/r0 to generation 2 (39c945f46ad8)",
+      "audit #42 19:17:06.765 route-draining route/web.chaos.test: web/r0 on host-a: routing → draining (control plane marked the replica draining; no new requests) (8717d40b2084)",
+      "audit #43 19:17:08.534 assignment-sign app/web/r1: running on host-b: rolling update waiting for maxUnavailable budget; rolling web/r1 to generation 2 (134b587f0ebf)",
+      "audit #44 19:17:08.865 route-routing route/web.chaos.test: web/r0 on host-a: draining → routing (edge probe over WireGuard passed (HTTP 200)) (436f8e25c3ed)",
+      "audit #46 19:17:09.535 assignment-sign app/web/r2: running on host-c: rolling web/r2 to generation 2 (f7cf68205152)",
+      "audit #47 19:17:09.779 route-draining route/web.chaos.test: web/r1 on host-b: routing → draining (control plane marked the replica draining; no new requests) (18ad42492c91)",
+      "audit #49 19:17:10.723 route-routing route/web.chaos.test: web/r1 on host-b: draining → routing (edge probe over WireGuard passed (HTTP 200)) (35611af280c5)",
+      "audit chain verified: 49 entries, head 35611af280c5"
+    ],
+    "id": "interrupted-deployment-1790277413348",
+    "injection": "apply a new generation and SIGKILL the raft leader as soon as the first replica has rolled",
+    "invariant": "the new leader resumes the rollout, it completes, and requests keep succeeding (maxUnavailable respected)",
+    "measurements": {
+      "requests_failed": "0",
+      "requests_ok": "282"
+    },
+    "observed": "rollout resumed by the new leader and completed; 282/282 requests OK",
+    "recovery": [
+      {
+        "atMs": 0,
+        "event": "starting 3 control-plane member(s), 3 host(s), 1 edge(s)"
+      },
+      {
+        "atMs": 5517,
+        "event": "cluster ready"
+      },
+      {
+        "atMs": 11652,
+        "event": "generation 2 applied"
+      },
+      {
+        "atMs": 13513,
+        "event": "SIGKILL leader cp-1 mid-rollout"
+      },
+      {
+        "atMs": 17089,
+        "event": "all replicas at generation 2"
+      }
+    ],
+    "scenario": "interrupted-deployment",
+    "started": 1790277413348,
+    "title": "Leader crash during a rolling update",
+    "verdict": "PASS"
+  },
+  "sig": "HheWNPJTEn_VX_c_Vyq1lOnKD8pG-IFjvNwYlBIK27iVEw6rslIXwqzfx27PwTigvsy_UvdcOSDAvppgdAcUAQ"
+}

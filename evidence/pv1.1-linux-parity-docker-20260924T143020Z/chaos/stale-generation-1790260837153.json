@@ -1,0 +1,44 @@
+{
+  "kind": "chaos-report",
+  "signer": "dh1yuddwefxapnm7vzneqynsvrtgo",
+  "pub": "P8MmTyvUAb-zQ9j2CqDwP4kb3AjQW6M3zKzAjw5b1Dw",
+  "payload": {
+    "durationMs": 36831,
+    "environment": {
+      "arch": "amd64",
+      "cpus": "2",
+      "go": "go1.26.8",
+      "os": "linux",
+      "topology": "1 control-plane member(s), 3 host(s), 1 edge(s)"
+    },
+    "evidence": [
+      "audit #23 14:40:40.258 assignment-sign app/web/r0: running on edge-1: placed web/r0 on edge-1; placed web/r1 on host-c; placed web/r2 on host-b (f4059e191fc4)",
+      "audit #24 14:40:40.258 assignment-sign app/web/r1: running on host-c: placed web/r0 on edge-1; placed web/r1 on host-c; placed web/r2 on host-b (c22f39301138)",
+      "audit #25 14:40:40.258 assignment-sign app/web/r2: running on host-b: placed web/r0 on edge-1; placed web/r1 on host-c; placed web/r2 on host-b (dc83b5827c12)",
+      "audit #29 14:40:41.463 workload-start app/web/r1: allowed/running: signature, capability, generation, digest and local policy allow (pid 13689) (090a412eac06)",
+      "audit #30 14:40:41.473 workload-start app/web/r2: allowed/running: signature, capability, generation, digest and local policy allow (pid 13690) (b840e6dcb8d8)",
+      "audit #31 14:40:43.421 workload-start app/web/r0: allowed/running: signature, capability, generation, digest and local policy allow (pid 13701) (e064c1eb796f)",
+      "audit chain verified: 31 entries, head e064c1eb796f"
+    ],
+    "id": "stale-generation-1790260837153",
+    "injection": "cut one host from the control plane, roll the app to a new generation, heal",
+    "invariant": "the cut-off host keeps the generation it admitted (never runs an unsigned one), the console shows it as stale, other hosts roll within maxUnavailable, and after healing every replica runs the new generation",
+    "measurements": {},
+    "observed": "timed out after 30s waiting for edge routing 3 endpoint(s) for web.chaos.test",
+    "recovery": [
+      {
+        "atMs": 0,
+        "event": "starting 1 control-plane member(s), 3 host(s), 1 edge(s)"
+      },
+      {
+        "atMs": 2389,
+        "event": "cluster ready"
+      }
+    ],
+    "scenario": "stale-generation",
+    "started": 1790260837153,
+    "title": "Rollout while a host is cut off",
+    "verdict": "FAIL"
+  },
+  "sig": "dcsvFPNfwK_dy4tlYufVwFnSFnk3HwkAf8k4GvX0TkVKutteTllSi5HNuJXtk62qrbCgpvJIMH6L_uzDp8c3AA"
+}

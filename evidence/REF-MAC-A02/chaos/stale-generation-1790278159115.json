@@ -1,0 +1,84 @@
+{
+  "kind": "chaos-report",
+  "signer": "dh1nxobuuvqblljmn55hxzm3l2kab",
+  "pub": "zf0L_5EsJAFqesT4AfN05oOTiKMjUptKzhWmqKzE7Aw",
+  "payload": {
+    "durationMs": 27336,
+    "environment": {
+      "arch": "amd64",
+      "cpus": "6",
+      "go": "go1.26.4",
+      "os": "darwin",
+      "topology": "1 control-plane member(s), 3 host(s), 1 edge(s)"
+    },
+    "evidence": [
+      "audit #23 19:29:22.539 assignment-sign app/web/r0: running on host-a: placed web/r0 on host-a; placed web/r1 on host-b; placed web/r2 on host-c (0e1a987993a6)",
+      "audit #24 19:29:22.539 assignment-sign app/web/r1: running on host-b: placed web/r0 on host-a; placed web/r1 on host-b; placed web/r2 on host-c (2b4e836b12c3)",
+      "audit #25 19:29:22.539 assignment-sign app/web/r2: running on host-c: placed web/r0 on host-a; placed web/r1 on host-b; placed web/r2 on host-c (2731e410c28c)",
+      "audit #29 19:29:23.962 workload-start app/web/r1: allowed/running: signature, capability, generation, digest and local policy allow (pid 9000) (4d17bcd24131)",
+      "audit #30 19:29:24.137 workload-start app/web/r2: allowed/running: signature, capability, generation, digest and local policy allow (pid 9001) (a40576c4074f)",
+      "audit #31 19:29:24.720 workload-start app/web/r0: allowed/running: signature, capability, generation, digest and local policy allow (pid 9002) (e0816701ad94)",
+      "audit #32 19:29:25.788 health-pass app/web/r1: HTTP 200 in 465µs (a076aeda226d)",
+      "audit #33 19:29:25.956 health-pass app/web/r2: HTTP 200 in 491µs (39229ce52b16)",
+      "audit #34 19:29:26.208 route-routing route/web.chaos.test: web/r1 on host-b: pending → routing (edge probe over WireGuard passed (HTTP 200)) (cdd1645169b7)",
+      "audit #35 19:29:26.208 route-routing route/web.chaos.test: web/r2 on host-c: pending → routing (edge probe over WireGuard passed (HTTP 200)) (871e398565a8)",
+      "audit #37 19:29:26.544 health-pass app/web/r0: HTTP 200 in 343µs (f3dae902faf4)",
+      "audit #38 19:29:26.588 assignment-sign app/web/r0: running on host-a: rolling update waiting for maxUnavailable budget; rolling web/r0 to generation 2 (75e324fa2c8a)",
+      "audit #40 19:29:27.785 assignment-sign app/web/r1: running on host-b: rolling update waiting for maxUnavailable budget; rolling web/r1 to generation 2 (bc0e4ff52eb1)",
+      "audit #41 19:29:28.209 route-draining route/web.chaos.test: web/r0 on host-a: routing → draining (control plane marked the replica draining; no new requests) (bf621cb03136)",
+      "audit #42 19:29:29.208 route-routing route/web.chaos.test: web/r0 on host-a: draining → routing (edge probe over WireGuard passed (HTTP 200)) (d93793701fbb)",
+      "audit #43 19:29:29.208 route-draining route/web.chaos.test: web/r1 on host-b: routing → draining (control plane marked the replica draining; no new requests) (a51326254d79)",
+      "audit #44 19:29:41.221 node-lost node/dh1gl642x2my7aqgfeinkd2pnyml6: no signed observation for 15s; replicas will be rescheduled, admitted work on the host is not assumed dead (489c71d7b40b)",
+      "audit #45 19:29:42.000 assignment-sign app/web/r1: running on edge-1: moved web/r1 from host-b to edge-1; placed web/r1 on edge-1; rolling update waiting for maxUnavailabl… (31aa9b97f1b5)",
+      "audit #46 19:29:42.000 assignment-stop app/web/r1: stopped on host-b: moved web/r1 from host-b to edge-1; placed web/r1 on edge-1; rolling update waiting for maxUnavailabl… (01405bb7c1f2)",
+      "audit #48 19:29:43.385 workload-start app/web/r1: allowed/running: signature, capability, generation, digest and local policy allow (pid 9007) (27a676e0a01b)",
+      "audit #49 19:29:43.902 node-recovered node/dh1gl642x2my7aqgfeinkd2pnyml6: host-b is reporting again (1d1cf6390484)",
+      "audit #51 19:29:43.945 host-mode node/dh1gl642x2my7aqgfeinkd2pnyml6: offline-hold: control plane unreachable or stale: control plane unreachable (chaos: connectivity dropped); admitted work… (6110ae8ca98f)",
+      "audit #52 19:29:44.004 workload-stop app/web/r1: allowed/stopped: signed stop accepted (e17fe089b0fc)",
+      "audit #53 19:29:44.004 host-mode node/dh1gl642x2my7aqgfeinkd2pnyml6: normal:  (4180d68996db)",
+      "audit #54 19:29:45.201 health-pass app/web/r1: HTTP 200 in 377µs (97e3595954d7)",
+      "audit #55 19:29:45.201 route-routing route/web.chaos.test: web/r1 on edge-1: draining → routing (edge probe over WireGuard passed (HTTP 200)) (2c190154b400)",
+      "audit #56 19:29:45.223 assignment-sign app/web/r2: running on host-c: rolling web/r2 to generation 2 (9a2cebdc6eb7)",
+      "audit chain verified: 57 entries, head dd416264a340"
+    ],
+    "id": "stale-generation-1790278159115",
+    "injection": "cut one host from the control plane, roll the app to a new generation, heal",
+    "invariant": "the cut-off host keeps the generation it admitted (never runs an unsigned one), the console shows it as stale, other hosts roll within maxUnavailable, and after healing every replica runs the new generation",
+    "measurements": {
+      "requests_failed": "0",
+      "requests_ok": "748"
+    },
+    "observed": "cut-off host held generation 1 until healed; rollout completed; 748/748 requests OK",
+    "recovery": [
+      {
+        "atMs": 0,
+        "event": "starting 1 control-plane member(s), 3 host(s), 1 edge(s)"
+      },
+      {
+        "atMs": 3158,
+        "event": "cluster ready"
+      },
+      {
+        "atMs": 7153,
+        "event": "host-b cut from the control plane"
+      },
+      {
+        "atMs": 7230,
+        "event": "applied generation 2: web: template changed; rolling update to a new generation (generation 2)"
+      },
+      {
+        "atMs": 24465,
+        "event": "cut-off host still runs generation 1 (stale evidence shown: true)"
+      },
+      {
+        "atMs": 24486,
+        "event": "healed"
+      }
+    ],
+    "scenario": "stale-generation",
+    "started": 1790278159115,
+    "title": "Rollout while a host is cut off",
+    "verdict": "PASS"
+  },
+  "sig": "mKnJq3-O2F62mAzasYtFsgkYSP0L_sX3q7NYeMLvBiFUK1C7FpbGeAreVcToKl8Nz6YvRnuhc_yPKL7pmK9sAw"
+}

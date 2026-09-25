@@ -1,0 +1,112 @@
+=== attempt 1 at 2026-09-24T19:22:03Z: go test -count=1 -timeout 40m -v ./tests/integration/...
+=== RUN   TestEdgeRoutesToReplicaOnItself
+--- PASS: TestEdgeRoutesToReplicaOnItself (9.60s)
+=== RUN   TestArtifactFetchSkipsDeadHolder
+    fetch_dead_holder_test.go:22: no artifact holders: [{Artifact:{Digest:b3:281f89306dbf3b8788b3d3b3fe4d9dacaf648a58dbe3284ff4b3f2b1579dee31 Name:dh-beacon Bytes:9196768 Chunks:125 Manifest:b3:d0f4476f39b8e3660c41864956196cdbde8cbfcb23012952aa7af00821a4ca72 Holders:[] Uploaded:1790277740506} HolderNames:[] Attested:true Local:true}]
+    harness_test.go:89: ---- cp-1.log ----
+        member dh1iathc7g2i2umzun5lg532arife awaiting bootstrap or join; one-time code in /var/folders/0z/z01bgwxj7px2nd47_0vm83jm0000gn/T/TestArtifactFetchSkipsDeadHolder888311775/001/cp-1/bootstrap.code
+        2026/09/25 00:52:17 dh-control member dh1iathc7g2i2umzun5lg532arife serving API on 127.0.0.1:23001 (raft 127.0.0.1:23101)
+    harness_test.go:89: ---- host-a.log ----
+        2026/09/25 00:52:18 dh-noded[host-a] host dh1ftdv4heggx5x67rs6jnjgp4653 (host-a) running; root GTP6mKFf2V9d; control plane [127.0.0.1:23001]
+    harness_test.go:89: ---- host-b.log ----
+        2026/09/25 00:52:18 dh-noded[host-b] host dh1w7stejzg7bl7jq6ozwfs72ispm (host-b) running; root GTP6mKFf2V9d; control plane [127.0.0.1:23001]
+    harness_test.go:89: ---- host-c.log ----
+        2026/09/25 00:52:18 dh-noded[host-c] host dh1xebylu3q4rnnxofoclbwbuahma (host-c) running; root GTP6mKFf2V9d; control plane [127.0.0.1:23001]
+    harness_test.go:89: ---- host-d.log ----
+        2026/09/25 00:52:19 dh-noded[host-d] host dh1tn3pge726htagzvbsij3qf3aeb (host-d) running; root GTP6mKFf2V9d; control plane [127.0.0.1:23001]
+--- FAIL: TestArtifactFetchSkipsDeadHolder (6.87s)
+=== RUN   TestM1SovereignRuntime
+=== RUN   TestM1SovereignRuntime/identical_desired_state_does_not_advance_the_generation
+=== RUN   TestM1SovereignRuntime/replayed_observation_is_rejected_with_the_sequence_numbers
+=== RUN   TestM1SovereignRuntime/observation_signed_with_another_key_is_rejected
+=== RUN   TestM1SovereignRuntime/tampered_observation_field_is_rejected
+=== RUN   TestM1SovereignRuntime/freeze_holds_admitted_work_and_refuses_new_work
+=== RUN   TestM1SovereignRuntime/control-plane_outage_is_not_workload_outage
+=== RUN   TestM1SovereignRuntime/revocation_blocks_new_work_without_killing_admitted_work
+=== RUN   TestM1SovereignRuntime/audit_chain_verifies_and_tampering_is_detected_offline
+=== RUN   TestM1SovereignRuntime/host_ledger_is_authoritative,_chained_and_signed
+--- PASS: TestM1SovereignRuntime (26.34s)
+    --- PASS: TestM1SovereignRuntime/identical_desired_state_does_not_advance_the_generation (0.05s)
+    --- PASS: TestM1SovereignRuntime/replayed_observation_is_rejected_with_the_sequence_numbers (0.05s)
+    --- PASS: TestM1SovereignRuntime/observation_signed_with_another_key_is_rejected (0.00s)
+    --- PASS: TestM1SovereignRuntime/tampered_observation_field_is_rejected (0.00s)
+    --- PASS: TestM1SovereignRuntime/freeze_holds_admitted_work_and_refuses_new_work (4.09s)
+    --- PASS: TestM1SovereignRuntime/control-plane_outage_is_not_workload_outage (15.79s)
+    --- PASS: TestM1SovereignRuntime/revocation_blocks_new_work_without_killing_admitted_work (0.82s)
+    --- PASS: TestM1SovereignRuntime/audit_chain_verifies_and_tampering_is_detected_offline (0.04s)
+    --- PASS: TestM1SovereignRuntime/host_ledger_is_authoritative,_chained_and_signed (0.00s)
+=== RUN   TestM2StorageSurvivesHostLoss
+    m2_test.go:103: committed b3:5f7db6ea1eef on [host-a host-d host-b] (primary host-a)
+    m2_test.go:109: killed host-a and 1 workload(s)
+    m2_test.go:142: replica restored on host-b from b3:5f7db6ea1eef; 3145728 bytes identical
+=== RUN   TestM2StorageSurvivesHostLoss/interrupted_write_never_corrupts_committed_data
+    m2_test.go:186: killed host-b mid-write (pending snapshot seen: true; committed at kill b3:5f7db6ea1eef)
+    m2_test.go:208: timed out after 30s waiting for data readable after recovery
+=== RUN   TestM2StorageSurvivesHostLoss/anti-entropy_repairs_a_corrupted_replica_chunk_with_evidence
+    m2_test.go:240: corrupted b3:1c82ab72f2a75c2e5acc916418da48d49f88828cc37a5420c38111355d0435ea on host-c
+=== NAME  TestM2StorageSurvivesHostLoss
+    harness_test.go:89: ---- cp-1.log ----
+        member dh15whdd3o72xbkovyoshpf3o3gws awaiting bootstrap or join; one-time code in /var/folders/0z/z01bgwxj7px2nd47_0vm83jm0000gn/T/TestM2StorageSurvivesHostLoss2451482809/001/cp-1/bootstrap.code
+        2026/09/25 00:52:50 dh-control member dh15whdd3o72xbkovyoshpf3o3gws serving API on 127.0.0.1:25001 (raft 127.0.0.1:25101)
+    harness_test.go:89: ---- edge-1.log ----
+        2026/09/25 00:52:52 dh-noded[edge-1] host dh1uduomcvpk72es67vhwy5hstj3o (edge-1) running; root yG2R-x_GCoUU; control plane [127.0.0.1:25001]
+    harness_test.go:89: ---- host-a.log ----
+        2026/09/25 00:52:51 dh-noded[host-a] host dh1ubt4wqmcdg5tana5ws3mcizsth (host-a) running; root yG2R-x_GCoUU; control plane [127.0.0.1:25001]
+    harness_test.go:89: ---- host-b.log ----
+        2026/09/25 00:52:51 dh-noded[host-b] host dh1fhyyqtxwogelrpi42vcen22lk4 (host-b) running; root yG2R-x_GCoUU; control plane [127.0.0.1:25001]
+    harness_test.go:89: ---- host-c.log ----
+        2026/09/25 00:52:52 dh-noded[host-c] host dh1vr7oscznvzpqqxsv6kx3br7mcu (host-c) running; root yG2R-x_GCoUU; control plane [127.0.0.1:25001]
+    harness_test.go:89: ---- host-d.log ----
+        2026/09/25 00:52:52 dh-noded[host-d] host dh12v74xohk2yykdkgdeefo3jmkro (host-d) running; root yG2R-x_GCoUU; control plane [127.0.0.1:25001]
+--- FAIL: TestM2StorageSurvivesHostLoss (69.47s)
+    --- FAIL: TestM2StorageSurvivesHostLoss/interrupted_write_never_corrupts_committed_data (42.17s)
+    --- PASS: TestM2StorageSurvivesHostLoss/anti-entropy_repairs_a_corrupted_replica_chunk_with_evidence (1.58s)
+=== RUN   TestM3TrustAndMesh
+=== RUN   TestM3TrustAndMesh/key_rotation_keeps_the_identity_and_the_workloads
+=== RUN   TestM3TrustAndMesh/revoked_host_is_cut_from_the_mesh_but_keeps_admitted_work
+=== RUN   TestM3TrustAndMesh/emergency_key_revocation_rejects_the_host's_signatures
+=== RUN   TestM3TrustAndMesh/root_rotation_is_followed_by_hosts_that_pinned_the_old_root
+--- PASS: TestM3TrustAndMesh (34.43s)
+    --- PASS: TestM3TrustAndMesh/key_rotation_keeps_the_identity_and_the_workloads (1.69s)
+    --- PASS: TestM3TrustAndMesh/revoked_host_is_cut_from_the_mesh_but_keeps_admitted_work (6.38s)
+    --- PASS: TestM3TrustAndMesh/emergency_key_revocation_rejects_the_host's_signatures (9.88s)
+    --- PASS: TestM3TrustAndMesh/root_rotation_is_followed_by_hosts_that_pinned_the_old_root (1.73s)
+=== RUN   TestM4EdgeTLSAndFailover
+=== RUN   TestM4EdgeTLSAndFailover/HTTPS_with_a_certificate_chained_to_the_ACME_CA,_round-robin_over_three_replicas
+=== RUN   TestM4EdgeTLSAndFailover/a_hung_replica_is_ejected_and_requests_keep_succeeding
+    m4_test.go:203: 241 requests, 0 failures while replica web/r0 was hung and ejected
+=== RUN   TestM4EdgeTLSAndFailover/scale-down_drains_the_replica_before_it_leaves_the_routing_table
+    m4_test.go:231: note: the draining transition was shorter than one observation interval (no audit entry); removal verified
+=== RUN   TestM4EdgeTLSAndFailover/edge_failover:_losing_an_edge_does_not_lose_the_service
+--- PASS: TestM4EdgeTLSAndFailover (27.69s)
+    --- PASS: TestM4EdgeTLSAndFailover/HTTPS_with_a_certificate_chained_to_the_ACME_CA,_round-robin_over_three_replicas (0.02s)
+    --- PASS: TestM4EdgeTLSAndFailover/a_hung_replica_is_ejected_and_requests_keep_succeeding (15.66s)
+    --- PASS: TestM4EdgeTLSAndFailover/scale-down_drains_the_replica_before_it_leaves_the_routing_table (2.00s)
+    --- PASS: TestM4EdgeTLSAndFailover/edge_failover:_losing_an_edge_does_not_lose_the_service (0.05s)
+=== RUN   TestM5HighlyAvailableControlPlane
+=== RUN   TestM5HighlyAvailableControlPlane/every_member_serves_the_leader's_view,_the_console_and_conformance
+=== RUN   TestM5HighlyAvailableControlPlane/leader_loss:_new_leader,_no_lost_writes,_no_workload_interruption
+    m5_test.go:201: leader cp-1 killed; cp-3 elected in 1.699s; 262 requests through the edge during failover, 0 failed
+=== RUN   TestM5HighlyAvailableControlPlane/backup_verifies_offline;_total_control-plane_loss_is_restored_without_stopping_workloads
+    m5_test.go:299: restored from backup at index 66; 159 requests during total control-plane loss and restore, 0 failed
+--- PASS: TestM5HighlyAvailableControlPlane (24.79s)
+    --- PASS: TestM5HighlyAvailableControlPlane/every_member_serves_the_leader's_view,_the_console_and_conformance (0.08s)
+    --- PASS: TestM5HighlyAvailableControlPlane/leader_loss:_new_leader,_no_lost_writes,_no_workload_interruption (8.24s)
+    --- PASS: TestM5HighlyAvailableControlPlane/backup_verifies_offline;_total_control-plane_loss_is_restored_without_stopping_workloads (3.62s)
+=== RUN   TestM7Federation
+=== RUN   TestM7Federation/placement_over_quota_is_refused_by_the_grantor
+=== RUN   TestM7Federation/cross-cluster_placement_runs_under_the_grantor's_own_authority_and_host_policy
+=== RUN   TestM7Federation/revocation_by_the_grantor_stops_the_work_there_and_is_visible_to_the_grantee
+--- PASS: TestM7Federation (18.05s)
+    --- PASS: TestM7Federation/placement_over_quota_is_refused_by_the_grantor (1.58s)
+    --- PASS: TestM7Federation/cross-cluster_placement_runs_under_the_grantor's_own_authority_and_host_policy (5.45s)
+    --- PASS: TestM7Federation/revocation_by_the_grantor_stops_the_work_there_and_is_visible_to_the_grantee (4.01s)
+=== RUN   TestRollingUpdateOfSingleReplicaDropsNothing
+    rollout_test.go:54: 138 requests during the rolling update, 0 failed
+--- PASS: TestRollingUpdateOfSingleReplicaDropsNothing (10.42s)
+=== RUN   TestTLSEndToEnd
+--- PASS: TestTLSEndToEnd (9.96s)
+FAIL
+FAIL	decentralized.host/tests/integration	239.465s
+FAIL
+=== exit 1: exit status 1

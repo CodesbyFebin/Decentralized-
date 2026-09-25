@@ -1,0 +1,1 @@
+=== attempt 1 at 2026-09-24T19:47:40Z: sh -c GOBIN=$PWD/tools/bin go install github.com/letsencrypt/pebble/v2/cmd/pebble@v2.10.1 github.com/letsencrypt/pebble/v2/cmd/pebble-challtestsrv@v2.10.1

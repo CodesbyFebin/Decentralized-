@@ -1,0 +1,10 @@
+apiVersion: dh/v1
+kind: Application
+metadata: {name: web}
+spec:
+  replicas: 2
+  image: dh-beacon@b3:6bfa9c6840733d30e588437b002cd94521d9777d878621fddf341bff00944c26
+  resources: {cpu: 100m, mem: 32Mi}
+  placement: {tiers: [trusted], spread: failure-domain, antiAffinity: hard}
+  ports: [{name: http}]
+  health: {http: /healthz, interval: 1s}

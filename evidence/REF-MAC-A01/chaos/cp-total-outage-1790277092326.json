@@ -1,0 +1,77 @@
+{
+  "kind": "chaos-report",
+  "signer": "dh1bjtulwwvuuoekacve25espwffd",
+  "pub": "YJWKtmdwSx_E19iVMG7hU5upeOfH3WrKh-hlvsZSHfY",
+  "payload": {
+    "durationMs": 35954,
+    "environment": {
+      "arch": "amd64",
+      "cpus": "6",
+      "go": "go1.26.4",
+      "os": "darwin",
+      "topology": "1 control-plane member(s), 2 host(s), 1 edge(s)"
+    },
+    "evidence": [
+      "audit #19 19:11:36.436 assignment-sign app/web/r0: running on host-a: placed web/r0 on host-a; placed web/r1 on host-b (ddcd7d419afc)",
+      "audit #20 19:11:36.436 assignment-sign app/web/r1: running on host-b: placed web/r0 on host-a; placed web/r1 on host-b (72fbc9b49682)",
+      "audit #23 19:11:38.146 workload-start app/web/r0: allowed/running: signature, capability, generation, digest and local policy allow (pid 7322) (cca500a40651)",
+      "audit #24 19:11:38.266 workload-start app/web/r1: allowed/running: signature, capability, generation, digest and local policy allow (pid 7323) (8e88a2a560ee)",
+      "audit #25 19:11:39.953 health-pass app/web/r0: HTTP 200 in 537µs (3aaa458eef24)",
+      "audit #26 19:11:40.019 health-pass app/web/r1: HTTP 200 in 599µs (74ef3c25da8e)",
+      "audit #27 19:11:42.120 route-ejected route/web.chaos.test: web/r1 on host-b: pending → ejected (2 consecutive edge probes failed: Get \"http://10.77.0.2:20000/healthz\": context d… (de1712ab9a36)",
+      "audit #28 19:11:44.119 route-routing route/web.chaos.test: web/r1 on host-b: ejected → routing (edge probe over WireGuard passed (HTTP 200)) (8a8768279f92)",
+      "audit #30 19:12:06.070 host-mode node/dh1bmg3vjt6t2gr4bulywwx7olxd5: offline-hold: control plane unreachable or stale: control plane unreachable: Post \"http://127.0.0.1:32001/v1/bundle\": di… (46f74466afc9)",
+      "audit #31 19:12:06.207 node-lost node/dh1azxe7yrypfxxj3gjkktilcokzu: no signed observation for 15s; replicas will be rescheduled, admitted work on the host is not assumed dead (77593902082b)",
+      "audit #32 19:12:06.208 node-recovered node/dh1azxe7yrypfxxj3gjkktilcokzu: edge-1 is reporting again (0eb6e7e5cbd5)",
+      "audit #34 19:12:06.208 host-mode node/dh1bmg3vjt6t2gr4bulywwx7olxd5: normal:  (e6236e1468c8)",
+      "audit #36 19:12:06.226 host-mode node/dh15ues4u3lkl7ewnsy533palkbue: offline-hold: control plane unreachable or stale: control plane unreachable: Post \"http://127.0.0.1:32001/v1/bundle\": di… (96e830d3b760)",
+      "audit #38 19:12:06.330 host-mode node/dh15ues4u3lkl7ewnsy533palkbue: normal:  (1bcb96114697)",
+      "audit chain verified: 38 entries, head 1bcb96114697"
+    ],
+    "id": "cp-total-outage-1790277092326",
+    "injection": "SIGKILL every control-plane member for 15s, then restart",
+    "invariant": "hosts enter offline-hold, admitted workloads keep running with the same PIDs, no request fails, buffered observations are delivered after recovery",
+    "measurements": {
+      "host-a_outbox": "2",
+      "host-b_outbox": "2",
+      "requests_failed": "0",
+      "requests_ok": "892"
+    },
+    "observed": "offline-hold entered, workloads untouched, 892/892 requests OK during outage, buffered observations flushed: true",
+    "recovery": [
+      {
+        "atMs": 0,
+        "event": "starting 1 control-plane member(s), 2 host(s), 1 edge(s)"
+      },
+      {
+        "atMs": 3029,
+        "event": "cluster ready"
+      },
+      {
+        "atMs": 11843,
+        "event": "SIGKILL cp-1"
+      },
+      {
+        "atMs": 21730,
+        "event": "host-a entered offline-hold: control plane unreachable or stale: control plane unreachable: Post \"http://127.0.0.1:3200…"
+      },
+      {
+        "atMs": 31734,
+        "event": "workloads verified running with unchanged PIDs during the outage"
+      },
+      {
+        "atMs": 31739,
+        "event": "cp-1 restarted"
+      },
+      {
+        "atMs": 33933,
+        "event": "hosts reporting again"
+      }
+    ],
+    "scenario": "cp-total-outage",
+    "started": 1790277092326,
+    "title": "Total control-plane outage",
+    "verdict": "PASS"
+  },
+  "sig": "tHz9qPUOn4z7qha6hk9BW73l7NRx0DzCz4pFPxPjb3GeEHa64k-Cstw3Ezozo9mpoVkS4PyKBuox3k-kGDaSBw"
+}

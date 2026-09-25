@@ -1,0 +1,68 @@
+{
+  "kind": "chaos-report",
+  "signer": "dh1bjtulwwvuuoekacve25espwffd",
+  "pub": "YJWKtmdwSx_E19iVMG7hU5upeOfH3WrKh-hlvsZSHfY",
+  "payload": {
+    "durationMs": 16819,
+    "environment": {
+      "arch": "amd64",
+      "cpus": "6",
+      "go": "go1.26.4",
+      "os": "darwin",
+      "topology": "1 control-plane member(s), 4 host(s), 1 edge(s)"
+    },
+    "evidence": [
+      "audit #27 19:15:15.542 assignment-sign app/web/r0: running on host-a: placed web/r0 on host-a; placed web/r1 on host-b; placed web/r2 on host-c (1067ee5caa01)",
+      "audit #28 19:15:15.542 assignment-sign app/web/r1: running on host-b: placed web/r0 on host-a; placed web/r1 on host-b; placed web/r2 on host-c (35aa1dc8f679)",
+      "audit #29 19:15:15.542 assignment-sign app/web/r2: running on host-c: placed web/r0 on host-a; placed web/r1 on host-b; placed web/r2 on host-c (6f1af73beda5)",
+      "audit #33 19:15:16.881 workload-start app/web/r1: allowed/running: signature, capability, generation, digest and local policy allow (pid 7576) (6488333582d6)",
+      "audit #34 19:15:17.015 workload-start app/web/r2: allowed/running: signature, capability, generation, digest and local policy allow (pid 7577) (0dbcab95edc3)",
+      "audit #35 19:15:17.798 workload-start app/web/r0: allowed/running: signature, capability, generation, digest and local policy allow (pid 7579) (2493bb413272)",
+      "audit #36 19:15:18.697 health-pass app/web/r1: HTTP 200 in 308µs (0eda928d5a44)",
+      "audit #37 19:15:18.844 health-pass app/web/r2: HTTP 200 in 384µs (8b4cfc86d2b9)",
+      "audit #38 19:15:19.586 health-pass app/web/r0: HTTP 200 in 405µs (adf35daa643b)",
+      "audit #39 19:15:19.629 node-revoke node/dh1r7qshqzxwer4elo45ywu5pzdsj: host-c revoked (chaos). New admission blocked; admitted processes are not killed by this record. (c93e7ca880cd)",
+      "audit #41 19:15:19.909 assignment-sign app/web/r2: running on host-d: placed web/r2 on host-d (9a2025fd9850)",
+      "audit #43 19:15:21.380 workload-start app/web/r2: allowed/running: signature, capability, generation, digest and local policy allow (pid 7583) (4f0127fc82ff)",
+      "audit #44 19:15:21.497 route-draining route/web.chaos.test: web/r2 on host-c: routing → draining (removed from routing table; finishing in-flight requests) (24e7e8b57ba6)",
+      "audit #45 19:15:22.501 route-routing route/web.chaos.test: web/r2 on host-d: draining → routing (edge probe over WireGuard passed (HTTP 200)) (9de564340eb5)",
+      "audit #46 19:15:23.206 health-pass app/web/r2: HTTP 200 in 398µs (acb2c6816608)",
+      "audit #47 19:15:23.248 assignment-stop app/web/r2: stopped on host-c: moved web/r2 from host-c to host-d (37a98aa0119f)",
+      "audit #48 19:15:23.938 workload-stop app/web/r2: allowed/stopped: signed stop accepted (9ea99e7e1b17)",
+      "audit chain verified: 48 entries, head 9ea99e7e1b17"
+    ],
+    "id": "revoked-host-1790277310801",
+    "injection": "revoke a host that serves a replica while traffic flows",
+    "invariant": "the revoked host keeps its admitted workload but is removed from the mesh and the edge routing table, the replica is rescheduled, and no request fails",
+    "measurements": {
+      "requests_failed": "0",
+      "requests_ok": "223",
+      "reschedule_ms": "4926",
+      "served_by_revoked_after_removal": "0"
+    },
+    "observed": "revoked host removed from routing and mesh; replica rescheduled; 223/223 requests OK; 0 routed to the revoked host after removal: true",
+    "recovery": [
+      {
+        "atMs": 0,
+        "event": "starting 1 control-plane member(s), 4 host(s), 1 edge(s)"
+      },
+      {
+        "atMs": 3829,
+        "event": "cluster ready"
+      },
+      {
+        "atMs": 8868,
+        "event": "revoked host-c"
+      },
+      {
+        "atMs": 13795,
+        "event": "replica 2 running on another host; host-c removed from routing"
+      }
+    ],
+    "scenario": "revoked-host",
+    "started": 1790277310801,
+    "title": "Host revocation under traffic",
+    "verdict": "PASS"
+  },
+  "sig": "hA9slqyp-uGWltvE2OIRDgEzKV1AyKrPqIkM3XpBIBhyLvMl7w-8A6vacJST6bEXMt1E13gxVKq8YbsABA3jDA"
+}

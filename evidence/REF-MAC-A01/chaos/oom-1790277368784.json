@@ -1,0 +1,49 @@
+{
+  "kind": "chaos-report",
+  "signer": "dh1bjtulwwvuuoekacve25espwffd",
+  "pub": "YJWKtmdwSx_E19iVMG7hU5upeOfH3WrKh-hlvsZSHfY",
+  "payload": {
+    "durationMs": 43805,
+    "environment": {
+      "arch": "amd64",
+      "cpus": "6",
+      "go": "go1.26.4",
+      "os": "darwin",
+      "topology": "1 control-plane member(s), 1 host(s), 0 edge(s)"
+    },
+    "evidence": [
+      "audit #9 19:16:15.220 assignment-sign app/hog/r0: running on host-a: placed hog/r0 on host-a (56ab0457b52a)",
+      "audit #10 19:16:19.617 workload-start app/hog/r0: allowed/running: signature, capability, generation, digest and local policy allow (pid 33499) (container d8f4e42086c5) (c2e67a0ae263)",
+      "audit #16 19:16:52.476 workload-oom app/hog/r0: allowed/oom-killed: signature, capability, generation, digest and local policy allow (pid 34069) (container 5665eb8ed23c… (6e1a8d0b137c)",
+      "audit chain verified: 17 entries, head c4332465ff10"
+    ],
+    "id": "oom-1790277368784",
+    "injection": "run a container limited to 32 MiB that allocates without bound",
+    "invariant": "the container runtime kills it (OOMKilled=true), the host reports oom-killed from runtime evidence, audits it, and restarts it with backoff",
+    "measurements": {},
+    "observed": "container OOM-killed by the runtime under a 32 MiB limit; reported and audited: true; restarted with backoff",
+    "recovery": [
+      {
+        "atMs": 31,
+        "event": "starting 1 control-plane member(s), 1 host(s), 0 edge(s)"
+      },
+      {
+        "atMs": 2753,
+        "event": "cluster ready"
+      },
+      {
+        "atMs": 6388,
+        "event": "using busybox@sha256:73aaf090f3d85aa34ee199857f03fa3a95c8ede2ffd4cc2cdb5b94e566b11662"
+      },
+      {
+        "atMs": 43760,
+        "event": "observed OOM-KILLED on host-a: signature, capability, generation, digest and local policy allow"
+      }
+    ],
+    "scenario": "oom",
+    "started": 1790277368784,
+    "title": "Out-of-memory kill (Docker runtime)",
+    "verdict": "PASS"
+  },
+  "sig": "PAFN7f85lLYdGhGYoMQl1jGACwO6Yk4TBK97zazZyNWIzOIKGegs7CLUstimHztq88hyXiaUbODMLJDn9BIyAg"
+}

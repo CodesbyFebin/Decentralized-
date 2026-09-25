@@ -1,0 +1,92 @@
+{
+  "kind": "chaos-report",
+  "signer": "dh1bjtulwwvuuoekacve25espwffd",
+  "pub": "YJWKtmdwSx_E19iVMG7hU5upeOfH3WrKh-hlvsZSHfY",
+  "payload": {
+    "durationMs": 35305,
+    "environment": {
+      "arch": "amd64",
+      "cpus": "6",
+      "go": "go1.26.4",
+      "os": "darwin",
+      "topology": "1 control-plane member(s), 4 host(s), 1 edge(s)"
+    },
+    "evidence": [
+      "audit #27 19:12:57.215 assignment-sign app/web/r0: running on host-a: placed web/r0 on host-a; placed web/r1 on host-b; placed web/r2 on host-c (50aad102e336)",
+      "audit #28 19:12:57.215 assignment-sign app/web/r1: running on host-b: placed web/r0 on host-a; placed web/r1 on host-b; placed web/r2 on host-c (4b63b76e7885)",
+      "audit #29 19:12:57.215 assignment-sign app/web/r2: running on host-c: placed web/r0 on host-a; placed web/r1 on host-b; placed web/r2 on host-c (2ef3dc83ee06)",
+      "audit #33 19:12:59.028 workload-start app/web/r0: allowed/running: signature, capability, generation, digest and local policy allow (pid 7410) (98cb0318cb91)",
+      "audit #34 19:12:59.151 workload-start app/web/r1: allowed/running: signature, capability, generation, digest and local policy allow (pid 7411) (eb897851f2c5)",
+      "audit #35 19:12:59.448 workload-start app/web/r2: allowed/running: signature, capability, generation, digest and local policy allow (pid 7412) (58c7f4b4633d)",
+      "audit #36 19:13:00.856 health-pass app/web/r0: HTTP 200 in 402µs (b3450b2984fe)",
+      "audit #37 19:13:01.005 health-pass app/web/r1: HTTP 200 in 1051µs (0dde194896c4)",
+      "audit #38 19:13:01.249 health-pass app/web/r2: HTTP 200 in 481µs (f6026311a6a4)",
+      "audit #39 19:13:02.854 route-ejected route/web.chaos.test: web/r0 on host-a: routing → ejected (request failed: context deadline exceeded) (42b59b7106a8)",
+      "audit #40 19:13:10.215 node-lost node/dh16oa6vtgpp4b3d63jrm3l4n3i2m: no signed observation for 8s; replicas will be rescheduled, admitted work on the host is not assumed dead (962e744b0b9f)",
+      "audit #41 19:13:10.660 assignment-sign app/web/r0: running on host-d: moved web/r0 from host-a to host-d; placed web/r0 on host-d (f05db1ee6b7e)",
+      "audit #42 19:13:10.660 assignment-stop app/web/r0: stopped on host-a: moved web/r0 from host-a to host-d; placed web/r0 on host-d (5e2f1ca6d42d)",
+      "audit #44 19:13:11.853 route-draining route/web.chaos.test: web/r0 on host-a: ejected → draining (control plane marked the replica draining; no new requests) (e81c1881522a)",
+      "audit #45 19:13:12.753 workload-start app/web/r0: allowed/running: signature, capability, generation, digest and local policy allow (pid 7420) (67c131574ee1)",
+      "audit #46 19:13:13.851 route-routing route/web.chaos.test: web/r0 on host-d: draining → routing (edge probe over WireGuard passed (HTTP 200)) (5db5cbf8e0aa)",
+      "audit #47 19:13:14.580 health-pass app/web/r0: HTTP 200 in 331µs (c9a920e9b9f3)",
+      "audit #48 19:13:26.836 route-draining route/web.chaos.test: web/r0 on host-a: routing → draining (control plane marked the replica draining; no new requests) (d1536c3558d0)",
+      "audit #49 19:13:27.049 node-recovered node/dh16oa6vtgpp4b3d63jrm3l4n3i2m: host-a is reporting again (ec3ca253e2bb)",
+      "audit #51 19:13:27.110 host-mode node/dh16oa6vtgpp4b3d63jrm3l4n3i2m: offline-hold: control plane unreachable or stale: control plane unreachable (chaos: connectivity dropped); admitted work… (72b3cdde2af3)",
+      "audit #52 19:13:27.187 workload-stop app/web/r0: allowed/stopped: signed stop accepted (6d89812111ec)",
+      "audit #53 19:13:27.187 host-mode node/dh16oa6vtgpp4b3d63jrm3l4n3i2m: normal:  (602e6b8d0b52)",
+      "audit chain verified: 53 entries, head 602e6b8d0b52"
+    ],
+    "id": "network-partition-1790277172085",
+    "injection": "drop every WireGuard packet to and from one host at the fault proxies and cut its control-plane channel for 25s, then heal",
+    "invariant": "the isolated host keeps its admitted workload, gossip suspects it, the control plane marks it lost and reschedules, no request fails, and after healing the cluster converges to exactly the desired replicas",
+    "measurements": {
+      "converged_after_heal_ms": "1314",
+      "gossip_suspect_ms": "0",
+      "marked_lost_ms": "9274",
+      "proxy_packets": "map[dropped:270 duplicated:0 forwarded:15527 reordered:0]",
+      "requests_failed": "0",
+      "requests_ok": "916",
+      "rescheduled_ms": "11775"
+    },
+    "observed": "gossip suspect 0s, lost 9.274s, rescheduled 11.776s; converged after heal; 916/916 requests OK",
+    "recovery": [
+      {
+        "atMs": 0,
+        "event": "starting 1 control-plane member(s), 4 host(s), 1 edge(s)"
+      },
+      {
+        "atMs": 4016,
+        "event": "cluster ready"
+      },
+      {
+        "atMs": 9005,
+        "event": "isolated host-a (WireGuard dropped both ways, control-plane channel cut)"
+      },
+      {
+        "atMs": 18241,
+        "event": "control plane marked host-a lost"
+      },
+      {
+        "atMs": 20743,
+        "event": "replica 0 running on host-d"
+      },
+      {
+        "atMs": 20743,
+        "event": "isolated host mode offline-hold, original workload alive: true"
+      },
+      {
+        "atMs": 33991,
+        "event": "partition healed"
+      },
+      {
+        "atMs": 35289,
+        "event": "old instance on host-a stopped by a signed stop; 3 replicas running"
+      }
+    ],
+    "scenario": "network-partition",
+    "started": 1790277172085,
+    "title": "Network partition of one host",
+    "verdict": "PASS"
+  },
+  "sig": "AsAm8YfuTBwgvrZOphgF8pTE5yk2f1w71EYXpoIjwgu8OLLJiGga-03zgHrYRN4i5fdKUZ-JlH8WdSFTNR57Bw"
+}

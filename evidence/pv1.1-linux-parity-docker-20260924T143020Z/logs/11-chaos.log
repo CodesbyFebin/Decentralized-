@@ -1,0 +1,114 @@
+=== attempt 1 at 2026-09-24T14:37:23Z: /evidence/bin/dh chaos run --scenario all --out /evidence/chaos
+▶ leader-crash — Control-plane leader crash
+         0ms  starting 3 control-plane member(s), 3 host(s), 1 edge(s)
+      2749ms  cluster ready
+      9710ms  SIGKILL leader cp-1
+     10912ms  cp-2 elected leader
+     10919ms  write committed through the new leader
+     13011ms  old leader restarted
+  PASS in 13s: new leader in 1201 ms; 188/188 requests succeeded during failover; audit 35 → 35 verified
+▶ cp-total-outage — Total control-plane outage
+         0ms  starting 1 control-plane member(s), 2 host(s), 1 edge(s)
+      2831ms  cluster ready
+      7848ms  SIGKILL cp-1
+     18390ms  host-a entered offline-hold: control plane unreachable or stale: control plane unreachable: Post "http://127.0.0.1:3200…
+     28394ms  workloads verified running with unchanged PIDs during the outage
+     28399ms  cp-1 restarted
+     29381ms  hosts reporting again
+  PASS in 31s: offline-hold entered, workloads untouched, 862/862 requests OK during outage, buffered observations flushed: true
+▶ host-crash — Host crash
+         0ms  starting 1 control-plane member(s), 4 host(s), 1 edge(s)
+      2625ms  cluster ready
+  FAIL in 37s: timed out after 30s waiting for edge routing 3 endpoint(s) for web.chaos.test
+▶ agent-restart — Host agent restart
+         0ms  starting 1 control-plane member(s), 2 host(s), 0 edge(s)
+      2197ms  cluster ready
+      5117ms  SIGKILL dh-noded on host-a
+      7122ms  dh-noded restarted
+  PASS in 11s: 1 workload(s) re-adopted with unchanged PIDs; ledger records re-adoption: true
+▶ journal-corruption — Host ledger corruption
+         0ms  starting 1 control-plane member(s), 2 host(s), 0 edge(s)
+      2037ms  cluster ready
+      5514ms  rewrote journal entry at line 3 of 4 on host-b (ledger head was 4)
+      5867ms  host-b mode ledger-corrupt: event-hash mismatch at seq 3
+      6786ms  new replica refused with LEDGER_CORRUPT
+      7326ms  operator sealed the journal: sealed /evidence/chaos/journal-corruption-1790260741865/host-b/journal.jsonl.sealed-1790260749185
+      8562ms  host-b admits work again on a new, verifying chain
+  PASS in 9s: break named (event-hash mismatch at seq 3); new work refused with LEDGER_CORRUPT; after an operator seal the host admitted the replica
+▶ network-partition — Network partition of one host
+         0ms  starting 1 control-plane member(s), 4 host(s), 1 edge(s)
+      2642ms  cluster ready
+      9346ms  isolated host-c (WireGuard dropped both ways, control-plane channel cut)
+     18263ms  control plane marked host-c lost
+     20730ms  replica 0 running on edge-1
+     20732ms  isolated host mode offline-hold, original workload alive: true
+     34346ms  partition healed
+     35280ms  old instance on host-c stopped by a signed stop; 3 replicas running
+  PASS in 35s: gossip suspect 0s, lost 8.921s, rescheduled 11.387s; converged after heal; 886/886 requests OK
+▶ packet-chaos — Packet loss, duplication, reordering and delay
+         0ms  starting 1 control-plane member(s), 3 host(s), 1 edge(s)
+      2233ms  cluster ready
+  FAIL in 36s: timed out after 30s waiting for edge routing 3 endpoint(s) for web.chaos.test
+▶ clock-skew — Host clock skew
+         0ms  starting 1 control-plane member(s), 2 host(s), 0 edge(s)
+      2246ms  cluster ready
+      5177ms  host-b clock offset +120000ms
+      6094ms  detected: bundle is 120002ms old on arrival: host clock ahead or plane slow; holding admitted work
+      6096ms  host-b clock offset -120000ms
+      6099ms  detected: bundle is 120002ms old on arrival: host clock ahead or plane slow; holding admitted work
+      6104ms  host-a clock offset -120000ms; scaling to 2
+      7025ms  new work refused on host-a with CLOCK_SKEW
+      7027ms  clocks restored
+  PASS in 9s: skew detected in both directions from bundle timestamps; admitted workload (pid 13623) held; new work refused with CLOCK_SKEW; both replicas running after correction
+▶ stale-generation — Rollout while a host is cut off
+         0ms  starting 1 control-plane member(s), 3 host(s), 1 edge(s)
+      2389ms  cluster ready
+  FAIL in 37s: timed out after 30s waiting for edge routing 3 endpoint(s) for web.chaos.test
+▶ replay-forgery — Replayed, forged and tampered observations
+         0ms  starting 1 control-plane member(s), 2 host(s), 0 edge(s)
+      1928ms  cluster ready
+      6220ms  replay → {"results":[{"seq":6,"status":"rejected","reason":"replay detected: seq 6, last accepted 6"}]}
+
+      6222ms  foreign key → {"results":[{"seq":1000006,"status":"rejected","reason":"wrong host key"}]}
+
+      6223ms  tampered → {"results":[{"seq":6,"status":"rejected","reason":"signature does not verify"}]}
+
+  PASS in 6s: replay, foreign-key and tampered observations rejected with specific reasons; state unchanged
+▶ revoked-host — Host revocation under traffic
+         0ms  starting 1 control-plane member(s), 4 host(s), 1 edge(s)
+      2219ms  cluster ready
+      8145ms  revoked host-b
+     13093ms  replica 2 running on another host; host-b removed from routing
+  PASS in 16s: revoked host removed from routing and mesh; replica rescheduled; 216/216 requests OK; 0 routed to the revoked host after removal: true
+▶ storage-replica-loss — Loss of a storage replica
+         0ms  starting 1 control-plane member(s), 4 host(s), 1 edge(s)
+      2402ms  cluster ready
+     13629ms  deleted all stored objects on edge-1
+  PASS in 17s: 28 object(s) repaired on edge-1 with verified evidence in 3691 ms; data identical
+▶ disk-full — Disk full on a replica (injected ENOSPC)
+         0ms  starting 1 control-plane member(s), 4 host(s), 1 edge(s)
+      2487ms  cluster ready
+     13509ms  ENOSPC injected on edge-1
+     17356ms  reported DEGRADED: 2/3 replicas verified; anti-entropy is repairing
+     17360ms  ENOSPC cleared
+  PASS in 20s: volume shown DEGRADED while edge-1 was full (DEGRADED: 2/3 replicas verified; anti-entropy is repairing); HEALTHY after recovery; data intact
+▶ oom — Out-of-memory kill (Docker runtime)
+  SKIP in 0s: prerequisite docker unavailable: docker daemon not reachable
+▶ interrupted-deployment — Leader crash during a rolling update
+         0ms  starting 3 control-plane member(s), 3 host(s), 1 edge(s)
+      2644ms  cluster ready
+      8573ms  generation 2 applied
+      9813ms  SIGKILL leader cp-1 mid-rollout
+     12727ms  all replicas at generation 2
+  FAIL in 15s: rollout resumed by the new leader and completed; 222/224 requests OK — 2 requests failed during the interrupted rollout
+▶ interrupted-storage-write — Host killed during a storage write
+         0ms  starting 1 control-plane member(s), 4 host(s), 1 edge(s)
+      2509ms  cluster ready
+     16520ms  killed host-d while the snapshot was pending
+  PASS in 29s: committed data intact; interrupted write absent (rolled back to the committed snapshot)
+▶ postgres-outage — Evidence database outage
+  SKIP in 0s: prerequisite docker unavailable: docker daemon not reachable
+
+11 PASS, 4 FAIL, 2 SKIP — signed reports in /evidence/chaos (runner key dh1yuddwefxapnm7vzneqynsvrtgo)
+dh: 4 scenario(s) failed
+=== exit 1: exit status 1

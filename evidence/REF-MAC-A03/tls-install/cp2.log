@@ -1,0 +1,3 @@
+member dh1duvqhxjwzkdgix5atubwbybbqe awaiting bootstrap or join; one-time code in /Users/cyberteck/Desktop/Decentralized/decentralized.host/evidence/REF-MAC-A03/tls-install/cp2/bootstrap.code
+2026/09/25 01:28:06 dh-control awaiting bootstrap over TLS; certificate fingerprint sha256:0f75c613ff8ba7bf45c5017216a256011cc4b30aebce344aaae0f47289be892e (also in /Users/cyberteck/Desktop/Decentralized/decentralized.host/evidence/REF-MAC-A03/tls-install/cp2/bootstrap.fingerprint)
+2026/09/25 01:28:06 dh-control member dh1duvqhxjwzkdgix5atubwbybbqe serving API on 127.0.0.1:37702 (raft 127.0.0.1:37802)
