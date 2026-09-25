@@ -1,0 +1,78 @@
+{
+  "kind": "chaos-report",
+  "signer": "dh1m55lxqetmj7w72rdag6gbfmkw2",
+  "pub": "sWodPENZXPdcxHDIKfOpr38qd2WF_47znQBWZsHuLuI",
+  "payload": {
+    "durationMs": 26146,
+    "environment": {
+      "arch": "amd64",
+      "cpus": "6",
+      "go": "go1.26.4",
+      "os": "darwin",
+      "topology": "3 control-plane member(s), 3 host(s), 1 edge(s)"
+    },
+    "evidence": [
+      "audit #2 18:04:01.167 roster-update cluster/chaos: roster v2: dh1sa2tzfqtj7gk2wjaou4bzdoav5, dh1ha7r5jbzlii54lukl2mvzmitni (40d036c293db)",
+      "audit #3 18:04:01.642 roster-update cluster/chaos: roster v3: dh1sa2tzfqtj7gk2wjaou4bzdoav5, dh1ha7r5jbzlii54lukl2mvzmitni, dh1iti7xvocqinvonekvjusvwfbmj (eb6c96d6acad)",
+      "audit #27 18:04:06.648 assignment-sign app/web/r0: running on host-a: placed web/r0 on host-a; placed web/r1 on host-b; placed web/r2 on host-c (4ebc256f8004)",
+      "audit #28 18:04:06.648 assignment-sign app/web/r1: running on host-b: placed web/r0 on host-a; placed web/r1 on host-b; placed web/r2 on host-c (1f8af0244fd7)",
+      "audit #29 18:04:06.648 assignment-sign app/web/r2: running on host-c: placed web/r0 on host-a; placed web/r1 on host-b; placed web/r2 on host-c (77200837fd9a)",
+      "audit #33 18:04:08.216 workload-start app/web/r0: allowed/running: signature, capability, generation, digest and local policy allow (pid 2572) (97bca9d3c930)",
+      "audit #34 18:04:08.932 workload-start app/web/r2: allowed/running: signature, capability, generation, digest and local policy allow (pid 2573) (40d5e395fd92)",
+      "audit #35 18:04:09.626 workload-start app/web/r1: allowed/running: signature, capability, generation, digest and local policy allow (pid 2575) (2dd3f4f80ecb)",
+      "audit #36 18:04:10.043 health-pass app/web/r0: HTTP 200 in 734µs (3245506bf119)",
+      "audit #37 18:04:10.453 route-routing route/web.chaos.test: web/r0 on host-a: ejected → routing (edge probe over WireGuard passed (HTTP 200)) (7ad7dc9d7cdb)",
+      "audit #38 18:04:11.435 route-ejected route/web.chaos.test: web/r2 on host-c: pending → ejected (2 consecutive edge probes failed: Get \"http://10.77.0.3:20000/healthz\": read tcp … (7655c789f1fb)",
+      "audit #39 18:04:12.453 route-ejected route/web.chaos.test: web/r1 on host-b: pending → ejected (2 consecutive edge probes failed: Get \"http://10.77.0.2:20000/healthz\": EOF) (ae5c78f7b72e)",
+      "audit #40 18:04:18.420 health-pass app/web/r1: HTTP 200 in 376µs (a83ca5938596)",
+      "audit #41 18:04:18.476 route-routing route/web.chaos.test: web/r1 on host-b: ejected → routing (edge probe over WireGuard passed (HTTP 200)) (0ee29e888193)",
+      "audit #42 18:04:18.476 route-routing route/web.chaos.test: web/r2 on host-c: ejected → routing (edge probe over WireGuard passed (HTTP 200)) (3c5f2c3e8a50)",
+      "audit #44 18:04:18.780 health-pass app/web/r2: HTTP 200 in 340µs (ad948512c878)",
+      "audit #45 18:04:18.854 assignment-sign app/web/r0: running on host-a: rolling update waiting for maxUnavailable budget; rolling web/r0 to generation 2 (8857914f9893)",
+      "audit #47 18:04:20.352 assignment-sign app/web/r1: running on host-b: rolling update waiting for maxUnavailable budget; rolling web/r1 to generation 2 (96b06ca0483f)",
+      "audit #48 18:04:22.444 route-draining route/web.chaos.test: web/r0 on host-a: routing → draining (control plane marked the replica draining; no new requests) (409716fc79c9)",
+      "audit #49 18:04:22.528 route-routing route/web.chaos.test: web/r0 on host-a: draining → routing (edge probe over WireGuard passed (HTTP 200)) (eba63e5dd878)",
+      "audit #51 18:04:23.268 assignment-sign app/web/r2: running on host-c: rolling web/r2 to generation 2 (e5388a342ecf)",
+      "audit #52 18:04:23.500 route-draining route/web.chaos.test: web/r1 on host-b: routing → draining (control plane marked the replica draining; no new requests) (e0f41ee0acab)",
+      "audit #54 18:04:24.443 route-routing route/web.chaos.test: web/r1 on host-b: draining → routing (edge probe over WireGuard passed (HTTP 200)) (01e1cf4d5932)",
+      "audit #55 18:04:24.443 route-draining route/web.chaos.test: web/r2 on host-c: routing → draining (control plane marked the replica draining; no new requests) (c9e067e4eab0)",
+      "audit #56 18:04:25.443 route-routing route/web.chaos.test: web/r2 on host-c: draining → routing (edge probe over WireGuard passed (HTTP 200)) (a0ea335063c9)",
+      "audit chain verified: 56 entries, head a0ea335063c9"
+    ],
+    "id": "interrupted-deployment-1790273039846",
+    "injection": "apply a new generation and SIGKILL the raft leader as soon as the first replica has rolled",
+    "invariant": "the new leader resumes the rollout, it completes, and requests keep succeeding (maxUnavailable respected)",
+    "measurements": {
+      "requests_failed": "0",
+      "requests_ok": "274"
+    },
+    "observed": "rollout resumed by the new leader and completed; 274/274 requests OK",
+    "recovery": [
+      {
+        "atMs": 0,
+        "event": "starting 3 control-plane member(s), 3 host(s), 1 edge(s)"
+      },
+      {
+        "atMs": 5967,
+        "event": "cluster ready"
+      },
+      {
+        "atMs": 18999,
+        "event": "generation 2 applied"
+      },
+      {
+        "atMs": 20626,
+        "event": "SIGKILL leader cp-1 mid-rollout"
+      },
+      {
+        "atMs": 24129,
+        "event": "all replicas at generation 2"
+      }
+    ],
+    "scenario": "interrupted-deployment",
+    "started": 1790273039846,
+    "title": "Leader crash during a rolling update",
+    "verdict": "PASS"
+  },
+  "sig": "OCCNQ2uF9aAL1mg-t9FXXRdRh1xEdOcmWgqtHsO25UXpsTnhxeoNMUK63tKcOTF81sOUl8qoNEHhbshSL0FpBQ"
+}

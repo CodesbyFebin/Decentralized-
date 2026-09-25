@@ -1,0 +1,84 @@
+{
+  "kind": "chaos-report",
+  "signer": "dh1m55lxqetmj7w72rdag6gbfmkw2",
+  "pub": "sWodPENZXPdcxHDIKfOpr38qd2WF_47znQBWZsHuLuI",
+  "payload": {
+    "durationMs": 30938,
+    "environment": {
+      "arch": "amd64",
+      "cpus": "6",
+      "go": "go1.26.4",
+      "os": "darwin",
+      "topology": "1 control-plane member(s), 3 host(s), 1 edge(s)"
+    },
+    "evidence": [
+      "audit #23 12:32:46.211 assignment-sign app/web/r0: running on host-a: placed web/r0 on host-a; placed web/r1 on host-c; placed web/r2 on host-b (c27fce2ef37a)",
+      "audit #24 12:32:46.211 assignment-sign app/web/r1: running on host-c: placed web/r0 on host-a; placed web/r1 on host-c; placed web/r2 on host-b (9ea0fe7b2c91)",
+      "audit #25 12:32:46.211 assignment-sign app/web/r2: running on host-b: placed web/r0 on host-a; placed web/r1 on host-c; placed web/r2 on host-b (c619d23c9ea2)",
+      "audit #29 12:32:48.285 workload-start app/web/r0: allowed/running: signature, capability, generation, digest and local policy allow (pid 28816) (bac954e89ffa)",
+      "audit #30 12:32:48.285 workload-start app/web/r1: allowed/running: signature, capability, generation, digest and local policy allow (pid 28817) (757ade702425)",
+      "audit #31 12:32:48.341 workload-start app/web/r2: allowed/running: signature, capability, generation, digest and local policy allow (pid 28818) (e703b093870f)",
+      "audit #32 12:32:50.053 health-pass app/web/r0: HTTP 200 in 524µs (46b27346a487)",
+      "audit #33 12:32:50.110 health-pass app/web/r1: HTTP 200 in 565µs (8f6a87c3daba)",
+      "audit #34 12:32:50.149 health-pass app/web/r2: HTTP 200 in 436µs (c6d0e7796af1)",
+      "audit #36 12:32:51.150 assignment-sign app/web/r0: running on host-a: rolling update waiting for maxUnavailable budget; rolling web/r0 to generation 2 (caae89d7cad9)",
+      "audit #37 12:32:52.155 route-ejected route/web.chaos.test: web/r0 on host-a: routing → ejected (request failed: EOF) (9e5aa49b5eb9)",
+      "audit #39 12:32:53.133 route-draining route/web.chaos.test: web/r0 on host-a: ejected → draining (control plane marked the replica draining; no new requests) (db31eaa7af2e)",
+      "audit #40 12:32:53.151 assignment-sign app/web/r1: running on host-c: rolling update waiting for maxUnavailable budget; rolling web/r1 to generation 2 (8607f25b522d)",
+      "audit #41 12:32:54.136 route-routing route/web.chaos.test: web/r0 on host-a: draining → routing (edge probe over WireGuard passed (HTTP 200)) (cc937ecc7d11)",
+      "audit #42 12:32:55.136 route-draining route/web.chaos.test: web/r1 on host-c: routing → draining (control plane marked the replica draining; no new requests) (27648e89460e)",
+      "audit #43 12:33:06.150 node-lost node/dh1n7sl4vl24zmjzh2je5il3ogife: no signed observation for 15s; replicas will be rescheduled, admitted work on the host is not assumed dead (b43abc20d119)",
+      "audit #44 12:33:06.454 assignment-sign app/web/r1: running on edge-1: moved web/r1 from host-c to edge-1; placed web/r1 on edge-1; rolling update waiting for maxUnavailabl… (ccc5df4bc543)",
+      "audit #45 12:33:06.454 assignment-stop app/web/r1: stopped on host-c: moved web/r1 from host-c to edge-1; placed web/r1 on edge-1; rolling update waiting for maxUnavailabl… (c08407f59a85)",
+      "audit #47 12:33:08.370 workload-start app/web/r1: allowed/running: signature, capability, generation, digest and local policy allow (pid 28820) (0ac9e702e0b0)",
+      "audit #48 12:33:09.247 node-recovered node/dh1n7sl4vl24zmjzh2je5il3ogife: host-c is reporting again (f44014e65c2a)",
+      "audit #50 12:33:09.310 host-mode node/dh1n7sl4vl24zmjzh2je5il3ogife: offline-hold: control plane unreachable or stale: control plane unreachable (chaos: connectivity dropped); admitted work… (fccc5ec5edfd)",
+      "audit #51 12:33:09.353 workload-stop app/web/r1: allowed/stopped: signed stop accepted (ca154c4a1ab4)",
+      "audit #52 12:33:09.353 host-mode node/dh1n7sl4vl24zmjzh2je5il3ogife: normal:  (8b520d5efc4f)",
+      "audit #53 12:33:10.191 health-pass app/web/r1: HTTP 200 in 447µs (45fbce947d1f)",
+      "audit #54 12:33:10.191 route-ejected route/web.chaos.test: web/r1 on edge-1: draining → ejected (2 consecutive edge probes failed: Get \"http://10.77.0.4:20000/healthz\": EOF) (ed6df0ec5e9e)",
+      "audit #55 12:33:11.151 assignment-sign app/web/r2: running on host-b: rolling web/r2 to generation 2 (a6f4e0e11026)",
+      "audit #56 12:33:12.151 route-ejected route/web.chaos.test: web/r2 on host-b: routing → ejected (request failed: EOF) (3cf1ca465e93)",
+      "audit chain verified: 57 entries, head f61bc0651d7c"
+    ],
+    "id": "stale-generation-1790253161718",
+    "injection": "cut one host from the control plane, roll the app to a new generation, heal",
+    "invariant": "the cut-off host keeps the generation it admitted (never runs an unsigned one), the console shows it as stale, other hosts roll within maxUnavailable, and after healing every replica runs the new generation",
+    "measurements": {
+      "requests_failed": "0",
+      "requests_ok": "814"
+    },
+    "observed": "cut-off host held generation 1 until healed; rollout completed; 814/814 requests OK",
+    "recovery": [
+      {
+        "atMs": 0,
+        "event": "starting 1 control-plane member(s), 3 host(s), 1 edge(s)"
+      },
+      {
+        "atMs": 3712,
+        "event": "cluster ready"
+      },
+      {
+        "atMs": 8635,
+        "event": "host-c cut from the control plane"
+      },
+      {
+        "atMs": 8677,
+        "event": "applied generation 2: web: template changed; rolling update to a new generation (generation 2)"
+      },
+      {
+        "atMs": 26838,
+        "event": "cut-off host still runs generation 1 (stale evidence shown: true)"
+      },
+      {
+        "atMs": 26860,
+        "event": "healed"
+      }
+    ],
+    "scenario": "stale-generation",
+    "started": 1790253161718,
+    "title": "Rollout while a host is cut off",
+    "verdict": "PASS"
+  },
+  "sig": "L9WN1mlzevUpd3nvhSfKGhS0II2C_PqAmGvjW2g00faK-M704M7EITchpa3GEJshSxSpfIe3OMyLETVWeHcvCQ"
+}

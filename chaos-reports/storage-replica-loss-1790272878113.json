@@ -1,0 +1,51 @@
+{
+  "kind": "chaos-report",
+  "signer": "dh1m55lxqetmj7w72rdag6gbfmkw2",
+  "pub": "sWodPENZXPdcxHDIKfOpr38qd2WF_47znQBWZsHuLuI",
+  "payload": {
+    "durationMs": 18630,
+    "environment": {
+      "arch": "amd64",
+      "cpus": "6",
+      "go": "go1.26.4",
+      "os": "darwin",
+      "topology": "1 control-plane member(s), 4 host(s), 1 edge(s)"
+    },
+    "evidence": [
+      "audit #28 18:01:22.524 assignment-sign app/kv/r0: running on host-a: placed kv/r0 on host-a (45ec0fab80dd)",
+      "audit #30 18:01:24.803 workload-start app/kv/r0: allowed/running: signature, capability, generation, digest and local policy allow (pid 2208) (cefe3f645b38)",
+      "audit #32 18:01:26.624 health-pass app/kv/r0: HTTP 200 in 346µs (6e0c432c6692)",
+      "audit #33 18:01:28.396 snapshot-commit volume/kv/data/r0: c492d4818955 committed: 2 verified replica(s) (quorum 2); previous - (a294d06e6ae8)",
+      "audit #35 18:01:32.445 snapshot-commit volume/kv/data/r0: ee427ee177a4 committed: 2 verified replica(s) (quorum 2); previous c492d4818955 (564a39f26b6c)",
+      "audit #36 18:01:36.496 storage-repair volume/kv/data/r0: anti-entropy: 28 object(s) repaired and verified, 0 failed; from host-a; local root 568061565acb, peer root 2d1bcf7133f5 (822724fc45bd)",
+      "audit chain verified: 36 entries, head 822724fc45bd"
+    ],
+    "id": "storage-replica-loss-1790272878113",
+    "injection": "delete every stored object on one replica host while it runs",
+    "invariant": "anti-entropy detects the missing objects by Merkle comparison, repairs them from peers with signed evidence, and the volume returns to HEALTHY with identical data",
+    "measurements": {
+      "objects_repaired": "28",
+      "repair_ms": "4010"
+    },
+    "observed": "28 object(s) repaired on host-d with verified evidence in 4010 ms; data identical",
+    "recovery": [
+      {
+        "atMs": 0,
+        "event": "starting 1 control-plane member(s), 4 host(s), 1 edge(s)"
+      },
+      {
+        "atMs": 3709,
+        "event": "cluster ready"
+      },
+      {
+        "atMs": 14596,
+        "event": "deleted all stored objects on host-d"
+      }
+    ],
+    "scenario": "storage-replica-loss",
+    "started": 1790272878113,
+    "title": "Loss of a storage replica",
+    "verdict": "PASS"
+  },
+  "sig": "i4tBzQTMGKbGyitVHorC95mWpJaSSi4Qlyl8LvKT-luEfyzhW8F2halWgyXHNJV0UBTyOvMD8eV9lVS-FGoLBA"
+}

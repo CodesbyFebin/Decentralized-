@@ -1,0 +1,56 @@
+{
+  "kind": "chaos-report",
+  "signer": "dh1m55lxqetmj7w72rdag6gbfmkw2",
+  "pub": "sWodPENZXPdcxHDIKfOpr38qd2WF_47znQBWZsHuLuI",
+  "payload": {
+    "durationMs": 6230,
+    "environment": {
+      "arch": "amd64",
+      "cpus": "6",
+      "go": "go1.26.4",
+      "os": "darwin",
+      "topology": "1 control-plane member(s), 2 host(s), 0 edge(s)"
+    },
+    "evidence": [
+      "audit #15 13:33:39.880 assignment-sign app/web/r0: running on host-a: placed web/r0 on host-a; placed web/r1 on host-b (8d93b951c009)",
+      "audit #16 13:33:39.880 assignment-sign app/web/r1: running on host-b: placed web/r0 on host-a; placed web/r1 on host-b (de51aeeb0c90)",
+      "audit #19 13:33:42.017 workload-start app/web/r0: allowed/running: signature, capability, generation, digest and local policy allow (pid 34484) (07d2e5bb379e)",
+      "audit #20 13:33:42.113 workload-start app/web/r1: allowed/running: signature, capability, generation, digest and local policy allow (pid 34485) (6703c1f80e41)",
+      "audit chain verified: 20 entries, head 6703c1f80e41"
+    ],
+    "id": "replay-forgery-1790256816109",
+    "injection": "resend a committed host observation; send one signed by a foreign key; send one with a flipped field",
+    "invariant": "each is rejected with a specific reason and recorded; the host's real state is unchanged",
+    "measurements": {
+      "rejection_reasons": "[signature does not verify wrong host key replay detected]"
+    },
+    "observed": "replay, foreign-key and tampered observations rejected with specific reasons; state unchanged",
+    "recovery": [
+      {
+        "atMs": 0,
+        "event": "starting 1 control-plane member(s), 2 host(s), 0 edge(s)"
+      },
+      {
+        "atMs": 3130,
+        "event": "cluster ready"
+      },
+      {
+        "atMs": 6224,
+        "event": "replay → {\"results\":[{\"seq\":5,\"status\":\"rejected\",\"reason\":\"replay detected: seq 5, last accepted 5\"}]}\n"
+      },
+      {
+        "atMs": 6226,
+        "event": "foreign key → {\"results\":[{\"seq\":1000005,\"status\":\"rejected\",\"reason\":\"wrong host key\"}]}\n"
+      },
+      {
+        "atMs": 6227,
+        "event": "tampered → {\"results\":[{\"seq\":5,\"status\":\"rejected\",\"reason\":\"signature does not verify\"}]}\n"
+      }
+    ],
+    "scenario": "replay-forgery",
+    "started": 1790256816109,
+    "title": "Replayed, forged and tampered observations",
+    "verdict": "PASS"
+  },
+  "sig": "AHyolrVuwiJxLsrC_ZWS_AgdI1xk1qjcKoQAv1uHca3m7qkEF0rZBj6ehSrn4z02BozZZ7o8fS3Sgg-FF93NBg"
+}

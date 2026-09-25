@@ -1,0 +1,79 @@
+{
+  "kind": "chaos-report",
+  "signer": "dh1m55lxqetmj7w72rdag6gbfmkw2",
+  "pub": "sWodPENZXPdcxHDIKfOpr38qd2WF_47znQBWZsHuLuI",
+  "payload": {
+    "durationMs": 28025,
+    "environment": {
+      "arch": "amd64",
+      "cpus": "6",
+      "go": "go1.26.4",
+      "os": "darwin",
+      "topology": "1 control-plane member(s), 3 host(s), 1 edge(s)"
+    },
+    "evidence": [
+      "audit #23 12:36:52.837 assignment-sign app/web/r0: running on host-a: placed web/r0 on host-a; placed web/r1 on host-b; placed web/r2 on host-c (dbabff8fa21c)",
+      "audit #24 12:36:52.837 assignment-sign app/web/r1: running on host-b: placed web/r0 on host-a; placed web/r1 on host-b; placed web/r2 on host-c (ad87e740a0b9)",
+      "audit #25 12:36:52.837 assignment-sign app/web/r2: running on host-c: placed web/r0 on host-a; placed web/r1 on host-b; placed web/r2 on host-c (8281fe5c912f)",
+      "audit #29 12:36:54.553 workload-start app/web/r0: allowed/running: signature, capability, generation, digest and local policy allow (pid 29211) (1d52bca11c93)",
+      "audit #30 12:36:54.656 workload-start app/web/r1: allowed/running: signature, capability, generation, digest and local policy allow (pid 29212) (d00398d2feb0)",
+      "audit #31 12:36:54.899 workload-start app/web/r2: allowed/running: signature, capability, generation, digest and local policy allow (pid 29213) (e0cc7c5fe5af)",
+      "audit #33 12:36:56.379 health-pass app/web/r0: HTTP 200 in 342µs (51a205d30017)",
+      "audit #34 12:36:56.687 health-pass app/web/r2: HTTP 200 in 550µs (58846ba2fc6e)",
+      "audit #35 12:37:11.165 node-lost node/dh1ofcql3waddl6mlpf3tddrp2eiu: no signed observation for 15s; replicas will be rescheduled, admitted work on the host is not assumed dead (0b0c93df4d3c)",
+      "audit #36 12:37:11.443 assignment-sign app/web/r1: running on edge-1: moved web/r1 from host-b to edge-1; placed web/r1 on edge-1; rolling update waiting for maxUnavailabl… (27f2d1b4abbb)",
+      "audit #37 12:37:11.443 assignment-stop app/web/r1: stopped on host-b: moved web/r1 from host-b to edge-1; placed web/r1 on edge-1; rolling update waiting for maxUnavailabl… (e5b01287324d)",
+      "audit #39 12:37:13.163 workload-start app/web/r1: allowed/running: signature, capability, generation, digest and local policy allow (pid 29220) (47ed739cfb64)",
+      "audit #40 12:37:13.163 route-draining route/web.chaos.test: web/r1 on host-b: routing → draining (control plane marked the replica draining; no new requests) (c6a0a702f0ce)",
+      "audit #41 12:37:15.006 health-pass app/web/r1: HTTP 200 in 922µs (04dd581ed922)",
+      "audit #43 12:37:15.050 assignment-sign app/web/r0: running on host-a: rolling update waiting for maxUnavailable budget; rolling web/r0 to generation 2 (e32f35533006)",
+      "audit #45 12:37:15.692 assignment-sign app/web/r2: running on host-c: rolling web/r2 to generation 2 (9b8343a3ae92)",
+      "audit #46 12:37:16.001 route-ejected route/web.chaos.test: web/r1 on edge-1: draining → ejected (2 consecutive edge probes failed: Get \"http://10.77.0.4:20000/healthz\": EOF) (1bb729311e0c)",
+      "audit #47 12:37:16.573 node-recovered node/dh1ofcql3waddl6mlpf3tddrp2eiu: host-b is reporting again (67fbb924c019)",
+      "audit #48 12:37:16.573 health-pass app/web/r1: HTTP 200 in 504µs (ac0c8bf29f7b)",
+      "audit #50 12:37:16.650 host-mode node/dh1ofcql3waddl6mlpf3tddrp2eiu: offline-hold: control plane unreachable or stale: control plane unreachable (chaos: connectivity dropped); admitted work… (d2d5dd09fdda)",
+      "audit #51 12:37:16.694 workload-stop app/web/r1: allowed/stopped: signed stop accepted (af97d7179953)",
+      "audit #52 12:37:16.694 host-mode node/dh1ofcql3waddl6mlpf3tddrp2eiu: normal:  (a8bb19996f05)",
+      "audit chain verified: 52 entries, head a8bb19996f05"
+    ],
+    "id": "stale-generation-1790253409053",
+    "injection": "cut one host from the control plane, roll the app to a new generation, heal",
+    "invariant": "the cut-off host keeps the generation it admitted (never runs an unsigned one), the console shows it as stale, other hosts roll within maxUnavailable, and after healing every replica runs the new generation",
+    "measurements": {
+      "requests_failed": "0",
+      "requests_ok": "761"
+    },
+    "observed": "cut-off host held generation 1 until healed; rollout completed; 761/761 requests OK",
+    "recovery": [
+      {
+        "atMs": 0,
+        "event": "starting 1 control-plane member(s), 3 host(s), 1 edge(s)"
+      },
+      {
+        "atMs": 3159,
+        "event": "cluster ready"
+      },
+      {
+        "atMs": 7210,
+        "event": "host-b cut from the control plane"
+      },
+      {
+        "atMs": 7252,
+        "event": "applied generation 2: web: template changed; rolling update to a new generation (generation 2)"
+      },
+      {
+        "atMs": 26637,
+        "event": "cut-off host still runs generation 1 (stale evidence shown: true)"
+      },
+      {
+        "atMs": 26718,
+        "event": "healed"
+      }
+    ],
+    "scenario": "stale-generation",
+    "started": 1790253409053,
+    "title": "Rollout while a host is cut off",
+    "verdict": "PASS"
+  },
+  "sig": "yX22WyTyd7udwiZZgS9Mr3DGEP6dwi0X58xJffscGF1ds2ox_kXqbS5GWg1aJH8nVvj3bE2klHgzXH9-n2D-AA"
+}

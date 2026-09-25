@@ -1,0 +1,69 @@
+{
+  "kind": "chaos-report",
+  "signer": "dh1m55lxqetmj7w72rdag6gbfmkw2",
+  "pub": "sWodPENZXPdcxHDIKfOpr38qd2WF_47znQBWZsHuLuI",
+  "payload": {
+    "durationMs": 15798,
+    "environment": {
+      "arch": "amd64",
+      "cpus": "6",
+      "go": "go1.26.4",
+      "os": "darwin",
+      "topology": "1 control-plane member(s), 4 host(s), 1 edge(s)"
+    },
+    "evidence": [
+      "audit #27 18:01:05.775 assignment-sign app/web/r0: running on host-a: placed web/r0 on host-a; placed web/r1 on host-b; placed web/r2 on host-c (4a707b0210bb)",
+      "audit #28 18:01:05.775 assignment-sign app/web/r1: running on host-b: placed web/r0 on host-a; placed web/r1 on host-b; placed web/r2 on host-c (d6c7c6a3126a)",
+      "audit #29 18:01:05.775 assignment-sign app/web/r2: running on host-c: placed web/r0 on host-a; placed web/r1 on host-b; placed web/r2 on host-c (ebc070309b11)",
+      "audit #33 18:01:07.210 workload-start app/web/r2: allowed/running: signature, capability, generation, digest and local policy allow (pid 2167) (5a4edfcc390a)",
+      "audit #34 18:01:07.927 workload-start app/web/r0: allowed/running: signature, capability, generation, digest and local policy allow (pid 2170) (4f568a0a5f9a)",
+      "audit #35 18:01:08.042 workload-start app/web/r1: allowed/running: signature, capability, generation, digest and local policy allow (pid 2171) (b2011154b6b4)",
+      "audit #36 18:01:09.050 health-pass app/web/r2: HTTP 200 in 315µs (00961968eff3)",
+      "audit #37 18:01:09.737 health-pass app/web/r0: HTTP 200 in 554µs (b7725b8b3b87)",
+      "audit #38 18:01:09.871 health-pass app/web/r1: HTTP 200 in 300µs (a681b8acc86e)",
+      "audit #39 18:01:10.038 node-revoke node/dh1tmczkjpgdmctkezfsfslu232o3: host-c revoked (chaos). New admission blocked; admitted processes are not killed by this record. (dac68514062c)",
+      "audit #40 18:01:10.135 assignment-sign app/web/r2: running on host-d: placed web/r2 on host-d (ac2036aa5bac)",
+      "audit #43 18:01:11.436 workload-start app/web/r2: allowed/running: signature, capability, generation, digest and local policy allow (pid 2175) (5474c89d3460)",
+      "audit #44 18:01:11.885 route-draining route/web.chaos.test: web/r2 on host-c: routing → draining (removed from routing table; finishing in-flight requests) (60c6aafef173)",
+      "audit #45 18:01:12.867 route-routing route/web.chaos.test: web/r2 on host-d: draining → routing (edge probe over WireGuard passed (HTTP 200)) (532e446d8e68)",
+      "audit #46 18:01:13.265 health-pass app/web/r2: HTTP 200 in 472µs (3d75a2c22398)",
+      "audit #47 18:01:13.309 assignment-stop app/web/r2: stopped on host-c: moved web/r2 from host-c to host-d (58b503c866a8)",
+      "audit #48 18:01:13.866 route-routing route/web.chaos.test: web/r2 on host-d: draining → routing (edge probe over WireGuard passed (HTTP 200)) (b4a835783a43)",
+      "audit #49 18:01:14.126 workload-stop app/web/r2: allowed/stopped: signed stop accepted (f290b32ebafa)",
+      "audit chain verified: 49 entries, head f290b32ebafa"
+    ],
+    "id": "revoked-host-1790272861382",
+    "injection": "revoke a host that serves a replica while traffic flows",
+    "invariant": "the revoked host keeps its admitted workload but is removed from the mesh and the edge routing table, the replica is rescheduled, and no request fails",
+    "measurements": {
+      "requests_failed": "0",
+      "requests_ok": "193",
+      "reschedule_ms": "4042",
+      "served_by_revoked_after_removal": "0"
+    },
+    "observed": "revoked host removed from routing and mesh; replica rescheduled; 193/193 requests OK; 0 routed to the revoked host after removal: true",
+    "recovery": [
+      {
+        "atMs": 0,
+        "event": "starting 1 control-plane member(s), 4 host(s), 1 edge(s)"
+      },
+      {
+        "atMs": 3669,
+        "event": "cluster ready"
+      },
+      {
+        "atMs": 8752,
+        "event": "revoked host-c"
+      },
+      {
+        "atMs": 12794,
+        "event": "replica 2 running on another host; host-c removed from routing"
+      }
+    ],
+    "scenario": "revoked-host",
+    "started": 1790272861382,
+    "title": "Host revocation under traffic",
+    "verdict": "PASS"
+  },
+  "sig": "aWaI88OLmNPM5Fo4naHRkHhrRp8iVO-DEPaaBSZB-evgr04rs1cuE8eMfuUfk6SrX4sZYxm2Z0hw79uL8HzTBw"
+}

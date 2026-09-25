@@ -1,0 +1,72 @@
+{
+  "kind": "chaos-report",
+  "signer": "dh1m55lxqetmj7w72rdag6gbfmkw2",
+  "pub": "sWodPENZXPdcxHDIKfOpr38qd2WF_47znQBWZsHuLuI",
+  "payload": {
+    "durationMs": 21422,
+    "environment": {
+      "arch": "amd64",
+      "cpus": "6",
+      "go": "go1.26.4",
+      "os": "darwin",
+      "topology": "1 control-plane member(s), 4 host(s), 1 edge(s)"
+    },
+    "evidence": [
+      "audit #27 18:16:03.063 assignment-sign app/web/r0: running on host-a: placed web/r0 on host-a; placed web/r1 on host-b; placed web/r2 on host-c (4b6314a397af)",
+      "audit #28 18:16:03.063 assignment-sign app/web/r1: running on host-b: placed web/r0 on host-a; placed web/r1 on host-b; placed web/r2 on host-c (c98d0b6f6409)",
+      "audit #29 18:16:03.063 assignment-sign app/web/r2: running on host-c: placed web/r0 on host-a; placed web/r1 on host-b; placed web/r2 on host-c (88d0b2d7ccfc)",
+      "audit #33 18:16:04.539 workload-start app/web/r0: allowed/running: signature, capability, generation, digest and local policy allow (pid 3394) (34a8799f9961)",
+      "audit #34 18:16:04.676 workload-start app/web/r1: allowed/running: signature, capability, generation, digest and local policy allow (pid 3395) (28a45bd36e6f)",
+      "audit #35 18:16:04.935 workload-start app/web/r2: allowed/running: signature, capability, generation, digest and local policy allow (pid 3396) (b6272f78f31d)",
+      "audit #36 18:16:06.363 health-pass app/web/r0: HTTP 200 in 362µs (5ae18a3ce20e)",
+      "audit #37 18:16:06.505 health-pass app/web/r1: HTTP 200 in 528µs (cc464cc41dad)",
+      "audit #38 18:16:06.741 health-pass app/web/r2: HTTP 200 in 354µs (e0510e133da2)",
+      "audit #39 18:16:10.256 route-ejected route/web.chaos.test: web/r0 on host-a: routing → ejected (request failed: net/http: timeout awaiting response headers) (18c543522ddb)",
+      "audit #40 18:16:15.060 node-lost node/dh1y7x4ef7lr332wd6ptzql7cona3: no signed observation for 6s; replicas will be rescheduled, admitted work on the host is not assumed dead (498edf7dd155)",
+      "audit #41 18:16:16.061 assignment-sign app/web/r0: running on host-d: moved web/r0 from host-a to host-d; placed web/r0 on host-d (8dcf52305dc6)",
+      "audit #42 18:16:16.061 assignment-stop app/web/r0: stopped on host-a: moved web/r0 from host-a to host-d; placed web/r0 on host-d (b4bb84e5c95a)",
+      "audit #44 18:16:17.253 route-draining route/web.chaos.test: web/r0 on host-a: ejected → draining (control plane marked the replica draining; no new requests) (0adf9437ba28)",
+      "audit #45 18:16:18.158 workload-start app/web/r0: allowed/running: signature, capability, generation, digest and local policy allow (pid 3404) (76fd75f0673e)",
+      "audit #46 18:16:19.254 route-routing route/web.chaos.test: web/r0 on host-d: draining → routing (edge probe over WireGuard passed (HTTP 200)) (7167a729cde7)",
+      "audit #47 18:16:19.986 health-pass app/web/r0: HTTP 200 in 394µs (fe1c4066c5ac)",
+      "audit chain verified: 47 entries, head fe1c4066c5ac"
+    ],
+    "id": "host-crash-1790273758950",
+    "injection": "SIGKILL a host agent and all of its workloads (machine loss)",
+    "invariant": "the edge stops routing to the dead replica without failed requests, the host is marked lost, and the replica is rescheduled and observed running elsewhere",
+    "measurements": {
+      "detect_lost_ms": "7698",
+      "requests_failed": "0",
+      "requests_ok": "438",
+      "rescheduled_ms": "10833"
+    },
+    "observed": "host-a lost after 7.699s, replica running elsewhere after 10.833s; 438/438 requests OK",
+    "recovery": [
+      {
+        "atMs": 0,
+        "event": "starting 1 control-plane member(s), 4 host(s), 1 edge(s)"
+      },
+      {
+        "atMs": 3551,
+        "event": "cluster ready"
+      },
+      {
+        "atMs": 8588,
+        "event": "killed host-a and 1 workload(s)"
+      },
+      {
+        "atMs": 16282,
+        "event": "host-a marked lost"
+      },
+      {
+        "atMs": 19417,
+        "event": "replica 0 running on host-d"
+      }
+    ],
+    "scenario": "host-crash",
+    "started": 1790273758950,
+    "title": "Host crash",
+    "verdict": "PASS"
+  },
+  "sig": "HDgkcPQrrG2Xi2tLMtd3b2s_CQYIGqJZtNMe7xaBLIumcpGUV1hWwzNtUGHZMrpIyN2II3EUhviO9wiwyClnAQ"
+}

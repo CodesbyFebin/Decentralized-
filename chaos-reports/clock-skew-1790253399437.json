@@ -1,0 +1,75 @@
+{
+  "kind": "chaos-report",
+  "signer": "dh1m55lxqetmj7w72rdag6gbfmkw2",
+  "pub": "sWodPENZXPdcxHDIKfOpr38qd2WF_47znQBWZsHuLuI",
+  "payload": {
+    "durationMs": 8787,
+    "environment": {
+      "arch": "amd64",
+      "cpus": "6",
+      "go": "go1.26.4",
+      "os": "darwin",
+      "topology": "1 control-plane member(s), 2 host(s), 0 edge(s)"
+    },
+    "evidence": [
+      "audit #15 12:36:42.547 assignment-sign app/web/r0: running on host-a: placed web/r0 on host-a (44bdd08929d9)",
+      "audit #17 12:36:43.930 workload-start app/web/r0: allowed/running: signature, capability, generation, digest and local policy allow (pid 29188) (4c5c286dfd7d)",
+      "audit #19 12:36:44.814 host-mode node/dh162gn2wu675at23wnxnvmxpxse7: clock-skew: bundle is 120002ms old on arrival: host clock ahead or plane slow; holding admitted work (2aa899ea7eac)",
+      "audit #21 12:36:45.142 assignment-sign app/web/r1: running on host-b: placed web/r1 on host-b (731216e8ba5e)",
+      "audit #23 12:36:45.812 host-mode node/dh162gn2wu675at23wnxnvmxpxse7: normal:  (a052c10fc5cd)",
+      "audit #24 12:36:45.910 node-refuse app/web/r1: refused/unknown: bundle is 119998ms in the future (limit 30000ms); refusing new work (b4c4bbb6ff0e)",
+      "audit #25 12:36:45.910 host-mode node/dh1pxmvbhidulsa3uw5plxq343x73: clock-skew: bundle issued 119998ms ahead of host clock (limit 30000ms); holding admitted work, refusing new work (9c018dc03575)",
+      "audit #27 12:36:46.840 host-mode node/dh1pxmvbhidulsa3uw5plxq343x73: normal:  (4c5efc05409f)",
+      "audit #28 12:36:47.974 workload-start app/web/r1: allowed/running: signature, capability, generation, digest and local policy allow (pid 29189) (bfdfe24dd65e)",
+      "audit chain verified: 28 entries, head bfdfe24dd65e"
+    ],
+    "id": "clock-skew-1790253399437",
+    "injection": "shift one host's clock +120s, then −120s, then restore",
+    "invariant": "a skewed host detects it from signed bundle timestamps, holds admitted work, refuses new work (CLOCK_SKEW / stale plane), and returns to normal when the clock is corrected",
+    "measurements": {},
+    "observed": "skew detected in both directions from bundle timestamps; admitted workload (pid 29188) held; new work refused with CLOCK_SKEW; both replicas running after correction",
+    "recovery": [
+      {
+        "atMs": 0,
+        "event": "starting 1 control-plane member(s), 2 host(s), 0 edge(s)"
+      },
+      {
+        "atMs": 2452,
+        "event": "cluster ready"
+      },
+      {
+        "atMs": 4677,
+        "event": "host-a clock offset +120000ms"
+      },
+      {
+        "atMs": 5595,
+        "event": "detected: bundle is 120002ms old on arrival: host clock ahead or plane slow; holding admitted work"
+      },
+      {
+        "atMs": 5616,
+        "event": "host-a clock offset -120000ms"
+      },
+      {
+        "atMs": 5619,
+        "event": "detected: bundle is 120002ms old on arrival: host clock ahead or plane slow; holding admitted work"
+      },
+      {
+        "atMs": 5662,
+        "event": "host-b clock offset -120000ms; scaling to 2"
+      },
+      {
+        "atMs": 6623,
+        "event": "new work refused on host-b with CLOCK_SKEW"
+      },
+      {
+        "atMs": 6645,
+        "event": "clocks restored"
+      }
+    ],
+    "scenario": "clock-skew",
+    "started": 1790253399437,
+    "title": "Host clock skew",
+    "verdict": "PASS"
+  },
+  "sig": "1Z9mSuapCexze_Rnd78LMCWCqSWH_-RO237zJ_GYQ0zGiY9NGUjkusaxP6G24riw9RG0bG6Kzp_egZikd-0oAQ"
+}

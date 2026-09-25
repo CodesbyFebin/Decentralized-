@@ -1,0 +1,66 @@
+{
+  "kind": "chaos-report",
+  "signer": "dh1m55lxqetmj7w72rdag6gbfmkw2",
+  "pub": "sWodPENZXPdcxHDIKfOpr38qd2WF_47znQBWZsHuLuI",
+  "payload": {
+    "durationMs": 9646,
+    "environment": {
+      "arch": "amd64",
+      "cpus": "6",
+      "go": "go1.26.4",
+      "os": "darwin",
+      "topology": "1 control-plane member(s), 1 host(s), 0 edge(s)"
+    },
+    "evidence": [
+      "audit #11 13:36:18.677 host-mode node/dh1mohtoxhv4fjdqx3dq42n3etkdg: frozen-hold: control plane frozen: holding admitted work, refusing new work (3e890ffb72ad)",
+      "audit chain verified: 11 entries, head 3e890ffb72ad"
+    ],
+    "id": "postgres-outage-1790256970635",
+    "injection": "stop the Postgres evidence mirror, keep operating, restart it",
+    "invariant": "while Postgres is down the console reports JOURNAL ONLY (never DB COMMITTED), writes still commit through raft, and the mirror catches up to DB COMMITTED after recovery",
+    "measurements": {
+      "audit_head": "11",
+      "mirror_audit_seq": "11"
+    },
+    "observed": "DB COMMITTED → JOURNAL ONLY while down (writes kept committing) → DB COMMITTED with audit seq 11 of 11 mirrored",
+    "recovery": [
+      {
+        "atMs": 4239,
+        "event": "postgres container dh-chaos-pg-47000 ready"
+      },
+      {
+        "atMs": 4239,
+        "event": "starting 1 control-plane member(s), 1 host(s), 0 edge(s)"
+      },
+      {
+        "atMs": 7126,
+        "event": "cluster ready"
+      },
+      {
+        "atMs": 7430,
+        "event": "mirror reports DB COMMITTED"
+      },
+      {
+        "atMs": 7787,
+        "event": "postgres stopped"
+      },
+      {
+        "atMs": 7930,
+        "event": "3 writes committed through raft with the database down"
+      },
+      {
+        "atMs": 7932,
+        "event": "console: JOURNAL ONLY (database mirror at seq 7 of 10: )"
+      },
+      {
+        "atMs": 8430,
+        "event": "postgres started"
+      }
+    ],
+    "scenario": "postgres-outage",
+    "started": 1790256970635,
+    "title": "Evidence database outage",
+    "verdict": "PASS"
+  },
+  "sig": "Od29-tOw9nICnt69ateD66maCPSLdoJm5kj47dxtESvQlVoW2E52YHe1d23T3xAMkkwy9qilCOle4kUwWzqUCA"
+}

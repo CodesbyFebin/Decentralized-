@@ -1,0 +1,71 @@
+{
+  "kind": "chaos-report",
+  "signer": "dh1m55lxqetmj7w72rdag6gbfmkw2",
+  "pub": "sWodPENZXPdcxHDIKfOpr38qd2WF_47znQBWZsHuLuI",
+  "payload": {
+    "durationMs": 16553,
+    "environment": {
+      "arch": "amd64",
+      "cpus": "6",
+      "go": "go1.26.4",
+      "os": "darwin",
+      "topology": "3 control-plane member(s), 3 host(s), 1 edge(s)"
+    },
+    "evidence": [
+      "audit #2 17:55:48.223 roster-update cluster/chaos: roster v2: dh1vsdvs7lwzqafpc6a4jtnnf7fcw, dh15idwhnivirtp3hsoy5idfhoccs (65688a0ebb97)",
+      "audit #3 17:55:48.572 roster-update cluster/chaos: roster v3: dh1vsdvs7lwzqafpc6a4jtnnf7fcw, dh15idwhnivirtp3hsoy5idfhoccs, dh1tkvdrl5zgsng2kkfhfb3ng4gkc (b7612ee29e94)",
+      "audit #27 17:55:53.879 assignment-sign app/web/r0: running on host-a: placed web/r0 on host-a; placed web/r1 on host-b; placed web/r2 on host-c (cc479a622d52)",
+      "audit #28 17:55:53.879 assignment-sign app/web/r1: running on host-b: placed web/r0 on host-a; placed web/r1 on host-b; placed web/r2 on host-c (6665e75068dd)",
+      "audit #29 17:55:53.879 assignment-sign app/web/r2: running on host-c: placed web/r0 on host-a; placed web/r1 on host-b; placed web/r2 on host-c (b7817bc7778f)",
+      "audit #33 17:55:55.425 workload-start app/web/r1: allowed/running: signature, capability, generation, digest and local policy allow (pid 1782) (9ae682499f1e)",
+      "audit #34 17:55:56.372 workload-start app/web/r0: allowed/running: signature, capability, generation, digest and local policy allow (pid 1783) (90b810172101)",
+      "audit #35 17:55:56.724 workload-start app/web/r2: allowed/running: signature, capability, generation, digest and local policy allow (pid 1785) (bcfa68cd259f)",
+      "audit #36 17:55:57.159 health-pass app/web/r1: HTTP 200 in 364µs (4129373f5c61)",
+      "audit #37 17:55:58.087 health-pass app/web/r0: HTTP 200 in 526µs (e4fe9e555446)",
+      "audit #38 17:55:58.458 health-pass app/web/r2: HTTP 200 in 440µs (05c693e63dce)",
+      "audit chain verified: 38 entries, head 05c693e63dce"
+    ],
+    "id": "leader-crash-1790272546292",
+    "injection": "SIGKILL the raft leader while traffic flows through the edge",
+    "invariant": "a new leader is elected, committed writes survive, new writes succeed, and no workload request fails",
+    "measurements": {
+      "audit_head_after": "38",
+      "audit_head_before": "38",
+      "election_ms": "1077",
+      "requests_failed": "0",
+      "requests_ok": "191"
+    },
+    "observed": "new leader in 1077 ms; 191/191 requests succeeded during failover; audit 38 → 38 verified",
+    "recovery": [
+      {
+        "atMs": 0,
+        "event": "starting 3 control-plane member(s), 3 host(s), 1 edge(s)"
+      },
+      {
+        "atMs": 6376,
+        "event": "cluster ready"
+      },
+      {
+        "atMs": 13278,
+        "event": "SIGKILL leader cp-1"
+      },
+      {
+        "atMs": 14356,
+        "event": "cp-3 elected leader"
+      },
+      {
+        "atMs": 14482,
+        "event": "write committed through the new leader"
+      },
+      {
+        "atMs": 16553,
+        "event": "old leader restarted"
+      }
+    ],
+    "scenario": "leader-crash",
+    "started": 1790272546292,
+    "title": "Control-plane leader crash",
+    "verdict": "PASS"
+  },
+  "sig": "fZcYoPWKAxyi1X-NKPHAJRqxsI_rLyPSBytnFBcMN8LsxYPqcGfJW6DhrEaQtuFzX0yFawDlLLKRm4f1UZRIAw"
+}

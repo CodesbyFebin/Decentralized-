@@ -1,0 +1,56 @@
+{
+  "kind": "chaos-report",
+  "signer": "dh1m55lxqetmj7w72rdag6gbfmkw2",
+  "pub": "sWodPENZXPdcxHDIKfOpr38qd2WF_47znQBWZsHuLuI",
+  "payload": {
+    "durationMs": 16412,
+    "environment": {
+      "arch": "amd64",
+      "cpus": "6",
+      "go": "go1.26.4",
+      "os": "darwin",
+      "topology": "1 control-plane member(s), 4 host(s), 1 edge(s)"
+    },
+    "evidence": [
+      "audit #28 18:19:34.664 assignment-sign app/kv/r0: running on host-a: placed kv/r0 on host-a (b08c318095d3)",
+      "audit #30 18:19:36.121 workload-start app/kv/r0: allowed/running: signature, capability, generation, digest and local policy allow (pid 3696) (3b56b9f75273)",
+      "audit #31 18:19:37.912 health-pass app/kv/r0: HTTP 200 in 448µs (904b31fdd452)",
+      "audit #33 18:19:40.277 snapshot-commit volume/kv/data/r0: 5824577efc6d committed: 2 verified replica(s) (quorum 2); previous - (381a4555ee5b)",
+      "audit #35 18:19:44.518 snapshot-commit volume/kv/data/r0: ab99acdff481 committed: 2 verified replica(s) (quorum 2); previous 5824577efc6d (c194e25bcfa5)",
+      "audit #36 18:19:46.416 storage-repair volume/kv/data/r0: anti-entropy: 47 object(s) repaired and verified, 0 failed; from host-a; local root 81673cce75a4, peer root 4083a71b13b0 (79723b717950)",
+      "audit chain verified: 36 entries, head 79723b717950"
+    ],
+    "id": "disk-full-1790273970506",
+    "injection": "make every new write on one replica host fail with ENOSPC (storage-layer injection), write new data, then clear it",
+    "invariant": "the volume is reported DEGRADED — never falsely HEALTHY — while the replica cannot store data; writes still commit on the other replicas; after the disk frees, anti-entropy restores HEALTHY",
+    "measurements": {},
+    "observed": "volume shown DEGRADED while host-c was full (DEGRADED: 2/3 replicas verified; anti-entropy is repairing); HEALTHY after recovery; data intact",
+    "recovery": [
+      {
+        "atMs": 0,
+        "event": "starting 1 control-plane member(s), 4 host(s), 1 edge(s)"
+      },
+      {
+        "atMs": 3575,
+        "event": "cluster ready"
+      },
+      {
+        "atMs": 10128,
+        "event": "ENOSPC injected on host-c"
+      },
+      {
+        "atMs": 14181,
+        "event": "reported DEGRADED: 2/3 replicas verified; anti-entropy is repairing"
+      },
+      {
+        "atMs": 14202,
+        "event": "ENOSPC cleared"
+      }
+    ],
+    "scenario": "disk-full",
+    "started": 1790273970506,
+    "title": "Disk full on a replica (injected ENOSPC)",
+    "verdict": "PASS"
+  },
+  "sig": "yrwNuD6iuAo1wKG6DfW_m956EQMWtxI7Na2wVL-4usm6_FbjHyeLWflXQLcSXrlVpFY1qs-OT1Tknx-GrCGxAQ"
+}

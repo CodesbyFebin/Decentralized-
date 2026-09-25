@@ -1,0 +1,57 @@
+{
+  "kind": "chaos-report",
+  "signer": "dh1m55lxqetmj7w72rdag6gbfmkw2",
+  "pub": "sWodPENZXPdcxHDIKfOpr38qd2WF_47znQBWZsHuLuI",
+  "payload": {
+    "durationMs": 26600,
+    "environment": {
+      "arch": "amd64",
+      "cpus": "6",
+      "go": "go1.26.4",
+      "os": "darwin",
+      "topology": "1 control-plane member(s), 4 host(s), 1 edge(s)"
+    },
+    "evidence": [
+      "audit #28 18:04:31.644 assignment-sign app/kv/r0: running on host-a: placed kv/r0 on host-a (fdcb48eca71b)",
+      "audit #30 18:04:33.705 workload-start app/kv/r0: allowed/running: signature, capability, generation, digest and local policy allow (pid 2627) (0e4cc9016382)",
+      "audit #32 18:04:35.509 health-pass app/kv/r0: HTTP 200 in 450µs (210a05f41ee4)",
+      "audit #33 18:04:36.622 snapshot-commit volume/kv/data/r0: 6f69e7f1a08f committed: 2 verified replica(s) (quorum 2); previous - (22a0e78ac320)",
+      "audit #35 18:04:40.634 snapshot-commit volume/kv/data/r0: 4a20d40ac19f committed: 2 verified replica(s) (quorum 2); previous 6f69e7f1a08f (e0d872dd2c8d)",
+      "audit #37 18:04:45.174 route-ejected route/kv.chaos.test: kv/r0 on host-a: routing → ejected (2 consecutive edge probes failed: Get \"http://10.77.0.1:20000/healthz\": context de… (3eb954727b01)",
+      "audit #38 18:04:49.048 node-lost node/dh1ogd6ah3ie74djdrs6qm5a4vx36: no signed observation for 6s; replicas will be rescheduled, admitted work on the host is not assumed dead (e22c0a5d0d00)",
+      "audit #40 18:04:49.549 assignment-sign app/kv/r0: running on host-c: moved kv/r0 from host-a to host-c; placed kv/r0 on host-c (34113d772142)",
+      "audit #41 18:04:49.549 assignment-stop app/kv/r0: stopped on host-a: moved kv/r0 from host-a to host-c; placed kv/r0 on host-c (e866e4abb30e)",
+      "audit #43 18:04:51.173 route-draining route/kv.chaos.test: kv/r0 on host-a: ejected → draining (control plane marked the replica draining; no new requests) (c1149d32a9f2)",
+      "audit #44 18:04:51.861 workload-start app/kv/r0: allowed/running: signature, capability, generation, digest and local policy allow (pid 2634) (aee1e2f1cd5b)",
+      "audit #45 18:04:52.740 storage-repair volume/kv/data/r0: anti-entropy: 26 object(s) repaired and verified, 0 failed; from host-d; local root d2748264e9bd, peer root ab13bedf42e8 (6152f9385d4f)",
+      "audit #46 18:04:53.173 route-routing route/kv.chaos.test: kv/r0 on host-c: draining → routing (edge probe over WireGuard passed (HTTP 200)) (7dc64e9f7cb1)",
+      "audit chain verified: 46 entries, head 7dc64e9f7cb1"
+    ],
+    "id": "interrupted-storage-write-1790273066928",
+    "injection": "write 24 MiB, then SIGKILL the primary host (agent and workload) while the new snapshot is still pending",
+    "invariant": "committed data is intact after recovery, and the interrupted write is either fully committed or absent — never partial",
+    "measurements": {
+      "snapshot_pending_at_kill": "true"
+    },
+    "observed": "committed data intact; interrupted write absent (rolled back to the committed snapshot)",
+    "recovery": [
+      {
+        "atMs": 0,
+        "event": "starting 1 control-plane member(s), 4 host(s), 1 edge(s)"
+      },
+      {
+        "atMs": 3496,
+        "event": "cluster ready"
+      },
+      {
+        "atMs": 16168,
+        "event": "killed host-a while the snapshot was pending"
+      }
+    ],
+    "scenario": "interrupted-storage-write",
+    "started": 1790273066928,
+    "title": "Host killed during a storage write",
+    "verdict": "PASS"
+  },
+  "sig": "6o4UR_jk8XFvDHLnsKBTF6D1alKWihn_E-uFxc1HKW8s8Let4gibNRokz6ya6yPGfPSiQGSYgLoKOYIZnR8VBA"
+}

@@ -1,0 +1,23 @@
+# Build outputs and local state
+/bin/
+/tools/bin/
+/devcluster/
+/dh-node-data/*
+!/dh-node-data/policy.yaml
+__pycache__/
+*.pyc
+
+# Never commit private keys
+*.key
+identity.key
+wg.key
+bootstrap.code
+bootstrap.fingerprint
+
+# Sealed evidence run directories are large (binaries) and hold throwaway
+# test-cluster keys; they ship as release assets, not in git. The index and
+# attempt history are tracked.
+/evidence/*/
+!/evidence/INDEX.md
+!/evidence/PV1-S1-HISTORY.md
+/chaos-reports/runner/

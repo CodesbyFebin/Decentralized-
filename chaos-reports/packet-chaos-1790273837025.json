@@ -1,0 +1,68 @@
+{
+  "kind": "chaos-report",
+  "signer": "dh1m55lxqetmj7w72rdag6gbfmkw2",
+  "pub": "sWodPENZXPdcxHDIKfOpr38qd2WF_47znQBWZsHuLuI",
+  "payload": {
+    "durationMs": 53425,
+    "environment": {
+      "arch": "amd64",
+      "cpus": "6",
+      "go": "go1.26.4",
+      "os": "darwin",
+      "topology": "1 control-plane member(s), 3 host(s), 1 edge(s)"
+    },
+    "evidence": [
+      "audit #23 18:17:20.969 assignment-sign app/web/r0: running on host-a: placed web/r0 on host-a; placed web/r1 on host-b; placed web/r2 on host-c (4a71dd252b0e)",
+      "audit #24 18:17:20.969 assignment-sign app/web/r1: running on host-b: placed web/r0 on host-a; placed web/r1 on host-b; placed web/r2 on host-c (1c663bd9fff9)",
+      "audit #25 18:17:20.969 assignment-sign app/web/r2: running on host-c: placed web/r0 on host-a; placed web/r1 on host-b; placed web/r2 on host-c (fabd0a28e248)",
+      "audit #29 18:17:22.278 workload-start app/web/r2: allowed/running: signature, capability, generation, digest and local policy allow (pid 3522) (dfe620a42fd5)",
+      "audit #30 18:17:22.881 workload-start app/web/r0: allowed/running: signature, capability, generation, digest and local policy allow (pid 3523) (c8c5e1494abe)",
+      "audit #31 18:17:23.124 workload-start app/web/r1: allowed/running: signature, capability, generation, digest and local policy allow (pid 3524) (f1aaf9693877)",
+      "audit #32 18:17:24.062 health-pass app/web/r2: HTTP 200 in 576µs (0d4bb0deebd9)",
+      "audit #33 18:17:24.709 health-pass app/web/r0: HTTP 200 in 434µs (2ff1c1df8b71)",
+      "audit #34 18:17:24.928 health-pass app/web/r1: HTTP 200 in 452µs (def2871a32cf)",
+      "audit #35 18:17:40.217 route-ejected route/web.chaos.test: web/r1 on host-b: routing → ejected (request failed: net/http: timeout awaiting response headers) (e8faf5667548)",
+      "audit #36 18:17:42.219 route-routing route/web.chaos.test: web/r1 on host-b: ejected → routing (edge probe over WireGuard passed (HTTP 200)) (13dbccbb5b13)",
+      "audit #37 18:17:48.218 route-ejected route/web.chaos.test: web/r2 on host-c: routing → ejected (2 consecutive edge probes failed: Get \"http://10.77.0.3:20000/healthz\": context d… (82600a4cf74d)",
+      "audit #38 18:17:49.217 route-routing route/web.chaos.test: web/r2 on host-c: ejected → routing (edge probe over WireGuard passed (HTTP 200)) (b56febbe911b)",
+      "audit chain verified: 38 entries, head b56febbe911b"
+    ],
+    "id": "packet-chaos-1790273837025",
+    "injection": "on every WireGuard path: 5% loss, 10% duplication, 10% reordering, +40ms delay for 20s",
+    "invariant": "WireGuard and TCP absorb the faults: no request fails, the measured mesh RTT reflects the injected delay, and it returns to baseline when faults are cleared",
+    "measurements": {
+      "baseline_mesh_rtt_us": "2142 (mean of 16 host-measured samples)",
+      "faulted_mesh_rtt_us": "144709 (mean of 16 samples)",
+      "proxy_packets": "map[dropped:135 duplicated:291 forwarded:36463 reordered:255]",
+      "recovered_mesh_rtt_us": "1796 (mean of 16 samples)",
+      "request_latency_p50_ms": "1.4",
+      "request_latency_p99_ms": "451.6",
+      "requests_failed": "0",
+      "requests_ok": "668"
+    },
+    "observed": "RTT 2142µs → 144709µs under faults → 1796µs after; 668/668 requests OK (p50 1ms, p99 452ms)",
+    "recovery": [
+      {
+        "atMs": 0,
+        "event": "starting 1 control-plane member(s), 3 host(s), 1 edge(s)"
+      },
+      {
+        "atMs": 3433,
+        "event": "cluster ready"
+      },
+      {
+        "atMs": 19400,
+        "event": "faults on: loss 5%, dup 10%, reorder 10%, delay 40ms"
+      },
+      {
+        "atMs": 41406,
+        "event": "faults cleared"
+      }
+    ],
+    "scenario": "packet-chaos",
+    "started": 1790273837025,
+    "title": "Packet loss, duplication, reordering and delay",
+    "verdict": "PASS"
+  },
+  "sig": "fJ0qkRhGLo4p9HlelexdAGfWLiemw8pgS8LhvBj8CfgIyFOrduyT4sKPW6To09y5MfMeqik0_AvQ7xG1Eb8lDQ"
+}

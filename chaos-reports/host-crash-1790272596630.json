@@ -1,0 +1,60 @@
+{
+  "kind": "chaos-report",
+  "signer": "dh1m55lxqetmj7w72rdag6gbfmkw2",
+  "pub": "sWodPENZXPdcxHDIKfOpr38qd2WF_47znQBWZsHuLuI",
+  "payload": {
+    "durationMs": 69932,
+    "environment": {
+      "arch": "amd64",
+      "cpus": "6",
+      "go": "go1.26.4",
+      "os": "darwin",
+      "topology": "1 control-plane member(s), 4 host(s), 1 edge(s)"
+    },
+    "evidence": [
+      "audit #27 17:56:41.213 assignment-sign app/web/r0: running on host-a: placed web/r0 on host-a; placed web/r1 on host-b; placed web/r2 on host-c (34b96216736b)",
+      "audit #28 17:56:41.213 assignment-sign app/web/r1: running on host-b: placed web/r0 on host-a; placed web/r1 on host-b; placed web/r2 on host-c (243e771b7aa3)",
+      "audit #29 17:56:41.213 assignment-sign app/web/r2: running on host-c: placed web/r0 on host-a; placed web/r1 on host-b; placed web/r2 on host-c (ae802c353787)",
+      "audit #33 17:56:42.517 workload-start app/web/r1: allowed/running: signature, capability, generation, digest and local policy allow (pid 1860) (438e339cb3ec)",
+      "audit #34 17:56:42.805 workload-start app/web/r2: allowed/running: signature, capability, generation, digest and local policy allow (pid 1862) (53a7a2339b3b)",
+      "audit #35 17:56:43.457 workload-start app/web/r0: allowed/running: signature, capability, generation, digest and local policy allow (pid 1864) (23c9e05d2236)",
+      "audit #36 17:56:44.326 health-pass app/web/r1: HTTP 200 in 484µs (9c40d74742f7)",
+      "audit #37 17:56:44.616 health-pass app/web/r2: HTTP 200 in 422µs (6389b0dd830d)",
+      "audit #38 17:56:45.282 health-pass app/web/r0: HTTP 200 in 466µs (a6f3a666ef74)",
+      "audit #39 17:56:49.168 route-ejected route/web.chaos.test: web/r0 on host-a: routing → ejected (request failed: net/http: timeout awaiting response headers) (97a61f9906a3)",
+      "audit #40 17:56:52.744 node-lost node/dh142wih6v4jkj6qlersn5flysafg: no signed observation for 6s; replicas will be rescheduled, admitted work on the host is not assumed dead (f882fd05ae14)",
+      "audit #41 17:56:53.030 assignment-sign app/web/r0: running on host-d: moved web/r0 from host-a to host-d; placed web/r0 on host-d (1959fd7a58fc)",
+      "audit #42 17:56:53.030 assignment-stop app/web/r0: stopped on host-a: moved web/r0 from host-a to host-d; placed web/r0 on host-d (276117d16c28)",
+      "audit #44 17:56:54.167 route-draining route/web.chaos.test: web/r0 on host-a: ejected → draining (control plane marked the replica draining; no new requests) (475e1d1a023c)",
+      "audit chain verified: 44 entries, head 475e1d1a023c"
+    ],
+    "id": "host-crash-1790272596630",
+    "injection": "SIGKILL a host agent and all of its workloads (machine loss)",
+    "invariant": "the edge stops routing to the dead replica without failed requests, the host is marked lost, and the replica is rescheduled and observed running elsewhere",
+    "measurements": {},
+    "observed": "timed out after 1m0s waiting for replica 0 running on another host",
+    "recovery": [
+      {
+        "atMs": 0,
+        "event": "starting 1 control-plane member(s), 4 host(s), 1 edge(s)"
+      },
+      {
+        "atMs": 3578,
+        "event": "cluster ready"
+      },
+      {
+        "atMs": 9739,
+        "event": "killed host-a and 1 workload(s)"
+      },
+      {
+        "atMs": 16349,
+        "event": "host-a marked lost"
+      }
+    ],
+    "scenario": "host-crash",
+    "started": 1790272596630,
+    "title": "Host crash",
+    "verdict": "FAIL"
+  },
+  "sig": "oKBZ73pshVNKgrp1veJL4w18gL6MQ3Q1Tk3_5Xlsjg4UXpip5SVnSjyRLxp5YdR4Lz6AW3U1aM3axAXoHqvSCg"
+}
