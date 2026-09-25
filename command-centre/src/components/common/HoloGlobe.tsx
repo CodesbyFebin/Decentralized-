@@ -477,7 +477,7 @@ export const HoloGlobe: React.FC<Props> = ({
             ref={(el) => {
               calloutRefs.current[m.id] = el;
             }}
-            className="absolute left-0 top-0 transition-opacity duration-300 will-change-transform"
+            className="absolute left-0 top-0 will-change-transform"
             style={{ opacity: 0 }}
           >
             {m.callout}
