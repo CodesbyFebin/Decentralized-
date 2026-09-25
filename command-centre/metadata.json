@@ -1,0 +1,6 @@
+{
+  "name": "Decentralized.Host Command Centre",
+  "description": "Production Command Centre and control plane for Decentralized.Host with Desired/Observed/Evidence verification, node telemetry, distributed storage, domains, SSL, and RAG Copilot.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
