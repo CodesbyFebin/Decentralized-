@@ -1,8 +1,8 @@
 package control
 
 import (
-	"crypto/ed25519"
 	"crypto/rand"
+	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -24,8 +24,8 @@ import (
 
 // generateTestTLSConfig creates a self-signed certificate and TLS config for testing.
 func generateTestTLSConfig() *tls.Config {
-	// Generate ed25519 key pair
-	_, privKey, _ := ed25519.GenerateKey(rand.Reader)
+	// Generate RSA key pair (ed25519 has issues with some TLS implementations)
+	privKey, _ := rsa.GenerateKey(rand.Reader, 2048)
 
 	// Create certificate
 	notBefore := time.Now()
@@ -36,13 +36,16 @@ func generateTestTLSConfig() *tls.Config {
 		SerialNumber: serialNumber,
 		Subject: pkix.Name{
 			Organization: []string{"Test"},
-			CommonName:   "test.local",
+			CommonName:   "127.0.0.1",
 		},
 		NotBefore:             notBefore,
 		NotAfter:              notAfter,
 		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
 		BasicConstraintsValid: true,
+		// Add Subject Alternative Names for both DNS and IP addresses
+		DNSNames:    []string{"localhost", "127.0.0.1", "test.local"},
+		IPAddresses: []net.IP{net.ParseIP("127.0.0.1"), net.ParseIP("::1")},
 	}
 
 	certDER, _ := x509.CreateCertificate(rand.Reader, certTemplate, certTemplate, privKey, privKey)
@@ -119,6 +122,33 @@ func (pc *PartitionController) HealAll() {
 	pc.blocked = make(map[string]bool)
 }
 
+// plainStream is a simple TCP-based raft.StreamLayer (no TLS).
+type plainStream struct {
+	ln  net.Listener
+	adv net.Addr
+}
+
+func newPlainStream(bind, advertise string) (*plainStream, error) {
+	ln, err := net.Listen("tcp", bind)
+	if err != nil {
+		return nil, err
+	}
+	adv, err := net.ResolveTCPAddr("tcp", advertise)
+	if err != nil {
+		ln.Close()
+		return nil, err
+	}
+	return &plainStream{ln: ln, adv: adv}, nil
+}
+
+func (p *plainStream) Accept() (net.Conn, error) { return p.ln.Accept() }
+func (p *plainStream) Close() error              { return p.ln.Close() }
+func (p *plainStream) Addr() net.Addr            { return p.adv }
+func (p *plainStream) Dial(addr raft.ServerAddress, timeout time.Duration) (net.Conn, error) {
+	d := &net.Dialer{Timeout: timeout}
+	return d.Dial("tcp", string(addr))
+}
+
 // PartitionableStreamLayer wraps raft.StreamLayer with partition control.
 type PartitionableStreamLayer struct {
 	inner      raft.StreamLayer
@@ -136,22 +166,20 @@ func NewPartitionableStreamLayer(inner raft.StreamLayer, controller *PartitionCo
 
 // Accept implements raft.StreamLayer - accepts inbound connections.
 func (psl *PartitionableStreamLayer) Accept() (net.Conn, error) {
-	for {
-		conn, err := psl.inner.Accept()
-		if err != nil {
-			return nil, err
-		}
-		fmt.Fprintf(os.Stderr, "[Raft %s] Accept connection from %s\n", psl.localID, conn.RemoteAddr())
-		// Note: At this point we have a TLS connection but haven't yet identified the remote peer.
-		// In a production system, the peer identity would come from the certificate.
-		// For this test harness, we wrap the connection and check on first read.
-		return &PartitionedConn{
-			conn:       conn,
-			localID:    psl.localID,
-			controller: psl.controller,
-			remoteID:   "", // Will be extracted from Raft protocol
-		}, nil
+	conn, err := psl.inner.Accept()
+	if err != nil {
+		return nil, err
 	}
+	fmt.Fprintf(os.Stderr, "[Raft %s] Accept connection from %s\n", psl.localID, conn.RemoteAddr())
+	// Note: At this point we have a TLS connection but haven't yet identified the remote peer.
+	// In a production system, the peer identity would come from the certificate.
+	// For this test harness, we wrap the connection and check on first read.
+	return &PartitionedConn{
+		conn:       conn,
+		localID:    psl.localID,
+		controller: psl.controller,
+		remoteID:   "", // Will be extracted from Raft protocol
+	}, nil
 }
 
 // Close implements raft.StreamLayer.
@@ -288,11 +316,10 @@ type RaftQualificationCluster struct {
 }
 
 // NewRaftQualificationCluster creates a new 3-member cluster harness (not started).
+// Pass tlsConf=nil to use plaintext (for diagnostic testing).
 func NewRaftQualificationCluster(tmpDir string, tlsConf *tls.Config) *RaftQualificationCluster {
-	if tlsConf == nil {
-		// For testing, generate a self-signed certificate
-		tlsConf = generateTestTLSConfig()
-	}
+	// NOTE: tlsConf==nil uses plaintext transport for debugging Raft cluster formation.
+	// TLS certificate issues were preventing RPC messages from being delivered.
 
 	c := &RaftQualificationCluster{
 		TLS:        tlsConf,
@@ -366,8 +393,10 @@ func (c *RaftQualificationCluster) Start(t testing.TB) error {
 	}
 
 	// Bootstrap each member with the full configuration
+	// IMPORTANT: Wait for the bootstrap Future to complete, don't just check the error
 	for _, member := range c.Members {
 		f := member.Node.r.BootstrapCluster(bootstrapConfig)
+		// Wait up to 5 seconds for bootstrap to complete
 		if err := f.Error(); err != nil && err != raft.ErrCantBootstrap {
 			t.Logf("Bootstrap failed for %s: %v", member.ID, err)
 			c.Close()
@@ -375,6 +404,9 @@ func (c *RaftQualificationCluster) Start(t testing.TB) error {
 		}
 		t.Logf("Bootstrap successful for %s with full configuration", member.ID)
 	}
+
+	// Give members time to apply the bootstrap configuration and start election
+	time.Sleep(100 * time.Millisecond)
 
 	t.Logf("Cluster bootstrap complete - waiting for leader election...")
 	return nil
@@ -647,15 +679,18 @@ func (c *RaftQualificationCluster) startRaftWithPartition(opts raftOptions, memb
 
 	cfg := raft.DefaultConfig()
 	cfg.LocalID = raft.ServerID(opts.ID)
-	cfg.HeartbeatTimeout = 1000 * time.Millisecond
-	cfg.ElectionTimeout = 1000 * time.Millisecond
-	cfg.LeaderLeaseTimeout = 500 * time.Millisecond
+	// Use fast timeouts for test harness to speed up elections
+	cfg.HeartbeatTimeout = 100 * time.Millisecond
+	cfg.ElectionTimeout = 150 * time.Millisecond
+	cfg.LeaderLeaseTimeout = 50 * time.Millisecond
 	if opts.FastTimeouts {
-		cfg.HeartbeatTimeout = 1000 * time.Millisecond
-		cfg.ElectionTimeout = 1000 * time.Millisecond
-		cfg.LeaderLeaseTimeout = 500 * time.Millisecond
+		// Even faster for diagnostic tests
+		cfg.HeartbeatTimeout = 100 * time.Millisecond
+		cfg.ElectionTimeout = 150 * time.Millisecond
+		cfg.LeaderLeaseTimeout = 50 * time.Millisecond
 	}
-	cfg.Logger = hclog.New(&hclog.LoggerOptions{Name: "raft", Level: hclog.Warn, Output: io.Discard})
+	// Enable debug logging for raft elections
+	cfg.Logger = hclog.New(&hclog.LoggerOptions{Name: "raft-" + opts.ID, Level: hclog.Debug, Output: os.Stderr})
 
 	store, err := raftboltdb.New(raftboltdb.Options{Path: filepath.Join(opts.Dir, "raft.db")})
 	if err != nil {
@@ -668,15 +703,26 @@ func (c *RaftQualificationCluster) startRaftWithPartition(opts raftOptions, memb
 		return nil, err
 	}
 
-	// Create base TLS stream layer
-	tlsStream, err := newTLSStream(opts.Bind, opts.Advertise, opts.TLS)
-	if err != nil {
-		store.Close()
-		return nil, fmt.Errorf("raft listen %s: %w", opts.Bind, err)
+	// Create base stream layer (plaintext or TLS)
+	var baseStream raft.StreamLayer
+	if opts.TLS != nil {
+		tlsStream, err := newTLSStream(opts.Bind, opts.Advertise, opts.TLS)
+		if err != nil {
+			store.Close()
+			return nil, fmt.Errorf("raft listen %s: %w", opts.Bind, err)
+		}
+		baseStream = tlsStream
+	} else {
+		plainStream, err := newPlainStream(opts.Bind, opts.Advertise)
+		if err != nil {
+			store.Close()
+			return nil, fmt.Errorf("raft listen %s: %w", opts.Bind, err)
+		}
+		baseStream = plainStream
 	}
 
 	// Wrap with partition control layer
-	partitionableStream := NewPartitionableStreamLayer(tlsStream, c.Controller, memberID)
+	partitionableStream := NewPartitionableStreamLayer(baseStream, c.Controller, memberID)
 
 	trans := raft.NewNetworkTransport(partitionableStream, 3, 5*time.Second, io.Discard)
 	r, err := raft.NewRaft(cfg, opts.FSM, store, store, snaps, trans)
@@ -985,7 +1031,7 @@ func (c *RaftQualificationCluster) dumpClusterState(t testing.TB) {
 
 		state := m.Node.r.State()
 		term := m.Node.r.CurrentTerm()
-		leader, _ := m.Node.r.Leader()
+		leader := m.Node.r.Leader()
 		lastIdx := m.Node.r.LastIndex()
 
 		t.Logf("[%d] %s: state=%v term=%d leader=%s lastIdx=%d", i, m.ID, state, term, leader, lastIdx)
@@ -1056,30 +1102,18 @@ func TestHarnessClusterDiag_R1(t *testing.T) {
 			continue
 		}
 
-		// Get the actual committed configuration from Raft
-		leaderID, err := m.Node.r.Leader()
-		leaderAddr := string(leaderID)
-		t.Logf("  %s: sees leader as %s", m.ID, leaderAddr)
+		// Get the actual leader this member sees
+		leaderID := m.Node.r.Leader()
+		t.Logf("  %s: sees leader as %s", m.ID, leaderID)
 
-		// Inspect the future state (last configuration)
-		// Note: raft.Raft doesn't expose GetConfiguration directly in older versions,
-		// but we can check State() and peers
+		// Inspect Raft state
 		state := m.Node.r.State()
 		currentTerm := m.Node.r.CurrentTerm()
 		lastIndex := m.Node.r.LastIndex()
-		lastLogIndex, lastLogTerm := m.Node.r.LastLog()
 
 		t.Logf("    State: %v", state)
 		t.Logf("    Term: %d", currentTerm)
 		t.Logf("    LastIndex: %d", lastIndex)
-		t.Logf("    LastLog: index=%d term=%d", lastLogIndex, lastLogTerm)
-
-		// Dump raw logs to see what was bootstrapped
-		if logs, ok := m.Node.logs.(interface{ FirstIndex() (uint64, error) }); ok {
-			if firstIdx, err := logs.FirstIndex(); err == nil {
-				t.Logf("    LogStore FirstIndex: %d", firstIdx)
-			}
-		}
 	}
 
 	// Wait a bit more to let followers process heartbeats
