@@ -80,11 +80,28 @@ func (e *Engine) Available() (bool, string) {
 	if goruntime.GOARCH != archName {
 		return false, "no seccomp filter for " + goruntime.GOARCH
 	}
+	// Probe for actual namespace support via dry-run unshare.
+	namespaceTests := []string{
+		"user",  // must work (used for mapping)
+		"pid",   // must work (isolation)
+		"mount", // must work (isolation)
+		"net",   // required for RESTRICTED
+	}
+	for _, ns := range namespaceTests {
+		cmd := exec.Command("unshare", "--"+ns, "true")
+		if err := cmd.Run(); err != nil {
+			return false, fmt.Sprintf("%s namespace not supported by kernel: %v", ns, err)
+		}
+	}
+	// Check rootless support (subuid availability).
+	if _, err := os.Stat("/etc/subuid"); err != nil {
+		return false, "no /etc/subuid range configured; workloads will run as namespace-root (less ideal)"
+	}
 	v := "cgroup v1"
 	if cgroupV2() {
 		v = "cgroup v2"
 	}
-	return true, "user/mount/pid/ipc/uts namespaces (+ network for RESTRICTED), seccomp, no capabilities, read-only root, " + v + " limits"
+	return true, "user/mount/pid/ipc/uts/net namespaces, seccomp, no capabilities, read-only root, " + v + " limits, rootless support"
 }
 
 // identity is how one workload is mapped into and out of its user namespace.

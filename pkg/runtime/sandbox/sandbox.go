@@ -18,6 +18,7 @@ package sandbox
 import (
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 )
@@ -127,11 +128,53 @@ func checkMount(m Mount, allowedRoots []string) error {
 	if !filepath.IsAbs(m.HostPath) || filepath.Clean(m.HostPath) != m.HostPath {
 		return fmt.Errorf("sandbox: mount source %q must be a clean absolute path", m.HostPath)
 	}
+	// Attempt symlink resolution; if path doesn't exist, check parent recursively.
+	// This prevents symlink escapes while allowing paths to be created later.
+	realPath := m.HostPath
+	if _, err := os.Stat(m.HostPath); err == nil {
+		// Path exists; resolve it fully.
+		resolved, err := filepath.EvalSymlinks(m.HostPath)
+		if err != nil {
+			return fmt.Errorf("sandbox: mount source %q cannot be resolved: %w", m.HostPath, err)
+		}
+		realPath = resolved
+	} else {
+		// Path doesn't exist; check that we can resolve the parent to prevent traversal.
+		parent := filepath.Dir(m.HostPath)
+		for parent != "/" && parent != m.HostPath {
+			if _, err := os.Stat(parent); err == nil {
+				// Found an existing ancestor; resolve it.
+				resolved, err := filepath.EvalSymlinks(parent)
+				if err != nil {
+					return fmt.Errorf("sandbox: mount source %q has an unresolvable parent: %w", m.HostPath, err)
+				}
+				// Reconstruct the full path from the resolved parent.
+				rel := m.HostPath[len(parent):]
+				realPath = filepath.Join(resolved, rel)
+				break
+			}
+			parent = filepath.Dir(parent)
+		}
+	}
 	inside := false
 	for _, r := range allowedRoots {
 		r = filepath.Clean(r)
-		if m.HostPath != r && strings.HasPrefix(m.HostPath, r+string(filepath.Separator)) {
+		realRoot := r
+		if _, err := os.Stat(r); err == nil {
+			resolved, err := filepath.EvalSymlinks(r)
+			if err != nil {
+				continue
+			}
+			realRoot = resolved
+		}
+		// Check exact match or proper containment (must have a separator boundary).
+		if realPath == realRoot {
 			inside = true
+			break
+		}
+		if len(realPath) > len(realRoot) && realPath[len(realRoot)] == filepath.Separator && strings.HasPrefix(realPath, realRoot+string(filepath.Separator)) {
+			inside = true
+			break
 		}
 	}
 	if !inside {
