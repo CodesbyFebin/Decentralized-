@@ -365,6 +365,7 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("POST /v1/evidence", s.leaderOnly(s.handleEvidence))
 	mux.HandleFunc("POST /v1/binding", s.leaderOnly(s.handleBinding))
 	mux.HandleFunc("POST /v1/rotate", s.leaderOnly(s.handleRotate))
+	mux.HandleFunc("POST /v1/retrieve-secret", s.leaderOnly(s.handleRetrieveSecret))
 	mux.HandleFunc("POST /v1/chunk", s.handleChunk)
 	mux.HandleFunc("POST /v1/cert", s.leaderOnly(s.handleCertSign))
 
