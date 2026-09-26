@@ -1,0 +1,252 @@
+[
+  {
+    "name": "before /: loaded, no outage shown",
+    "ok": true,
+    "detail": "alerts 0"
+  },
+  {
+    "name": "before /apps: loaded, no outage shown",
+    "ok": true,
+    "detail": "alerts 0"
+  },
+  {
+    "name": "before /apps/web: loaded, no outage shown",
+    "ok": true,
+    "detail": "alerts 0"
+  },
+  {
+    "name": "before /nodes: loaded, no outage shown",
+    "ok": true,
+    "detail": "alerts 0"
+  },
+  {
+    "name": "before /nodes/dh1a3yj4ldev35ldusztcsaz2cbak: loaded, no outage shown",
+    "ok": true,
+    "detail": "alerts 0"
+  },
+  {
+    "name": "before /nodes/add: loaded, no outage shown",
+    "ok": true,
+    "detail": "alerts 0"
+  },
+  {
+    "name": "before /evidence: loaded, no outage shown",
+    "ok": true,
+    "detail": "alerts 0"
+  },
+  {
+    "name": "before /activity?tab=refused: loaded, no outage shown",
+    "ok": true,
+    "detail": "alerts 0"
+  },
+  {
+    "name": "before /operations: loaded, no outage shown",
+    "ok": true,
+    "detail": "alerts 0"
+  },
+  {
+    "name": "before /settings: loaded, no outage shown",
+    "ok": true,
+    "detail": "alerts 0"
+  },
+  {
+    "name": "before /: dashboard shows FRESH",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "during /: CONTROL PLANE UNREACHABLE shown",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "during /: last observation desaturated or error shown",
+    "ok": true,
+    "detail": "grayscale 1"
+  },
+  {
+    "name": "during /: no FRESH badge",
+    "ok": true,
+    "detail": "0 visible"
+  },
+  {
+    "name": "during /apps: CONTROL PLANE UNREACHABLE shown",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "during /apps: last observation desaturated or error shown",
+    "ok": true,
+    "detail": "grayscale 1"
+  },
+  {
+    "name": "during /apps: no FRESH badge",
+    "ok": true,
+    "detail": "0 visible"
+  },
+  {
+    "name": "during /apps/web: CONTROL PLANE UNREACHABLE shown",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "during /apps/web: last observation desaturated or error shown",
+    "ok": true,
+    "detail": "grayscale 1"
+  },
+  {
+    "name": "during /apps/web: no FRESH badge",
+    "ok": true,
+    "detail": "0 visible"
+  },
+  {
+    "name": "during /nodes: CONTROL PLANE UNREACHABLE shown",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "during /nodes: last observation desaturated or error shown",
+    "ok": true,
+    "detail": "grayscale 3"
+  },
+  {
+    "name": "during /nodes: no FRESH badge",
+    "ok": true,
+    "detail": "0 visible"
+  },
+  {
+    "name": "during /nodes/dh1a3yj4ldev35ldusztcsaz2cbak: CONTROL PLANE UNREACHABLE shown",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "during /nodes/dh1a3yj4ldev35ldusztcsaz2cbak: last observation desaturated or error shown",
+    "ok": true,
+    "detail": "grayscale 1"
+  },
+  {
+    "name": "during /nodes/dh1a3yj4ldev35ldusztcsaz2cbak: no FRESH badge",
+    "ok": true,
+    "detail": "0 visible"
+  },
+  {
+    "name": "during /nodes/add: CONTROL PLANE UNREACHABLE shown",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "during /nodes/add: last observation desaturated or error shown",
+    "ok": true,
+    "detail": "grayscale 1"
+  },
+  {
+    "name": "during /nodes/add: no FRESH badge",
+    "ok": true,
+    "detail": "0 visible"
+  },
+  {
+    "name": "during /evidence: CONTROL PLANE UNREACHABLE shown",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "during /evidence: last observation desaturated or error shown",
+    "ok": true,
+    "detail": "grayscale 1"
+  },
+  {
+    "name": "during /evidence: no FRESH badge",
+    "ok": true,
+    "detail": "0 visible"
+  },
+  {
+    "name": "during /activity?tab=refused: CONTROL PLANE UNREACHABLE shown",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "during /activity?tab=refused: last observation desaturated or error shown",
+    "ok": true,
+    "detail": "grayscale 1"
+  },
+  {
+    "name": "during /activity?tab=refused: no FRESH badge",
+    "ok": true,
+    "detail": "0 visible"
+  },
+  {
+    "name": "during /operations: CONTROL PLANE UNREACHABLE shown",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "during /operations: last observation desaturated or error shown",
+    "ok": true,
+    "detail": "grayscale 1"
+  },
+  {
+    "name": "during /operations: no FRESH badge",
+    "ok": true,
+    "detail": "0 visible"
+  },
+  {
+    "name": "during /settings: CONTROL PLANE UNREACHABLE shown",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "after /: recovered",
+    "ok": true,
+    "detail": "banner 0, grayscale 0"
+  },
+  {
+    "name": "after /apps: recovered",
+    "ok": true,
+    "detail": "banner 0, grayscale 0"
+  },
+  {
+    "name": "after /apps/web: recovered",
+    "ok": true,
+    "detail": "banner 0, grayscale 0"
+  },
+  {
+    "name": "after /nodes: recovered",
+    "ok": true,
+    "detail": "banner 0, grayscale 0"
+  },
+  {
+    "name": "after /nodes/dh1a3yj4ldev35ldusztcsaz2cbak: recovered",
+    "ok": true,
+    "detail": "banner 0, grayscale 0"
+  },
+  {
+    "name": "after /nodes/add: recovered",
+    "ok": true,
+    "detail": "banner 0, grayscale 0"
+  },
+  {
+    "name": "after /evidence: recovered",
+    "ok": true,
+    "detail": "banner 0, grayscale 0"
+  },
+  {
+    "name": "after /activity?tab=refused: recovered",
+    "ok": true,
+    "detail": "banner 0, grayscale 0"
+  },
+  {
+    "name": "after /operations: recovered",
+    "ok": true,
+    "detail": "banner 0, grayscale 0"
+  },
+  {
+    "name": "after /settings: recovered",
+    "ok": true,
+    "detail": "banner 0, grayscale 0"
+  },
+  {
+    "name": "after /: dashboard shows FRESH again",
+    "ok": true,
+    "detail": ""
+  }
+]

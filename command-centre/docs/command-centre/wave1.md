@@ -64,6 +64,10 @@ PLANNED / UNAVAILABLE.
 | No-mock gate | PASS; a planted `'VERIFIED'` assignment still fails it |
 | Tests | unit 37, live integration 26 (7 new), e2e disconnect 12 + 50 |
 
+## Evidence
+
+`evidence/CC-W1-A01`: **PASS**, VERIFIED, at commit `f7242f6`. Reproduce with `validation/cc-wave1.sh`.
+
 ## Not done in Wave 1
 
 - A real Operation resource.
