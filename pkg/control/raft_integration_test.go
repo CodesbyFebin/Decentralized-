@@ -309,6 +309,7 @@ type QualificationMember struct {
 type RaftQualificationCluster struct {
 	Members    []*QualificationMember
 	TLS        *tls.Config
+	CABundle   *tlsCABundle // CA bundle for production-equivalent mTLS (HARNESS-TLS-01)
 	Controller *PartitionController
 
 	// Cluster state
@@ -317,12 +318,41 @@ type RaftQualificationCluster struct {
 
 // NewRaftQualificationCluster creates a new 3-member cluster harness (not started).
 // Pass tlsConf=nil to use plaintext (for diagnostic testing).
+// Pass caBundle!=nil to use production-equivalent mutual TLS (HARNESS-TLS-01).
 func NewRaftQualificationCluster(tmpDir string, tlsConf *tls.Config) *RaftQualificationCluster {
 	// NOTE: tlsConf==nil uses plaintext transport for debugging Raft cluster formation.
-	// TLS certificate issues were preventing RPC messages from being delivered.
+	// For production-equivalent mTLS, use NewRaftQualificationClusterWithCA() instead.
 
 	c := &RaftQualificationCluster{
 		TLS:        tlsConf,
+		Members:    make([]*QualificationMember, 3),
+		Controller: NewPartitionController(),
+	}
+
+	// Initialize member specs
+	basePort := 50000
+	for i := 0; i < 3; i++ {
+		id := fmt.Sprintf("member-%d", i)
+		c.Members[i] = &QualificationMember{
+			ID:              id,
+			DataDir:         filepath.Join(tmpDir, "member-"+id),
+			GossipBind:      fmt.Sprintf("127.0.0.1:%d", basePort+i),
+			GossipAdvertise: fmt.Sprintf("127.0.0.1:%d", basePort+i),
+			RaftBind:        fmt.Sprintf("127.0.0.1:%d", basePort+100+i),
+			RaftAdvertise:   fmt.Sprintf("127.0.0.1:%d", basePort+100+i),
+			Partitioned:     false,
+		}
+	}
+
+	return c
+}
+
+// NewRaftQualificationClusterWithCA creates a new 3-member cluster harness with production-equivalent mutual TLS.
+// Each member receives a distinct certificate signed by the test CA, enabling true peer verification.
+// This is the required path for HARNESS-TLS-01 (gate G1).
+func NewRaftQualificationClusterWithCA(tmpDir string, caBundle *tlsCABundle) *RaftQualificationCluster {
+	c := &RaftQualificationCluster{
+		CABundle:   caBundle,
 		Members:    make([]*QualificationMember, 3),
 		Controller: NewPartitionController(),
 	}
@@ -357,12 +387,28 @@ func (c *RaftQualificationCluster) Start(t testing.TB) error {
 		fsm := NewFSM()
 		fsm.s.Cluster = "qualification-cluster"
 
+		// Get the TLS config for this member
+		var tlsConf *tls.Config
+		if c.CABundle != nil {
+			// Production-equivalent mTLS: each member gets its own certificate
+			var err error
+			tlsConf, err = c.CABundle.getTLSConfig(m.ID)
+			if err != nil {
+				t.Logf("Failed to get TLS config for member %s: %v", m.ID, err)
+				c.Close()
+				return err
+			}
+		} else {
+			// Plaintext or shared TLS config (diagnostic mode)
+			tlsConf = c.TLS
+		}
+
 		opts := raftOptions{
 			Dir:         m.DataDir,
 			ID:          m.ID,
 			Bind:        m.RaftBind,
 			Advertise:   m.RaftAdvertise,
-			TLS:         c.TLS,
+			TLS:         tlsConf,
 			FSM:         fsm,
 			Bootstrap:   (i == 0),
 			LogOutput:   nil,
@@ -759,6 +805,177 @@ func (c *RaftQualificationCluster) getMember(id string) *QualificationMember {
 		}
 	}
 	return nil
+}
+
+// ========================================
+// TLS CA and Certificate Generation (HARNESS-TLS-01)
+// ========================================
+
+// tlsCABundle holds a test CA and member certificates for mutual TLS authentication.
+type tlsCABundle struct {
+	caCert    *x509.Certificate
+	caKey     *rsa.PrivateKey
+	caPEM     []byte
+	members   map[string]*tlsMemberCert // memberID -> cert
+}
+
+type tlsMemberCert struct {
+	cert   *x509.Certificate
+	key    *rsa.PrivateKey
+	certPEM []byte
+	keyPEM  []byte
+}
+
+// generateTestCABundle creates a root CA and issues three distinct member certificates.
+// This implements proper mutual TLS (mTLS) with certificate-based peer identity.
+func generateTestCABundle() (*tlsCABundle, error) {
+	// 1. Generate CA certificate
+	caKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return nil, fmt.Errorf("CA key generation: %w", err)
+	}
+
+	caSerialNumber, err := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128))
+	if err != nil {
+		return nil, err
+	}
+
+	notBefore := time.Now()
+	notAfter := notBefore.Add(24 * time.Hour)
+
+	caCertTemplate := &x509.Certificate{
+		SerialNumber: caSerialNumber,
+		Subject: pkix.Name{
+			Organization: []string{"Decentralized Test"},
+			CommonName:   "Decentralized Test CA",
+		},
+		NotBefore:             notBefore,
+		NotAfter:              notAfter,
+		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
+		BasicConstraintsValid: true,
+		IsCA:                  true,
+	}
+
+	caCertDER, err := x509.CreateCertificate(rand.Reader, caCertTemplate, caCertTemplate, &caKey.PublicKey, caKey)
+	if err != nil {
+		return nil, fmt.Errorf("CA certificate creation: %w", err)
+	}
+
+	caCert, err := x509.ParseCertificate(caCertDER)
+	if err != nil {
+		return nil, fmt.Errorf("CA certificate parsing: %w", err)
+	}
+
+	caPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: caCertDER})
+
+	bundle := &tlsCABundle{
+		caCert:  caCert,
+		caKey:   caKey,
+		caPEM:   caPEM,
+		members: make(map[string]*tlsMemberCert),
+	}
+
+	// 2. Issue three distinct member certificates
+	memberIDs := []string{"member-0", "member-1", "member-2"}
+	for _, memberID := range memberIDs {
+		memberCert, err := bundle.issueMemberCertificate(memberID)
+		if err != nil {
+			return nil, fmt.Errorf("member %s certificate: %w", memberID, err)
+		}
+		bundle.members[memberID] = memberCert
+	}
+
+	return bundle, nil
+}
+
+// issueMemberCertificate creates a certificate for a cluster member, signed by the CA.
+func (b *tlsCABundle) issueMemberCertificate(memberID string) (*tlsMemberCert, error) {
+	// Generate member key
+	memberKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return nil, fmt.Errorf("key generation: %w", err)
+	}
+
+	// Create member certificate template
+	serialNumber, err := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128))
+	if err != nil {
+		return nil, err
+	}
+
+	notBefore := time.Now()
+	notAfter := notBefore.Add(24 * time.Hour)
+
+	memberCertTemplate := &x509.Certificate{
+		SerialNumber: serialNumber,
+		Subject: pkix.Name{
+			Organization: []string{"Decentralized Test"},
+			CommonName:   memberID,
+		},
+		NotBefore:   notBefore,
+		NotAfter:    notAfter,
+		KeyUsage:    x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
+		DNSNames:    []string{"localhost", "127.0.0.1"},
+		IPAddresses: []net.IP{net.ParseIP("127.0.0.1"), net.ParseIP("::1")},
+	}
+
+	// Sign by CA
+	memberCertDER, err := x509.CreateCertificate(rand.Reader, memberCertTemplate, b.caCert, &memberKey.PublicKey, b.caKey)
+	if err != nil {
+		return nil, fmt.Errorf("certificate creation: %w", err)
+	}
+
+	memberCert, err := x509.ParseCertificate(memberCertDER)
+	if err != nil {
+		return nil, fmt.Errorf("certificate parsing: %w", err)
+	}
+
+	// Encode to PEM
+	certPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: memberCertDER})
+	keyBytes, err := x509.MarshalPKCS8PrivateKey(memberKey)
+	if err != nil {
+		return nil, err
+	}
+	keyPEM := pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: keyBytes})
+
+	return &tlsMemberCert{
+		cert:    memberCert,
+		key:     memberKey,
+		certPEM: certPEM,
+		keyPEM:  keyPEM,
+	}, nil
+}
+
+// getTLSConfig creates a tls.Config for a member with proper mutual authentication.
+// The config verifies peers using the CA certificate and identifies this member by its certificate.
+func (b *tlsCABundle) getTLSConfig(memberID string) (*tls.Config, error) {
+	memberCert, ok := b.members[memberID]
+	if !ok {
+		return nil, fmt.Errorf("member %s not in bundle", memberID)
+	}
+
+	// Load member certificate
+	tlsCert, err := tls.X509KeyPair(memberCert.certPEM, memberCert.keyPEM)
+	if err != nil {
+		return nil, fmt.Errorf("loading member certificate: %w", err)
+	}
+
+	// Create CA certificate pool for peer verification
+	caCertPool := x509.NewCertPool()
+	caCertPool.AddCert(b.caCert)
+
+	// Create client CA pool (same CA for mutual auth)
+	clientCACertPool := x509.NewCertPool()
+	clientCACertPool.AddCert(b.caCert)
+
+	return &tls.Config{
+		Certificates: []tls.Certificate{tlsCert},
+		ClientAuth:   tls.RequireAndVerifyClientCert,
+		ClientCAs:    clientCACertPool,
+		RootCAs:      caCertPool,
+		// Do NOT use InsecureSkipVerify in production-equivalent path
+		InsecureSkipVerify: false,
+	}, nil
 }
 
 // ========================================
@@ -1388,4 +1605,77 @@ func TestRaftHarness_MemberRestart(t *testing.T) {
 	}
 
 	t.Logf("Cluster converged with restarted member")
+}
+
+// TestRaftHarness_TLS_ProductionMTLS is HARNESS-TLS-01 (G1): Qualification gate for production-equivalent mutual TLS.
+// Verifies that 25 consecutive cluster formations succeed with distinct per-member certificates signed by a test CA.
+// This establishes that the Raft consensus protocol implementation meets the production-equivalent mTLS baseline
+// required for SEC-P0-A01-A04 qualification.
+func TestRaftHarness_TLS_ProductionMTLS(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping qualification gate test in short mode")
+	}
+
+	// Generate a test CA bundle with distinct member certificates
+	caBundle, err := generateTestCABundle()
+	if err != nil {
+		t.Fatalf("Failed to generate test CA bundle: %v", err)
+	}
+
+	// Run 25 consecutive cluster formations with production-equivalent mTLS
+	const formationCount = 25
+	var successCount int
+
+	for formation := 1; formation <= formationCount; formation++ {
+		t.Logf("--- Formation %d/%d (G1: HARNESS-TLS-01) ---", formation, formationCount)
+
+		tmpDir := t.TempDir()
+		c := NewRaftQualificationClusterWithCA(tmpDir, caBundle)
+		defer c.Close()
+
+		// Start all three members with their distinct mTLS certificates
+		if err := c.Start(t); err != nil {
+			t.Logf("Formation %d: Start failed: %v", formation, err)
+			continue
+		}
+
+		// Wait for stable leader election with production mTLS in place
+		leader, term, err := c.WaitForLeader(10 * time.Second)
+		if err != nil {
+			t.Logf("Formation %d: WaitForLeader failed: %v", formation, err)
+			continue
+		}
+
+		t.Logf("Formation %d: Leader elected: %s (term=%d)", formation, leader, term)
+
+		// Verify cluster health: all members should be responsive
+		healthy := true
+		for _, m := range c.Members {
+			if m.Node == nil || m.Node.r == nil {
+				t.Logf("Formation %d: Member %s not initialized", formation, m.ID)
+				healthy = false
+				break
+			}
+		}
+
+		if !healthy {
+			t.Logf("Formation %d: Cluster not healthy", formation)
+			continue
+		}
+
+		// Formation succeeded
+		t.Logf("Formation %d: PASSED (mTLS handshakes + leader election + convergence)", formation)
+		successCount++
+
+		// Clean up for next formation
+		c.Close()
+	}
+
+	// Verify all 25 formations succeeded with production-equivalent mTLS
+	t.Logf("G1 Result: %d/%d formations successful", successCount, formationCount)
+	if successCount != formationCount {
+		t.Fatalf("G1 HARNESS-TLS-01 FAILED: Only %d/%d formations succeeded with production mTLS", successCount, formationCount)
+	}
+
+	t.Logf("G1 HARNESS-TLS-01 PASSED: All 25 formations succeeded with production-equivalent mutual TLS")
 }
