@@ -48,6 +48,8 @@ interface Props {
   resolution?: number;
   /** Pixels on the right kept clear of callouts (e.g. for an overlaid legend). */
   safeRight?: number;
+  /** Stale topology: draw one still frame, no rotation or flow pulses. */
+  frozen?: boolean;
 }
 
 /* Coarse continent outlines [lat, lng]. Low resolution on purpose: rendered as glowing dots. */
@@ -180,7 +182,8 @@ export const HoloGlobe: React.FC<Props> = ({
   glow = 1,
   className = '',
   resolution = 1.6,
-  safeRight = 0
+  safeRight = 0,
+  frozen = false
 }) => {
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -223,12 +226,12 @@ export const HoloGlobe: React.FC<Props> = ({
     resize();
     const ro = new ResizeObserver(() => {
       resize();
-      if (reduced) draw(performance.now());
+      if (reduced || frozen) draw(0);
     });
     ro.observe(wrap);
     const io = new IntersectionObserver(([e]) => {
       visible = e.isIntersecting;
-      if (visible && !reduced) {
+      if (visible && !reduced && !frozen) {
         last = performance.now();
         cancelAnimationFrame(raf);
         raf = requestAnimationFrame(frame);
@@ -457,7 +460,7 @@ export const HoloGlobe: React.FC<Props> = ({
       if (visible) raf = requestAnimationFrame(frame);
     }
 
-    if (reduced) draw(performance.now());
+    if (reduced || frozen) draw(0);
     else raf = requestAnimationFrame(frame);
 
     return () => {
@@ -465,7 +468,7 @@ export const HoloGlobe: React.FC<Props> = ({
       ro.disconnect();
       io.disconnect();
     };
-  }, [land, focusLng]);
+  }, [land, focusLng, frozen]);
 
   return (
     <div ref={wrapRef} className={`${/(^|\s)!?absolute(\s|$)/.test(className) ? '' : 'relative '}overflow-hidden ${className}`}>

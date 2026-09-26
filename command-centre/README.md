@@ -1,38 +1,64 @@
 # Decentralized.Host Command Centre
 
-Operator console for Decentralized.Host: a React + Vite front end with a small
-Express BFF (`server.ts`) that serves `/api/v1/*` from a demo platform store.
+A console for the Decentralized.Host control plane (`dh-control`). The
+control plane is authoritative; this app is a presentation layer with a thin
+BFF that forwards your operator capability, validates input, normalizes the
+control plane's view and sanitizes errors. It holds no operational state.
 
-## Run locally
+> ADR 0007 makes the embedded, no-build console in `web/dist` the default.
+> This app has a build step and npm dependencies; see the proposed ADR 0009.
 
-Prerequisites: Node.js 22+ (or Bun).
+## Run against a real cluster
 
 ```bash
-npm install          # or: bun install
-npm run dev          # http://localhost:3000 (Vite middleware + API)
-npm run lint         # tsc --noEmit
-npm run build && NODE_ENV=production npm start
+# from the repository root
+make build
+./bin/dh dev up --dir ./devcluster            # 3 control-plane members, 3 hosts, 1 edge
+export DH_HOME=./devcluster/operator
+
+cd command-centre
+npm install                                   # or: bun install
+PLATFORM_ADAPTER=controlplane \
+DH_CONTROL_URL=http://127.0.0.1:17701,http://127.0.0.1:17702,http://127.0.0.1:17703 \
+npm run dev                                   # http://127.0.0.1:3000
 ```
 
-Set `GEMINI_API_KEY` in `.env.local` to enable model-backed RAG Copilot answers.
+Sign in with a capability minted by your cluster root:
 
-## Surfaces
+```bash
+dh token --ttl 12h               # operator: api.read, api.write, api.admin
+dh token --read-only --ttl 12h   # viewer
+```
 
-| Route | What it shows |
-| --- | --- |
-| `/` | Dashboard: greeting, live globe, KPIs, resource usage, RAG Copilot, activity, health |
-| `/deploy` | Universal Deploy: source → build → artifact → targets pipeline, strategies, KPIs, live deployment map, ownership mix, deployments table. `/deploy/new[:preset]` opens the deployment wizard |
-| `/nodes` | Nodes & Compute: owned / community / DePIN fleet, contribution, node table, Add a Node (real `dh node invite` → `dh-noded --join-file` → `dh node approve` flow) |
-| `/storage` | Storage & Data: capacity, replication, integrity, distributed storage map, storage nodes, Add Storage |
+or open `http://127.0.0.1:3000/#token=<capability>` (the fragment is exchanged
+for an HttpOnly cookie and removed). The control plane verifies the capability
+and enforces what it allows; the console hides nothing it relies on for security.
 
-The holographic globe (`src/components/common/HoloGlobe.tsx`) is a dependency-free
-canvas renderer: dotted continents, great-circle arcs with travelling pulses, node
-markers and HTML callouts that track rotation and avoid overlapping. It pauses
-off-screen and respects `prefers-reduced-motion`.
+Production: `npm run build && PLATFORM_ADAPTER=controlplane DH_CONTROL_URL=… npm start`.
+With TLS clusters set `NODE_EXTRA_CA_CERTS` to the cluster root CA. All options:
+`.env.example`.
 
-Fonts are bundled with `@fontsource-variable/*`, so the console loads nothing from
-third-party hosts.
+`PLATFORM_ADAPTER=demo` replays a recorded dev-cluster view for UI work. Every
+value is labelled SIMULATED, every mutation is refused, and production refuses
+it unless `ALLOW_DEMO_IN_PRODUCTION=1`. There is no fallback between adapters.
 
-See [`design.md`](design.md) for the visual system and
-[`docs/command-centre/reality-matrix.md`](docs/command-centre/reality-matrix.md)
-for which numbers are live, derived or simulated.
+## What is real
+
+See `docs/command-centre/reality-matrix.md`: hosts, applications, deployments,
+volumes, artifacts, routes, certificates, audit and evidence are live from the
+control plane; visitor analytics, bandwidth, billing, DePIN and the marketplace
+are shown as UNAVAILABLE or PLANNED instead of being filled in.
+
+## Checks
+
+```bash
+npm run lint              # tsc --noEmit (strict)
+npm test                  # unit tests on recorded real views + failure injection (offline, timeout, malformed, 5xx, config)
+npm run gate              # no-mock production gate (also runs as part of npm run build)
+DH_CONTROL_URL=… DH_TOKEN_ADMIN=$(dh token --ttl 2h) DH_TOKEN_READ=$(dh token --read-only --ttl 2h) \
+  npm run test:integration   # against a live cluster: RBAC, CSRF, deploy lifecycle, drain, Copilot approvals, audit actor
+CC_URL=http://127.0.0.1:3000 DH_TOKEN_ADMIN=… DEV_CLUSTER_DIR=../devcluster \
+  node tests/e2e/disconnect.mjs   # freezes every control-plane member; the console must lose confidence
+```
+
+Qualification record: `docs/qualification/RC1.md`.

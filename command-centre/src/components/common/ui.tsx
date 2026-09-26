@@ -12,7 +12,19 @@ import {
   SlidersHorizontal,
   ArrowUpDown
 } from 'lucide-react';
-import { Ownership, BenefitRing, ExternalNetwork } from '../../types/platform';
+import type { TruthState } from '../../types/reality';
+
+/** A network the console can report on. `state` is the truth state of the integration itself. */
+export interface NetworkInfo {
+  id: string;
+  name: string;
+  description: string;
+  status: string;
+  state: TruthState;
+  accent: string;
+  glyph: string;
+  nodes?: number;
+}
 
 /* ------------------------------------------------------------------ */
 /* Tokens                                                              */
@@ -30,13 +42,7 @@ export const TONE: Record<Tone, string> = {
   slate: '#94A3B8'
 };
 
-export const OWNERSHIP_META: Record<Ownership, { label: string; tone: Tone; icon: React.FC<{ className?: string }> }> = {
-  owned: { label: 'Your Hardware', tone: 'cyan', icon: Home },
-  community: { label: 'Community', tone: 'violet', icon: Users },
-  depin: { label: 'DePIN', tone: 'blue', icon: Box },
-  edge: { label: 'Edge', tone: 'emerald', icon: Globe2 },
-  cloud: { label: 'Central Cloud', tone: 'slate', icon: Cloud }
-};
+
 
 /* ------------------------------------------------------------------ */
 /* Surfaces                                                            */
@@ -283,7 +289,42 @@ const STATUS_TONE: Record<string, Tone> = {
   'Not Installed': 'rose',
   Stopped: 'slate',
   'Not Configured': 'slate',
-  Production: 'emerald'
+  Production: 'emerald',
+  HEALTHY: 'emerald',
+  READY: 'emerald',
+  VALID: 'emerald',
+  PASS: 'emerald',
+  RUNNING: 'emerald',
+  ADMITTED: 'emerald',
+  VERIFIED: 'emerald',
+  LIVE: 'emerald',
+  ACTIVE: 'emerald',
+  DEGRADED: 'amber',
+  CONVERGING: 'blue',
+  DEPLOYING: 'blue',
+  VERIFYING: 'blue',
+  QUEUED: 'blue',
+  PENDING: 'amber',
+  PENDING_APPROVAL: 'amber',
+  DRAINING: 'amber',
+  EXPIRING: 'amber',
+  WARN: 'amber',
+  STALE: 'amber',
+  HELD: 'amber',
+  OFFLINE: 'rose',
+  FAILED: 'rose',
+  FAIL: 'rose',
+  REFUSED: 'rose',
+  REVOKED: 'rose',
+  EXPIRED: 'rose',
+  INVALID: 'rose',
+  DEPLOY_FAILED: 'rose',
+  VALIDATION_FAILED: 'rose',
+  UNKNOWN: 'slate',
+  UNAVAILABLE: 'slate',
+  STOPPED: 'slate',
+  SUPERSEDED: 'slate',
+  DELETED: 'slate'
 };
 
 export const StatusPill: React.FC<{ status: string; tone?: Tone; className?: string; dot?: boolean }> = ({
@@ -325,21 +366,6 @@ export const DemoTag: React.FC<{ mode: 'demo' | 'live' }> = ({ mode }) =>
     <LiveTag />
   );
 
-export const OwnershipBadges: React.FC<{ placement: Ownership[] }> = ({ placement }) => (
-  <div className="flex items-center gap-1.5">
-    {placement.map((o, i) => {
-      const m = OWNERSHIP_META[o];
-      const Icon = m.icon;
-      return (
-        <span key={i} title={m.label}>
-          <IconTile tone={m.tone} size="sm" className="!w-7 !h-7 !rounded-lg">
-            <Icon className="w-3.5 h-3.5" />
-          </IconTile>
-        </span>
-      );
-    })}
-  </div>
-);
 
 /* ------------------------------------------------------------------ */
 /* Navigation                                                          */
@@ -494,7 +520,7 @@ export const ViewAll: React.FC<{ onClick?: () => void; label?: string }> = ({ on
   </button>
 );
 
-export const NetworkGlyph: React.FC<{ network: Pick<ExternalNetwork, 'glyph' | 'accent' | 'name'> }> = ({ network }) => {
+export const NetworkGlyph: React.FC<{ network: Pick<NetworkInfo, 'glyph' | 'accent' | 'name'> }> = ({ network }) => {
   const letter = network.name.replace(/[^A-Za-z]/g, '').charAt(0).toUpperCase();
   return (
     <div
@@ -512,7 +538,7 @@ export const NetworkGlyph: React.FC<{ network: Pick<ExternalNetwork, 'glyph' | '
   );
 };
 
-export const NetworkRow: React.FC<{ network: ExternalNetwork; onClick?: () => void }> = ({ network, onClick }) => (
+export const NetworkRow: React.FC<{ network: NetworkInfo; onClick?: () => void }> = ({ network, onClick }) => (
   <button
     onClick={onClick}
     className="w-full flex items-center gap-3 py-2 px-1 rounded-xl hover:bg-white/[0.035] transition-colors text-left"
@@ -529,40 +555,6 @@ export const NetworkRow: React.FC<{ network: ExternalNetwork; onClick?: () => vo
   </button>
 );
 
-export const BenefitsPanel: React.FC<{ subtitle: string; rings: BenefitRing[]; tags: { label: string; tone: Tone; icon: React.ReactNode }[] }> = ({
-  subtitle,
-  rings,
-  tags
-}) => (
-  <RailPanel title="Self-Hosting Benefits" subtitle={subtitle}>
-    <div className="grid grid-cols-4 gap-1.5">
-      {rings.map((r) => (
-        <div key={r.id} className="flex flex-col items-center text-center gap-1.5">
-          <RingGauge
-            value={r.unit === '%' ? r.value : 100}
-            tone={r.tone}
-            size={58}
-            stroke={5}
-            label={<span className="text-[14px] font-bold text-white tabular-nums">{r.value}{r.unit}</span>}
-          />
-          <span className="text-[10.5px] leading-tight text-slate-300">{r.label}</span>
-        </div>
-      ))}
-    </div>
-    <div className="grid grid-cols-2 gap-2 mt-4">
-      {tags.map((t) => (
-        <div
-          key={t.label}
-          className="flex items-center gap-2 px-2.5 py-2 rounded-xl text-[10.5px] leading-tight font-semibold text-slate-200 border"
-          style={{ borderColor: `${TONE[t.tone]}40`, background: `${TONE[t.tone]}0F` }}
-        >
-          <span style={{ color: TONE[t.tone] }}>{t.icon}</span>
-          {t.label}
-        </div>
-      ))}
-    </div>
-  </RailPanel>
-);
 
 /* ------------------------------------------------------------------ */
 /* Globe callouts                                                      */
