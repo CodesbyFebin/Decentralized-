@@ -71,7 +71,8 @@ stale generation and revocation are refused. Out of scope, as proposed:
 marketplace, leases, settlement, tokens, external DePIN, ZK, federation of
 coordinators. First attempt: `evidence/NODE-A01-A01`, **FAIL** (VERIFIED).
 All NODE-A01 checks passed; the record fails on a pre-existing gossip-join
-defect (`docs/qualification/NODE-A01.md`). Not covered by NODE-A01: a distinct CORDONED state and
+defect, since fixed in `pkg/mesh`. Second attempt: `evidence/NODE-A01-A02`,
+**PASS** (VERIFIED). Not covered by NODE-A01: a distinct CORDONED state and
 owner-reserved capacity as a first-class record (§9–12).
 
 ## Recommended next steps (in order)

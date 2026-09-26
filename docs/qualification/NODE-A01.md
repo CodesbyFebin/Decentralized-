@@ -4,7 +4,7 @@ Commit under test: `70403c4` · branch `claude/friendly-gauss-kfxoc2`
 Evidence: `evidence/NODE-A01-A01` (verify with `dh evidence verify --dir evidence/NODE-A01-A01`)
 Script: `validation/node-a01.sh`
 
-**Outcome: FAIL (VERIFIED).** Every NODE-A01 check passed. The record fails
+**Current outcome: PASS (NODE-A01-A02, VERIFIED).** First attempt, NODE-A01-A01: **FAIL (VERIFIED)**. Every NODE-A01 check passed. The record fails
 because two regression steps hit a mesh defect that predates this checkpoint
 and reproduces on the base commit (below). No second attempt was run: running
 again until it passes would not tell anyone anything new.
@@ -120,4 +120,4 @@ regression test before NODE-A01-A02 is attempted.
   - Before the fix, 3 of 25 joins took about 5 s and 3 of 25 timed out.
 - Full integration suite: PASS, including M3.
 
-The second attempt is `evidence/NODE-A01-A02`.
+**Second attempt: `evidence/NODE-A01-A02`: PASS (VERIFIED)** at commit `775e1dd`, parent NODE-A01-A01. All 15 steps passed on the first try, including `gossip-repeat` (×20, `-race`) and the full integration suite (M3 and NODE-A01 included). The scope is still a single machine: this promotes nothing for PV1.

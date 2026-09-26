@@ -27,5 +27,6 @@ bootstrap.fingerprint
 !/evidence/CC-RC1-A01/
 !/evidence/CC-RC1-A02/
 !/evidence/NODE-A01-A01/
+!/evidence/NODE-A01-A02/
 !/evidence/*/**/*.key
 /chaos-reports/runner/

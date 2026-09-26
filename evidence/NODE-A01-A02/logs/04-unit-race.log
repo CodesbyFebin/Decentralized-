@@ -1,0 +1,28 @@
+=== attempt 1 at 2026-09-26T01:24:36Z: go test -count=1 -race ./pkg/... ./cmd/...
+?   	decentralized.host/pkg/api	[no test files]
+ok  	decentralized.host/pkg/audit	1.048s
+ok  	decentralized.host/pkg/canon	1.021s
+ok  	decentralized.host/pkg/capability	1.060s
+?   	decentralized.host/pkg/chaos	[no test files]
+?   	decentralized.host/pkg/cli	[no test files]
+ok  	decentralized.host/pkg/conformance	5.335s
+?   	decentralized.host/pkg/control	[no test files]
+?   	decentralized.host/pkg/devcluster	[no test files]
+ok  	decentralized.host/pkg/edge	1.019s
+ok  	decentralized.host/pkg/envelope	1.034s
+ok  	decentralized.host/pkg/evidence	1.088s
+?   	decentralized.host/pkg/identity	[no test files]
+ok  	decentralized.host/pkg/manifest	1.044s
+ok  	decentralized.host/pkg/mesh	10.600s
+ok  	decentralized.host/pkg/node	6.301s
+?   	decentralized.host/pkg/peer	[no test files]
+ok  	decentralized.host/pkg/pki	1.072s
+ok  	decentralized.host/pkg/policy	1.027s
+?   	decentralized.host/pkg/runtime	[no test files]
+ok  	decentralized.host/pkg/scheduler	1.018s
+ok  	decentralized.host/pkg/storage	1.900s
+?   	decentralized.host/cmd/dh	[no test files]
+?   	decentralized.host/cmd/dh-beacon	[no test files]
+?   	decentralized.host/cmd/dh-conformance	[no test files]
+?   	decentralized.host/cmd/dh-control	[no test files]
+?   	decentralized.host/cmd/dh-noded	[no test files]
