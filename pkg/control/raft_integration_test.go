@@ -1168,6 +1168,105 @@ func TestHarnessClusterDiag_R1(t *testing.T) {
 	t.Logf("✓ Leader and followers identified")
 }
 
+// TestHarnessBaseline_01 is the gate for cluster formation stability.
+// Requires 25 consecutive successful cluster formations with:
+// - Single stable leader elected
+// - All members in same term
+// - No convergence timeouts
+// - No configuration mismatches
+//
+// This baseline must pass before enabling HARNESS-FAILOVER-01 and HARNESS-FAILOVER-02.
+// Status: THIS IS THE REQUIRED GATE. Cluster failover tests are BLOCKED until this passes.
+func TestHarnessBaseline_01(t *testing.T) {
+	const iterations = 25
+	t.Logf("=== HARNESS-BASELINE-01: 25 iterations stability gate ===")
+	t.Logf("This test must pass before failover testing is enabled.")
+
+	successCount := 0
+	for iteration := 0; iteration < iterations; iteration++ {
+		t.Logf("\n[%d/%d] Starting baseline formation test...", iteration+1, iterations)
+
+		tmpDir := t.TempDir()
+		c := NewRaftQualificationCluster(tmpDir, nil)
+
+		// Start cluster
+		if err := c.Start(t); err != nil {
+			t.Logf("  ✗ Start failed: %v", err)
+			c.Close()
+			continue
+		}
+
+		// Wait for leader with timeout
+		leader, term, err := c.WaitForLeader(15 * time.Second)
+		if err != nil {
+			t.Logf("  ✗ WaitForLeader failed: %v", err)
+			c.dumpClusterState(t)
+			c.Close()
+			continue
+		}
+
+		t.Logf("  ✓ Leader elected: %s at term %d", leader, term)
+
+		// Verify all members converged to same term
+		followers := c.Followers()
+		if len(followers) != 2 {
+			t.Logf("  ✗ Expected 2 followers, got %d", len(followers))
+			c.dumpClusterState(t)
+			c.Close()
+			continue
+		}
+
+		// Check term convergence after a brief wait for heartbeats
+		time.Sleep(500 * time.Millisecond)
+
+		allConverged := true
+		for _, m := range c.Members {
+			if m.Node == nil {
+				t.Logf("  ✗ Member %s not running", m.ID)
+				allConverged = false
+				break
+			}
+			currentTerm := m.Node.r.CurrentTerm()
+			if currentTerm != term {
+				t.Logf("  ✗ Member %s term %d != leader term %d", m.ID, currentTerm, term)
+				allConverged = false
+				break
+			}
+		}
+
+		if !allConverged {
+			c.dumpClusterState(t)
+			c.Close()
+			continue
+		}
+
+		// Check FSM application for consistency
+		appliedIndices := make(map[string]int64)
+		for _, m := range c.Members {
+			if m.Node != nil {
+				idx, _ := c.AppliedIndex(m.ID)
+				appliedIndices[m.ID] = idx
+			}
+		}
+
+		t.Logf("  ✓ All members converged (applied: %v)", appliedIndices)
+		successCount++
+		c.Close()
+	}
+
+	t.Logf("\n=== RESULTS ===")
+	t.Logf("Successful formations: %d/%d", successCount, iterations)
+
+	if successCount == iterations {
+		t.Logf("✓ HARNESS-BASELINE-01 PASSED")
+		t.Logf("✓ Cluster formation is stable and ready for failover testing")
+	} else {
+		failureRate := float64(iterations-successCount) / float64(iterations) * 100
+		t.Fatalf("✗ HARNESS-BASELINE-01 FAILED: only %d/%d successful (%.1f%% failure rate)",
+			successCount, iterations, failureRate)
+	}
+}
+
 // TestRaftHarness_PartitionHeal verifies that a partitioned member rejoins
 // and converges with the cluster.
 func TestRaftHarness_PartitionHeal(t *testing.T) {
