@@ -29,6 +29,7 @@ import (
 	"decentralized.host/pkg/envelope"
 	"decentralized.host/pkg/identity"
 	"decentralized.host/pkg/pki"
+	"decentralized.host/pkg/runtime"
 	"decentralized.host/pkg/storage"
 )
 
@@ -84,11 +85,12 @@ type Server struct {
 		sync.Mutex
 		at time.Time
 	}
-	mirror  *mirror
-	meshMu  sync.RWMutex
-	meshCli meshClient
-	started time.Time
-	lastCP  time.Time // only touched by the housekeeping goroutine
+	mirror      *mirror
+	meshMu      sync.RWMutex
+	meshCli     meshClient
+	started     time.Time
+	lastCP      time.Time // only touched by the housekeeping goroutine
+	materializer *runtime.Materializer // [A05] for ephemeral secret delivery
 }
 
 // New creates a member; call Run to serve.
@@ -116,8 +118,14 @@ func New(cfg Config) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Initialize ephemeral secrets materializer for A05 delivery
+	ephemeralDir := filepath.Join(cfg.DataDir, "ephemeral-secrets")
+	if err := os.MkdirAll(ephemeralDir, 0o700); err != nil {
+		return nil, fmt.Errorf("create ephemeral secrets dir: %w", err)
+	}
 	s := &Server{cfg: cfg, id: id, fsm: NewFSM(), log: cfg.Logger, cas: cas, kick: make(chan struct{}, 1),
-		stop: make(chan struct{}), stopped: make(chan struct{}), obs: newObsCache(), plans: newPlanCache(), local: &localRejections{}, started: time.Now()}
+		stop: make(chan struct{}), stopped: make(chan struct{}), obs: newObsCache(), plans: newPlanCache(), local: &localRejections{}, started: time.Now(),
+		materializer: runtime.NewMaterializer(ephemeralDir)}
 	s.fsm.onApply = func(*Command, *Result) { s.wake() }
 	if b, err := os.ReadFile(s.credsPath()); err == nil {
 		var c Credentials

@@ -59,15 +59,32 @@ func (s *Sandboxed) Start(spec Spec) (Instance, error) {
 			cfg.Port = 8080
 		}
 	}
+	ephemeralPath := ""
 	for _, m := range spec.Mounts {
-		cfg.Mounts = append(cfg.Mounts, sandbox.Mount{HostPath: m.HostPath, Path: m.Path})
+		cfg.Mounts = append(cfg.Mounts, sandbox.Mount{HostPath: m.HostPath, Path: m.Path, ReadOnly: m.ReadOnly})
+	}
+	// Ephemeral mounts are read-only secret material
+	for _, m := range spec.EphemeralMounts {
+		cfg.Mounts = append(cfg.Mounts, sandbox.Mount{HostPath: m.HostPath, Path: m.Path, ReadOnly: true})
+		if ephemeralPath == "" {
+			ephemeralPath = m.HostPath
+		}
 	}
 	h, err := s.eng.Start(cfg, spec.App)
 	if err != nil {
 		return Instance{}, err
 	}
 	blob, _ := json.Marshal(h)
-	return Instance{Runtime: "sandbox", PID: int64(h.PID), ContainerID: string(blob), Port: h.HostPort, StartedAt: time.Now().UnixMilli(), StartToken: h.StartToken}, nil
+	return Instance{
+		Runtime:         "sandbox",
+		PID:             int64(h.PID),
+		ContainerID:     string(blob),
+		Port:            h.HostPort,
+		StartedAt:       time.Now().UnixMilli(),
+		StartToken:      h.StartToken,
+		EphemeralID:     spec.EphemeralID,
+		EphemeralPath:   ephemeralPath,
+	}, nil
 }
 
 func (s *Sandboxed) handle(i Instance) sandbox.Handle {

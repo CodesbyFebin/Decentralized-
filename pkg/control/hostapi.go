@@ -520,12 +520,36 @@ func (s *Server) handleRetrieveSecret(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Send plaintext response
-	// In production, this would be wrapped in authenticated encryption
-	writeJSON(w, 200, map[string]any{
-		"plaintext": plaintext,
-		"digest":    requestDigest,
-	})
+	// Determine delivery mode: ephemeral tmpfs (A05) or plaintext (legacy)
+	if req.EphemeralID != "" {
+		// A05: Ephemeral tmpfs delivery
+		// Allocate secret material on control plane, return path to agent
+		// Agent will mount at /run/secrets/... in workload namespace
+		ephemeralPath, err := s.materializer.AllocateEphemeral(r.Context(), req.WorkloadID, req.EphemeralID, plaintext)
+		if err != nil {
+			writeErr(w, 500, "ephemeral allocation failed: %v", err)
+			if s.fsm.retrievalObserver != nil {
+				s.fsm.retrievalObserver.AfterResponseWrite(map[string]string{
+					"requestDigest": requestDigest,
+				}, err)
+			}
+			return
+		}
+
+		// Return ephemeralPath instead of plaintext
+		writeJSON(w, 200, map[string]any{
+			"ephemeralPath": ephemeralPath,
+			"ephemeralId":   req.EphemeralID,
+			"digest":        requestDigest,
+		})
+	} else {
+		// Legacy: plaintext response
+		// In production, this would be wrapped in authenticated encryption
+		writeJSON(w, 200, map[string]any{
+			"plaintext": plaintext,
+			"digest":    requestDigest,
+		})
+	}
 
 	if s.fsm.retrievalObserver != nil {
 		s.fsm.retrievalObserver.AfterResponseWrite(map[string]string{
