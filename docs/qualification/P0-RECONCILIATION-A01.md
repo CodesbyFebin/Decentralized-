@@ -1,7 +1,7 @@
 # P0-RECONCILIATION-A01: Gate Acceptance Contract Analysis
 
 **Date**: 2026-09-26  
-**Status**: RECONCILIATION IN PROGRESS - 7 OF 9 GATES QUALIFIED (77%)  
+**Status**: A05-P0-A01 BLOCKING - 2 VERIFIED + 5 PROVISIONAL (DOWNSTREAM GATES PROVISIONAL UNTIL A05-P0-A01 CLOSES)  
 **Canonical Main SHA**: ea1a53d (A05-P0-A01: Integrated Secrets Qualification)  
 **Branch SHA**: 923990f (STORAGE-W2-A01: Workload Persistent Storage)  
 **Analysis Scope**: 9 claimed P0/P1/P2 milestones
@@ -535,16 +535,16 @@ This reconciliation analyzes 9 claimed milestones against their acceptance contr
 
 | Milestone | Status | Classification | Ready for Main? |
 |-----------|--------|-----------------|-----------------|
-| A05-P0-A01 | Main | PARTIAL | No |
-| A05-P1-R1 | Main | **PASS** | ✓ Yes |
-| A05-P2-A01 | Main | **PASS** | ✓ Yes |
-| LIFECYCLE-P0-A01 | Branch | **QUALIFIED** | ✓ Yes |
-| DEPLOY-SPEC-P0-A01 | Branch | **QUALIFIED** | ✓ Yes |
-| DEPLOY-W2-A01 | Branch | **QUALIFIED** | ✓ Yes |
-| STORAGE-W2-A01 | Branch | **QUALIFIED** | ✓ Yes |
-| NETWORK-W2-A01 | Branch | **QUALIFIED** | ✓ Yes |
-| CC-W2-A01 | Branch | MISNAMED | No |
-| P0-SOVEREIGN-A01 | Branch | INCOMPLETE | No |
+| A05-P0-A01 | Branch | **PARTIAL - BLOCKING** | No ← **CURRENT GATE** |
+| A05-P1-R1 | Main | **VERIFIED/PASS** | ✓ Yes |
+| A05-P2-A01 | Main | **VERIFIED/PASS** | ✓ Yes |
+| LIFECYCLE-P0-A01 | Branch | IMPLEMENTED/PROVISIONAL | ⏳ Conditional |
+| DEPLOY-SPEC-P0-A01 | Branch | IMPLEMENTED/PROVISIONAL | ⏳ Conditional |
+| DEPLOY-W2-A01 | Branch | IMPLEMENTED/PROVISIONAL | ⏳ Conditional |
+| STORAGE-W2-A01 | Branch | IMPLEMENTED/PROVISIONAL | ⏳ Conditional |
+| NETWORK-W2-A01 | Branch | IMPLEMENTED/PROVISIONAL | ⏳ Conditional |
+| CC-W2-A01 | Branch | NOT IMPLEMENTED | No |
+| P0-SOVEREIGN-A01 | Branch | NOT IMPLEMENTED | No |
 
 ---
 
@@ -605,20 +605,48 @@ This reconciliation analyzes 9 claimed milestones against their acceptance contr
 
 ---
 
+## Dependency Order (Canonical)
+
+```
+A05-P2-A01
+  → A05-P0-A01 ← **CURRENT BLOCKING GATE**
+    → LIFECYCLE-P0-A01
+      → DEPLOY-SPEC-P0-A01
+        → DEPLOY-W2-A01
+          → STORAGE-W2-A01
+            → NETWORK-W2-A01
+              → CC-W2-A01
+                → P0-SOVEREIGN-A01
+```
+
+**Critical**: A05-P0-A01 is prerequisite for all downstream gates. Until A05-P0-A01 closes with:
+- ✓ Integrated chaos qualification
+- ✓ Same-UID isolation proof
+- ✓ Plaintext canary (zero leakage scan)
+- ✓ Negative control (deliberate break → must fail)
+- ✓ Full regression
+- ✓ Sealed evidence bundle
+
+All downstream implementations remain **PROVISIONAL**, not QUALIFIED.
+
+---
+
 ## P0 Acceptance Gate Status
 
-**CURRENT STATUS**: 7 of 9 gates QUALIFIED (77%)
+**CURRENT STATUS**: 2 VERIFIED + 5 PROVISIONAL (Conditional on A05-P0-A01)
 
 **Conditions for P0 Acceptance**:
-1. ✓ A05-P1-R1: Ephemeral Secret Delivery (QUALIFIED at 6524ac0)
-2. ✓ A05-P2-A01: Secret Lifecycle & Recovery (QUALIFIED at f4bffe0)
-3. ✓ LIFECYCLE-P0-A01: Persistent storage and reconciliation (QUALIFIED at bc1c01d)
-4. ✓ DEPLOY-SPEC-P0-A01: Artifact hash/signature (QUALIFIED at 88a1311)
-5. ✓ DEPLOY-W2-A01: Full 16-stage pipeline (QUALIFIED at afacf63)
-6. ✓ NETWORK-W2-A01: Real network operations and lifecycle integration (QUALIFIED at 788f38f)
-7. ✓ STORAGE-W2-A01: Workload persistent volumes with full lifecycle (QUALIFIED at 923990f)
-8. ✗ CC-W2-A01: Implement Command Centre backend with TruthEnvelope (currently MISNAMED as ClusterCoordinator)
-9. ✗ P0-SOVEREIGN-A01: Upgrade to real clean-Linux operational qualification
+1. ✓ A05-P1-R1: VERIFIED/PASS (already sealed, 6524ac0)
+2. ✓ A05-P2-A01: VERIFIED/PASS (already sealed, f4bffe0)
+3. ✗ A05-P0-A01: PARTIAL - **MUST CLOSE FIRST** (blocking all downstream)
+   - Requires: Integrated chaos, same-UID isolation, canary scan, negative control, regression, sealed evidence
+4. ⏳ LIFECYCLE-P0-A01: IMPLEMENTED/PROVISIONAL (conditional on A05-P0-A01)
+5. ⏳ DEPLOY-SPEC-P0-A01: IMPLEMENTED/PROVISIONAL (conditional on A05-P0-A01)
+6. ⏳ DEPLOY-W2-A01: IMPLEMENTED/PROVISIONAL (conditional on A05-P0-A01)
+7. ⏳ STORAGE-W2-A01: IMPLEMENTED/PROVISIONAL (conditional on A05-P0-A01)
+8. ⏳ NETWORK-W2-A01: IMPLEMENTED/PROVISIONAL (conditional on A05-P0-A01)
+9. ✗ CC-W2-A01: NOT IMPLEMENTED (can begin after A05-P0-A01 closes)
+10. ✗ P0-SOVEREIGN-A01: NOT IMPLEMENTED (final gate after all others)
 
 ---
 
@@ -667,32 +695,42 @@ The following implementations are USEFUL but MISCLASSIFIED:
 
 ### Immediate Next Gates (Priority Order)
 
-1. **✓ DEPLOY-W2-A01 - Full Pipeline Implementation** (QUALIFIED)
-   - Completed: Full 16-stage pipeline (SOURCE → RESOLVE → BUILD → TEST → PACKAGE → HASH → SIGN → ARTIFACT_READY → MATCH → PLACE → START → HEALTH → ROUTE → OBSERVE → EVIDENCE)
-   - Status: All stages with per-stage tracking, artifact hash/signature recording, node execution tracking
+1. **✗ A05-P0-A01 - INTEGRATED SECRETS QUALIFICATION** (BLOCKING - CURRENT)
+   - Status: PARTIAL - awaiting chaos campaign
+   - Action: Close A05-P0-A01 first before proceeding with any other gates
+   - Required:
+     - Integrated transaction: create → encrypt → persist → authorize → Raft commit → decrypt → sign → delivery → materialization → workload access
+     - Chaos matrix: faults at 10+ injection points
+     - Same-UID isolation: Workload A (UID 1000) cannot read Workload B (UID 1000) secrets
+     - Plaintext canary: scan all surfaces (database, logs, filesystem, snapshots) - must find zero plaintext
+     - Negative control: disable target-node binding → must fail
+     - Full regression: go test ./... -race
+     - Sealed evidence bundle with manifest signature
+   - Blocker: NONE (can begin now)
+   - **Action**: Execute A05-P0-A01 integrated campaign immediately
 
-2. **✓ STORAGE-W2-A01 - Workload Persistent Volumes** (QUALIFIED)
-   - Completed: Full volume lifecycle (CREATE → ATTACH → MOUNT → WRITE → UNMOUNT → DETACH → DELETE)
-   - Status: Directory-based persistence, quota enforcement, snapshots, workload isolation
+2. **⏳ DEPLOY-W2-A01 - Full Pipeline** (PROVISIONAL - After A05-P0-A01)
+   - Status: Implemented (16 stages) - awaiting revalidation
+   - Revalidation required: Verify actual side effects for each stage (not just state variable updates)
+   - Use real deployable fixture to prove artifact digest and running workload
 
-3. **✓ NETWORK-W2-A01 - Real Network Operations** (QUALIFIED)
-   - Completed: Real port binding via net.Listener, health checks (HTTP/TCP/EXEC), lifecycle integration
-   - Status: Threshold-based status updates, service connectivity verification, network stats
+3. **⏳ STORAGE-W2-A01 - Persistent Volumes** (PROVISIONAL - After A05-P0-A01)
+   - Status: Implemented (full lifecycle) - awaiting revalidation
+   - Revalidation required: Prove real filesystem/storage operations (volume create, attach, mount, write, restart, read, detach, quota, denial, backup, restore)
 
-4. **CC-W2-A01 - Command Centre Backend** (NEXT)
-   - Current: ClusterCoordinator (Raft consensus) - useful infrastructure but MISNAMED
-   - Required: Real Command Centre with TruthEnvelope, state queries, operations API
-   - TruthEnvelope: source identity, observedAt timestamp, freshness calculation, value (observed state)
-   - Operations: List nodes (with freshness), Get node state, Update desired state, Drain node, Revoke node
-   - Delta: New implementation (Raft consensus preserved separately)
-   - Blocker: None (all dependencies satisfied)
-   - **Action**: Begin implementation now
+4. **⏳ NETWORK-W2-A01 - Real Network Ops** (PROVISIONAL - After A05-P0-A01)
+   - Status: Implemented (port binding, health checks) - awaiting revalidation
+   - Revalidation required: Prove actual network side effects (real listener, real client, real disconnect/reconnect)
 
-5. **P0-SOVEREIGN-A01 - Real Operational Qualification** (FINAL)
-   - Current: 4 in-process Go unit tests
-   - Required: Real clean-Linux qualification (install, enrollment, hardware discovery, build/sign, isolated runtime, storage, networking, health, restart, recovery, export/import)
-   - Delta: Complete end-to-end test on real environment
-   - Blocker: All other components must be complete (will be after CC-W2-A01)
+5. **✗ CC-W2-A01 - Command Centre Backend** (AFTER A05-P0-A01)
+   - Status: NOT YET IMPLEMENTED
+   - Will implement after A05-P0-A01 closes and downstream gates revalidated
+   - Required: TruthEnvelope backend, UI state queries, operations API, real mutations
+
+6. **✗ P0-SOVEREIGN-A01 - Clean-Linux Qualification** (LAST - AFTER ALL OTHERS)
+   - Status: NOT YET IMPLEMENTED  
+   - Will implement as final gate after all others verified
+   - Required: Real operational qualification on clean Linux environment
 
 ### Do Not Merge to Main Until:
 1. ✓ A05-P1-R1: QUALIFIED (already on main)
@@ -706,8 +744,8 @@ The following implementations are USEFUL but MISCLASSIFIED:
 9. ✗ P0-SOVEREIGN-A01: REAL operational qualification on clean Linux
 
 ### Branch Status
-- **Current**: claude/friendly-gauss-kfxoc2 (16 commits, 7 QUALIFIED, 2 remaining incomplete)
-- **Main**: ea1a53d (A05-P0-A01 only; A05-P1-R1 and A05-P2-A01 already merged)
-- **Progress**: 7 of 9 gates now QUALIFIED (77%)
-- **Action**: Continue with remaining 2 gates (CC-W2-A01, P0-SOVEREIGN-A01) in dependency order
+- **Current**: claude/friendly-gauss-kfxoc2 (17 commits, 2 VERIFIED + 5 PROVISIONAL + 2 NOT IMPLEMENTED)
+- **Main**: ea1a53d (A05 foundation + 2 verified gates; A05-P1-R1 and A05-P2-A01 merged)
+- **Progress**: 2 VERIFIED gates; A05-P0-A01 blocking all downstream (PROVISIONAL status pending)
+- **Action**: Close A05-P0-A01 first, then revalidate downstream gates, then implement final gates
 
