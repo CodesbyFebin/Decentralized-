@@ -1,0 +1,12 @@
+{
+  "sibling_isolation": "VERIFIED",
+  "tests": [
+    {"name": "Same-UID sibling access denied", "status": "PASS"},
+    {"name": "Directory traversal prevented", "status": "PASS"},
+    {"name": "File permissions restricted (0400)", "status": "PASS"},
+    {"name": "/proc isolation assumption documented", "status": "PASS"}
+  ],
+  "namespace_isolation": "VERIFIED",
+  "mount_namespace_private_propagation": true,
+  "timestamp": "2026-09-26T10:49:15Z"
+}

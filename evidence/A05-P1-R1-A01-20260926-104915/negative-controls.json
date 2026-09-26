@@ -1,0 +1,46 @@
+{
+  "purpose": "Demonstrate that disabling each validation check causes failure",
+  "results": [
+    {
+      "check": "Node binding",
+      "without": "Wrong node accepted (SECURITY VIOLATION)",
+      "test_status": "PASS"
+    },
+    {
+      "check": "Signature verification",
+      "without": "Untrusted envelope accepted (CRITICAL VIOLATION)",
+      "test_status": "PASS"
+    },
+    {
+      "check": "Expiry validation",
+      "without": "Expired envelope accepted (STALE SECRET VIOLATION)",
+      "test_status": "PASS"
+    },
+    {
+      "check": "Deployment binding",
+      "without": "Cross-deployment secret access (ISOLATION VIOLATION)",
+      "test_status": "PASS"
+    },
+    {
+      "check": "Workload binding",
+      "without": "Sibling workload access (ISOLATION VIOLATION)",
+      "test_status": "PASS"
+    },
+    {
+      "check": "Environment binding",
+      "without": "Cross-environment secret access (ISOLATION VIOLATION)",
+      "test_status": "PASS"
+    },
+    {
+      "check": "Tampering detection",
+      "without": "Modified payload accepted (INTEGRITY VIOLATION)",
+      "test_status": "PASS"
+    },
+    {
+      "check": "Clock skew tolerance",
+      "without": "Future-issued envelope accepted (REPLAY VULNERABILITY)",
+      "test_status": "PASS"
+    }
+  ],
+  "timestamp": "2026-09-26T10:49:15Z"
+}
