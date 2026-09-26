@@ -40,6 +40,7 @@ type State struct {
 	LocalCACert  string                        `json:"localCaCert"`
 	LocalCAKey   string                        `json:"localCaKey"` // secret: never exported without --include-secrets
 	Secrets      SecretsStore                  `json:"secrets"`    // encrypted secrets (never persisted plaintext)
+	ReplayLedger ReplayLedger                  `json:"replayLedger"` // consumed authorizations (replay protection, survives failover)
 	Index        int64                         `json:"index"`
 	IndexBase    int64                         `json:"indexBase"` // added to raft indexes after a restore so bundles never go backwards
 	Rejections   []Rejection                   `json:"rejections"`
@@ -232,6 +233,7 @@ func newState() *State {
 		MemberBind:   map[string]*envelope.Envelope{},
 		Federation:   newFederation(),
 		Secrets:      NewSecretsStore(),
+		ReplayLedger: NewReplayLedger(),
 	}
 }
 
@@ -266,6 +268,9 @@ func (s *State) ensure() {
 	}
 	if s.Secrets == nil {
 		s.Secrets = NewSecretsStore()
+	}
+	if s.ReplayLedger == nil {
+		s.ReplayLedger = NewReplayLedger()
 	}
 	s.Federation.ensure()
 }

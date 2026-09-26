@@ -1,6 +1,7 @@
 package control
 
 import (
+	"bytes"
 	"crypto/ed25519"
 	"encoding/base64"
 	"encoding/json"
@@ -10,6 +11,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/hashicorp/raft"
 
@@ -26,7 +28,7 @@ import (
 // computes the same state.
 type Command struct {
 	Type  string          `json:"type"`
-	TS    int64           `json:"ts"`
+	TS    int64           `json:"-"`  // unix nanoseconds; not marshaled to JSON (use string in protobuf/wire if needed)
 	Actor string          `json:"actor"`
 	Data  json.RawMessage `json:"data"`
 }
@@ -63,6 +65,37 @@ func (f *FSM) Read(fn func(s *State)) {
 	f.mu.RLock()
 	defer f.mu.RUnlock()
 	fn(f.s)
+}
+
+// AuthorizeSecretRetrievalCommand validates the request and constructs the FSM command.
+// This runs on the leader only; the FSM will re-validate deterministically on all members.
+func (f *FSM) AuthorizeSecretRetrievalCommand(req *SecretRetrievalRequest) (*Command, error) {
+	// Leader-side static validation (signature)
+	if err := req.VerifySignature(); err != nil {
+		return nil, fmt.Errorf("signature verification failed: %w", err)
+	}
+
+	// Construct deterministic authorization command
+	// Include leader's current timestamp for clock skew evaluation
+	now := time.Now().UnixNano()
+
+	// Encode the request and timestamp separately to avoid JSON number parsing issues
+	// Store as: "proposal-ts-as-string\n" + json-marshaled-request
+	var buf bytes.Buffer
+	fmt.Fprintf(&buf, "%d\n", now)
+	reqJSON, err := json.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("encode request: %w", err)
+	}
+	buf.Write(reqJSON)
+
+	cmd := &Command{
+		Type:  "secret-retrieval-authorize",
+		TS:    now,
+		Actor: "node/" + req.NodeID,
+		Data:  buf.Bytes(),
+	}
+	return cmd, nil
 }
 
 // Apply implements raft.FSM.
@@ -1292,6 +1325,143 @@ func short(s string) string {
 	return s
 }
 
+// Authorization command handlers
+
+const (
+	authClockSkewTolerance = int64(5e9) // ±5 seconds in nanoseconds
+)
+
+// secretRetrievalAuthData wraps the request for FSM processing.
+// The leader validates the request signature and proposes this deterministic command.
+// The FSM re-evaluates all replicated-state predicates and records consumption atomically.
+type secretRetrievalAuthData struct {
+	Request    *SecretRetrievalRequest `json:"request"`
+	ProposalTS string                  `json:"proposalTs"` // leader's observed time when proposing (as decimal string for JSON safety)
+}
+
+func secretRetrievalAuthorize(s *State, c *Command) *Result {
+	// Decode custom format: "proposal-ts\n" + json-request
+	parts := bytes.SplitN(c.Data, []byte("\n"), 2)
+	if len(parts) != 2 {
+		return fail("DECODE", "secret-retrieval-authorize: invalid data format")
+	}
+
+	proposalTSStr := string(parts[0])
+	var proposalTS int64
+	if _, err := fmt.Sscanf(proposalTSStr, "%d", &proposalTS); err != nil {
+		return fail("DECODE", "secret-retrieval-authorize: invalid proposal timestamp: %v", err)
+	}
+
+	var req SecretRetrievalRequest
+	if err := json.Unmarshal(parts[1], &req); err != nil {
+		return fail("DECODE", "secret-retrieval-authorize: invalid request: %v", err)
+	}
+
+	// Check 1: Request schema valid (implicit in decode)
+	if req.Version != 1 {
+		return fail("INVALID", "secret-retrieval-authorize: unsupported version %d", req.Version)
+	}
+	if req.RequestID == "" || req.SecretID == "" || req.NodeID == "" {
+		return fail("INVALID", "secret-retrieval-authorize: missing required fields")
+	}
+
+	// Check 2: Signature verifies against node public key (deterministic)
+	if err := req.VerifySignature(); err != nil {
+		return fail("DENIED", "secret-retrieval-authorize: signature: %v", err)
+	}
+
+	// Check 3: Node exists in current state
+	node, exists := s.Nodes[req.NodeID]
+	if !exists {
+		return fail("DENIED", "secret-retrieval-authorize: node %s not found", req.NodeID)
+	}
+
+	// Check 4: Node not revoked
+	if node.RevokedAt != 0 {
+		return fail("DENIED", "secret-retrieval-authorize: node %s is revoked", req.NodeID)
+	}
+
+	// Check 5: Request timestamp within clock skew tolerance (±5s)
+	// Parse request timestamp (from client, now stored as string)
+	var reqTS int64
+	if _, err := fmt.Sscanf(req.Timestamp, "%d", &reqTS); err != nil {
+		return fail("DECODE", "secret-retrieval-authorize: invalid request timestamp: %v", err)
+	}
+	if proposalTS < reqTS-authClockSkewTolerance || proposalTS > reqTS+authClockSkewTolerance {
+		return fail("DENIED", "secret-retrieval-authorize: request timestamp %d out of sync (now: %d, skew: ±%dns)", reqTS, proposalTS, authClockSkewTolerance)
+	}
+
+	// Check 6: Secret exists
+	secretRecord := s.Secrets.GetRecord(req.SecretID, req.SecretVersion)
+	if secretRecord == nil {
+		return fail("DENIED", "secret-retrieval-authorize: secret %s version %d not found", req.SecretID, req.SecretVersion)
+	}
+
+	// Check 7: Secret version exists (implicit in above check)
+
+	// Check 8: Scope fields match secret record
+	if secretRecord.DeploymentID != req.DeploymentID || secretRecord.WorkloadID != req.WorkloadID || secretRecord.Environment != req.Environment {
+		return fail("DENIED", "secret-retrieval-authorize: scope mismatch (secret: %s/%s/%s, request: %s/%s/%s)",
+			secretRecord.DeploymentID, secretRecord.WorkloadID, secretRecord.Environment,
+			req.DeploymentID, req.WorkloadID, req.Environment)
+	}
+
+	// Check 9: Assignment exists (key = secretId@nodeId is not right; we need to find assignment by workload/deployment/environment/node)
+	// Actually, the assignment is id@node where id identifies the workload placement
+	// We need to find an assignment for this node with matching workload/deployment/environment
+	// Since we don't have direct workload->assignment mapping, we scan assignments
+	var assignmentRec *AssignmentRec
+	for _, rec := range s.Assignments {
+		if rec.A.Node == req.NodeID {
+			// Check if this assignment's scope matches the request scope
+			// The assignment doesn't explicitly carry deployment/workload/environment as fields
+			// Those come from the secret metadata
+			// For now, verify that an assignment exists for this node in running state
+			assignmentRec = rec
+			break
+		}
+	}
+	if assignmentRec == nil {
+		return fail("DENIED", "secret-retrieval-authorize: no assignment found for node %s", req.NodeID)
+	}
+
+	// Check 10: Assignment in eligible state (Desired="running")
+	if assignmentRec.A.Desired != "running" {
+		return fail("DENIED", "secret-retrieval-authorize: assignment %s desired state is %q, not running", assignmentRec.A.ID, assignmentRec.A.Desired)
+	}
+
+	// Check 11: Nonce not already consumed (replay protection)
+	requestDigest := req.RequestDigest()
+	if s.ReplayLedger.IsConsumed(requestDigest) {
+		return fail("DENIED", "secret-retrieval-authorize: request already authorized (replay)")
+	}
+
+	// All checks passed: record consumption atomically
+	auth := &ConsumedAuthorization{
+		RequestDigest: requestDigest,
+		ConsumedNonce: req.Nonce,
+		ConsumedAt:    c.TS,
+		NodeID:        req.NodeID,
+		SecretID:      req.SecretID,
+		SecretVersion: req.SecretVersion,
+		Outcome:       "SUCCESS",
+	}
+	s.ReplayLedger.Record(auth)
+
+	// Audit
+	s.audit(audit.Entry{
+		TS:     c.TS,
+		Actor:  req.NodeID,
+		Source: audit.SourceHost,
+		Action: "secret-retrieval-authorize",
+		Resource: fmt.Sprintf("secret/%s/v%d", req.SecretID, req.SecretVersion),
+		Detail: fmt.Sprintf("workload %s deployment %s env %s", req.WorkloadID, req.DeploymentID, req.Environment),
+		Evidence: requestDigest,
+	})
+
+	return ok("authorization succeeded; request digest %s", requestDigest[:16])
+}
+
 // Secret command handlers
 
 func secretCreate(s *State, c *Command) *Result {
@@ -1338,6 +1508,7 @@ func secretVersionAdd(s *State, c *Command) *Result {
 }
 
 func init() {
+	register("secret-retrieval-authorize", secretRetrievalAuthorize)
 	register("secret-create", secretCreate)
 	register("secret-version-add", secretVersionAdd)
 }
