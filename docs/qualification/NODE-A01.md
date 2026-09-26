@@ -98,3 +98,26 @@ regression test before NODE-A01-A02 is attempted.
 - Chaos scenarios and the TLS runbook: not re-run.
 - A server-issued enrolment challenge. The root-signed single-use join nonce
   is the challenge; see `docs/protocol/dh-v1.md` §9.1.
+
+## Follow-up: the gossip defect is root-caused and fixed
+
+**Cause.** Crossed first handshakes.
+- The lower-key side of a pair sends a handshake initiation as soon as the peer is configured (startup keepalive).
+- In the failing joins, the higher-key side had data (the join's TCP SYN) and initiated at the same moment.
+- wireguard-go consumed the peer's initiation and the response to its own initiation on different goroutines. The resulting session no longer matched the index the other side addressed.
+- Every packet in that direction was then dropped until the rekey timer fired at 15 s (REKEY_TIMEOUT + KEEPALIVE_TIMEOUT). A trace with per-device WireGuard logs showed it: `Received invalid response message` on one side, one side's rx counter frozen while the other's tx grew, and recovery at 15.07 s.
+
+**Fix** (`pkg/mesh/device.go`). For a newly added peer, the higher-key side withholds the endpoint for `firstContactGrace` (2 s). Until then it can answer an initiation but not send one, and its data is staged until the handshake completes. After the grace period it gets the endpoint (unless a handshake already taught it one) and initiates at its next retry, so a pair where only it can open the path still connects.
+
+**Regression tests** (`pkg/mesh/handshake_test.go`):
+- the higher-key side sends nothing before the lower side's initiation. Without the fix it sent a 148-byte initiation immediately;
+- the higher-key side does initiate after the grace period when the lower side cannot reach it.
+
+**Measurements after the fix**
+- `TestGossipMembership` ×50 with `-race`: 50/50.
+- Join-latency probe, 60 joins with `-race`: 59 under 1 s, 1 at about 5 s, 0 timeouts.
+  - The remaining 5 s case is a startup initiation that arrived before the other side had configured the peer, and was resent at REKEY_TIMEOUT.
+  - Before the fix, 3 of 25 joins took about 5 s and 3 of 25 timed out.
+- Full integration suite: PASS, including M3.
+
+The second attempt is `evidence/NODE-A01-A02`.

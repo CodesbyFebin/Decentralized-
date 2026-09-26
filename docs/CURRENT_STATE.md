@@ -54,7 +54,7 @@ ZK / TEE (research).
 
 ## Broken / known defects
 
-- Gossip join over the userspace mesh can exceed memberlist's 10 s TCP timeout: a stalled TCP push-pull after the tunnel is up, plus an occasional 5 s WireGuard handshake retry. It reproduces on Linux under `-race` (3/20 at the base commit) and fails `TestGossipMembership` and `TestM3TrustAndMesh` intermittently. Diagnosis in `docs/qualification/NODE-A01.md`; not fixed.
+- Fixed after NODE-A01-A01: gossip joins over the userspace mesh could stall past memberlist's 10 s TCP timeout. The cause was crossed first handshakes: the lower-key side's startup initiation raced the other side's data-triggered initiation, wireguard-go consumed both concurrently, and one direction dropped every packet until the 15 s rekey. Now only the lower-key side starts a pair's first handshake; the other side gets the endpoint after `firstContactGrace` (2 s), or learns it from the handshake (`pkg/mesh/device.go`, `pkg/mesh/handshake_test.go`).
 - Fixed in NODE-A01: `facts.memBytes` reported the declared `--mem` capacity as if measured, and the Command Centre labelled it "Memory (measured)". Hosts now measure it; the console treats memory from agents that do not send `facts.unknown` as not measured.
 - Fixed in NODE-A01: a validly signed older `enroll` envelope replayed for a known host overwrote its newer enrolment (facts summary and policy).
 
