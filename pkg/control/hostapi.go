@@ -520,36 +520,54 @@ func (s *Server) handleRetrieveSecret(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Determine delivery mode: ephemeral tmpfs (A05) or plaintext (legacy)
-	if req.EphemeralID != "" {
-		// A05: Ephemeral tmpfs delivery
-		// Allocate secret material on control plane, return path to agent
-		// Agent will mount at /run/secrets/... in workload namespace
-		ephemeralPath, err := s.materializer.AllocateEphemeral(r.Context(), req.WorkloadID, req.EphemeralID, plaintext)
-		if err != nil {
-			writeErr(w, 500, "ephemeral allocation failed: %v", err)
-			if s.fsm.retrievalObserver != nil {
-				s.fsm.retrievalObserver.AfterResponseWrite(map[string]string{
-					"requestDigest": requestDigest,
-				}, err)
-			}
-			return
+	// A05-P1-R1: Fail-closed delivery gate
+	// If ephemeral delivery is not requested, deny the retrieval.
+	// Legacy plaintext fallback is disabled by default (require explicit opt-in configuration).
+	if req.EphemeralID == "" {
+		writeErr(w, 403, "ephemeral delivery required; plaintext retrieval not authorized")
+		if s.fsm.retrievalObserver != nil {
+			s.fsm.retrievalObserver.AfterResponseWrite(map[string]string{
+				"requestDigest": requestDigest,
+			}, errors.New("plaintext fallback denied"))
 		}
-
-		// Return ephemeralPath instead of plaintext
-		writeJSON(w, 200, map[string]any{
-			"ephemeralPath": ephemeralPath,
-			"ephemeralId":   req.EphemeralID,
-			"digest":        requestDigest,
-		})
-	} else {
-		// Legacy: plaintext response
-		// In production, this would be wrapped in authenticated encryption
-		writeJSON(w, 200, map[string]any{
-			"plaintext": plaintext,
-			"digest":    requestDigest,
-		})
+		return
 	}
+
+	// A05-P1-R1: Create signed delivery envelope
+	// Agent will receive this envelope, verify signature, and materialize on assigned node
+	// ClusterID comes from the SecretRecord's scope binding (same cluster where secret was created)
+	clusterID := ""
+	if secretRecord != nil {
+		clusterID = secretRecord.ClusterID
+	}
+	envelope := &SecretDeliveryEnvelope{
+		ProtocolVersion:     1,
+		DeliveryID:          req.EphemeralID,
+		AuthorizationDigest: requestDigest,
+		ClusterID:           clusterID,          // From secret's scope binding
+		NodeID:              req.NodeID,         // Target node (agent verifies == self)
+		DeploymentID:        req.DeploymentID,
+		WorkloadID:          req.WorkloadID,
+		Environment:         req.Environment,
+		SecretID:            req.SecretID,
+		SecretVersion:       req.SecretVersion,
+		IssuedAt:            Now(),
+		ExpiresAt:           Now() + int64(5*time.Minute), // 5-minute validity window
+		Nonce:               req.Nonce,
+		PlaintextPayload:    plaintext,
+	}
+
+	// Sign the envelope using control-plane identity
+	// This proves the envelope came from the authorized control plane
+	canonical := envelope.CanonicalEnvelope()
+	envelope.Signature = s.id.Sign(canonical)
+
+	// Return signed envelope (not plaintext)
+	// Agent verifies signature before materializing
+	writeJSON(w, 200, map[string]any{
+		"envelope": envelope,
+		"digest":   requestDigest,
+	})
 
 	if s.fsm.retrievalObserver != nil {
 		s.fsm.retrievalObserver.AfterResponseWrite(map[string]string{
