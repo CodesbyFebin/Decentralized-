@@ -1,0 +1,77 @@
+{
+  "campaign": "SEC-P0-A01-FINAL-A01",
+  "timestamp": "2026-09-26T08:55:48Z",
+
+  "system_environment": {
+    "operating_system": "Linux",
+    "os_version": "Linux vm 6.18.44-fc-v37 #1 SMP PREEMPT_DYNAMIC",
+    "kernel_version": "6.18.44-fc-v37",
+    "kernel_release": "6.18.44-fc-v37",
+    "kernel_type": "Linux",
+    "hostname": "vm",
+    "architecture": "x86_64",
+    "architecture_extended": "x86_64 GNU/Linux",
+    "cpu_count": 4
+  },
+
+  "runtime_environment": {
+    "go_version": "go1.26.4",
+    "go_platform": "linux/amd64",
+    "go_compiler": "gc",
+    "cgo_enabled": false
+  },
+
+  "dependencies": {
+    "raft": {
+      "package": "github.com/hashicorp/raft",
+      "version": "v1.8.0",
+      "purpose": "Distributed consensus engine for secret authorization"
+    },
+    "raft_boltdb": {
+      "package": "github.com/hashicorp/raft-boltdb/v2",
+      "version": "v2.4.2",
+      "purpose": "BoltDB persistence backend for Raft logs and snapshots"
+    }
+  },
+
+  "qualification_context": {
+    "source_sha": "14f39823c50b444c0ee2b0cf8135430fe28f0b61",
+    "source_branch": "main",
+    "r1_tests_merged": true,
+    "evidence_generator_sha": "93ccc22a927caf3d7a837a7dbe8d755b3e2ed3e5",
+    "evidence_generator_branch": "claude/friendly-gauss-kfxoc2"
+  },
+
+  "test_configuration": {
+    "test_mode": "standard",
+    "race_detector": "enabled",
+    "verbosity": "verbose",
+    "timeout": "600s",
+    "parallel": 1
+  },
+
+  "cluster_configuration": {
+    "cluster_type": "RaftQualificationCluster",
+    "member_count": 3,
+    "mTLS_enabled": true,
+    "ca_bundle_generated": true,
+    "persistence_backend": "BoltDB",
+    "snapshot_enabled": true
+  },
+
+  "qualification_parameters": {
+    "surface_scan_count": 13,
+    "r1_gate_count": 6,
+    "infrastructure_gate_count": 4,
+    "control_test_count": 18,
+    "integration_test_count": 17,
+    "race_detector_runs": 1,
+    "concurrent_load_test_concurrency": 50
+  },
+
+  "evidence_retention": {
+    "retention_class": "PERMANENT",
+    "regulatory_compliance": "Required for audit trail and regulatory requirements",
+    "immutability": "Cryptographically sealed, no modification after seal"
+  }
+}

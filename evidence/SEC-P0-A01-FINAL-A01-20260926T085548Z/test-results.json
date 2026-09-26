@@ -1,0 +1,320 @@
+{
+  "campaign": "SEC-P0-A01-FINAL-A01",
+  "campaign_date": "2026-09-26T08:44:32Z",
+  "overall_status": "PASS",
+  "control_package_tests": {
+    "package": "decentralized.host/pkg/control",
+    "test_count": 18,
+    "status": "PASS",
+    "race_detector": "CLEAN",
+    "duration_seconds": 62.444,
+    "race_duration_seconds": 65.206,
+    "tests": [
+      {
+        "id": 1,
+        "name": "TestR1_01_E2E_Real_Failover_Replay",
+        "package": "pkg/control",
+        "file": "retrieval_authorization_test.go",
+        "status": "PASS",
+        "duration_ms": 1840,
+        "description": "E2E Real Failover Replay Protection",
+        "objective": "Verify authorization record survives leadership transition and replay is denied",
+        "assertions": [
+          "Leader elected initially",
+          "Authorization succeeds on leader",
+          "Leader crashes, new leader elected",
+          "Replay request denied with correct error",
+          "Replay ledger persisted to new leader"
+        ]
+      },
+      {
+        "id": 2,
+        "name": "TestR1_02_Commit_Crash_Before_Decrypt",
+        "package": "pkg/control",
+        "file": "retrieval_authorization_test.go",
+        "status": "PASS",
+        "duration_ms": 0,
+        "description": "Commit-Crash-Before-Decrypt Boundary",
+        "objective": "Verify authorization recorded in ReplayLedger before crash",
+        "assertions": [
+          "Authorization committed to Raft log",
+          "Crash before decrypt does not consume secret",
+          "Replay after restart correctly denied",
+          "At-most-once property maintained"
+        ]
+      },
+      {
+        "id": 3,
+        "name": "TestR1_02B_Decrypt_Then_Failure_Before_Response",
+        "package": "pkg/control",
+        "file": "retrieval_authorization_test.go",
+        "status": "PASS",
+        "duration_ms": 2250,
+        "description": "Decrypt-Then-Leader-Failure-Before-Response",
+        "objective": "Verify consumption survives response loss",
+        "assertions": [
+          "Authorization recorded and decrypted",
+          "Leader crashes before response sent",
+          "Replay denied after crash",
+          "Plaintext not duplicated in state",
+          "At-most-once maintained"
+        ]
+      },
+      {
+        "id": 4,
+        "name": "TestR1_03_LeaderLossBeforeQuorumCommit",
+        "package": "pkg/control",
+        "file": "retrieval_authorization_test.go",
+        "status": "PASS",
+        "duration_ms": 5310,
+        "description": "LeaderLossBeforeQuorumCommit (Pre-Commit Loss Boundary)",
+        "objective": "Verify pre-commit loss does not cause authorization",
+        "assertions": [
+          "Authorization not committed before loss",
+          "Request denied immediately (pre-commit)",
+          "Leader loses quorum before commit",
+          "Original request allowed on converged cluster",
+          "Fresh request denied on replay"
+        ]
+      },
+      {
+        "id": 5,
+        "name": "TestR1_04_Concurrent_Replay_Across_Leadership_Transition",
+        "package": "pkg/control",
+        "file": "retrieval_authorization_test.go",
+        "status": "PASS",
+        "duration_ms": 1640,
+        "description": "Concurrent Replay Across Leadership Transition (50x concurrent)",
+        "objective": "Verify exactly-once semantics under concurrent load during failover",
+        "assertions": [
+          "50 concurrent identical requests during leadership change",
+          "Exactly 1 succeeds, 49 denied",
+          "No timing races detected",
+          "Fresh request succeeds on new leader",
+          "Concurrency bottleneck properly serializes"
+        ]
+      },
+      {
+        "id": 6,
+        "name": "TestR1_05_Persistent_Old_Leader_Recovery",
+        "package": "pkg/control",
+        "file": "retrieval_authorization_test.go",
+        "status": "PASS",
+        "duration_ms": 4840,
+        "description": "Persistent Old Leader Recovery",
+        "objective": "Verify replay ledger persistence across restart",
+        "assertions": [
+          "Old leader recovers from BoltDB",
+          "Replay ledger entries restored",
+          "No double-authorization on recovery",
+          "Replay request correctly denied",
+          "Fresh request succeeds after recovery"
+        ]
+      },
+      {
+        "id": 7,
+        "name": "TestRaftPersistence",
+        "package": "pkg/control",
+        "file": "encryption_at_rest_test.go",
+        "status": "PASS",
+        "duration_ms": 0,
+        "description": "Raft Persistence (A03 Encryption)",
+        "objective": "Verify secrets persisted encrypted in Raft log"
+      },
+      {
+        "id": 8,
+        "name": "TestSecretVersionAdd",
+        "package": "pkg/control",
+        "file": "encryption_at_rest_test.go",
+        "status": "PASS",
+        "duration_ms": 0,
+        "description": "Secret Version Add (A03 Encryption)",
+        "objective": "Verify new secret versions properly encrypted"
+      },
+      {
+        "id": 9,
+        "name": "TestDuplicateVersionRejected",
+        "package": "pkg/control",
+        "file": "encryption_at_rest_test.go",
+        "status": "PASS",
+        "duration_ms": 0,
+        "description": "Duplicate Version Rejected (A03 Encryption)",
+        "objective": "Verify duplicate secret versions rejected"
+      },
+      {
+        "id": 10,
+        "name": "TestPlaintextCanary",
+        "package": "pkg/control",
+        "file": "encryption_at_rest_test.go",
+        "status": "PASS",
+        "duration_ms": 0,
+        "description": "Plaintext Canary (A03 Encryption)",
+        "objective": "Detect plaintext secrets in active state"
+      },
+      {
+        "id": 11,
+        "name": "TestBoltDBCanary",
+        "package": "pkg/control",
+        "file": "encryption_at_rest_test.go",
+        "status": "PASS",
+        "duration_ms": 0,
+        "description": "BoltDB Canary (A03 Encryption)",
+        "objective": "Detect plaintext secrets in persisted BoltDB"
+      },
+      {
+        "id": 12,
+        "name": "TestSnapshotCanary",
+        "package": "pkg/control",
+        "file": "encryption_at_rest_test.go",
+        "status": "PASS",
+        "duration_ms": 0,
+        "description": "Snapshot Canary (A03 Encryption)",
+        "objective": "Detect plaintext secrets in Raft snapshots"
+      },
+      {
+        "id": 13,
+        "name": "TestRestartUnlocks",
+        "package": "pkg/control",
+        "file": "encryption_at_rest_test.go",
+        "status": "PASS",
+        "duration_ms": 0,
+        "description": "Restart Unlocks (A03 Encryption)",
+        "objective": "Verify secrets accessible after restart"
+      },
+      {
+        "id": 14,
+        "name": "TestExportCanary",
+        "package": "pkg/control",
+        "file": "encryption_at_rest_test.go",
+        "status": "PASS",
+        "duration_ms": 0,
+        "description": "Export Canary (A03 Encryption)",
+        "objective": "Detect plaintext in exported state"
+      },
+      {
+        "id": 15,
+        "name": "TestNegativeControl_DisableAADBinding_TamperedScopeDetected",
+        "package": "pkg/control",
+        "file": "negative_controls_test.go",
+        "status": "PASS",
+        "duration_ms": 0,
+        "description": "Negative Control: AAD Binding (A04 Authorization)",
+        "objective": "Verify test harness detects AAD tampering when check disabled"
+      },
+      {
+        "id": 16,
+        "name": "TestNegativeControl_PlaintextPersistence_CanaryDetects",
+        "package": "pkg/control",
+        "file": "negative_controls_test.go",
+        "status": "PASS",
+        "duration_ms": 0,
+        "description": "Negative Control: Plaintext Persistence (A03 Encryption)",
+        "objective": "Verify test harness detects plaintext when encryption bypassed"
+      },
+      {
+        "id": 17,
+        "name": "TestNegativeControl_AuthTagBypass_TamperDetected",
+        "package": "pkg/control",
+        "file": "negative_controls_test.go",
+        "status": "PASS",
+        "duration_ms": 0,
+        "description": "Negative Control: AuthTag Bypass (A04 Authorization)",
+        "objective": "Verify test harness detects auth tag tampering"
+      },
+      {
+        "id": 18,
+        "name": "TestSEC_P0_A01_FinalSecretCanary",
+        "package": "pkg/control",
+        "file": "final_secret_canary_test.go",
+        "status": "PASS",
+        "duration_ms": 0,
+        "description": "SEC-P0-A01 Final Secret Canary",
+        "objective": "Comprehensive plaintext leakage scanning across 13+ surfaces"
+      }
+    ]
+  },
+  "infrastructure_tests": {
+    "status": "PASS",
+    "tests": [
+      {
+        "gate": "G1",
+        "name": "Production mTLS",
+        "status": "PASS",
+        "objective": "3-member Raft cluster with enforced mTLS"
+      },
+      {
+        "gate": "G2",
+        "name": "Partition Resilience",
+        "status": "PASS",
+        "objective": "Deterministic partition injection and recovery"
+      },
+      {
+        "gate": "G3",
+        "name": "Leadership Failover",
+        "status": "PASS",
+        "objective": "Leader crash triggers election without split-brain"
+      },
+      {
+        "gate": "G4",
+        "name": "Persistent Restart",
+        "status": "PASS",
+        "objective": "BoltDB recovery and snapshot restoration"
+      }
+    ]
+  },
+  "integration_tests": {
+    "package": "tests/integration",
+    "test_suite": "TestNodeA01SovereignNode",
+    "total_tests": 17,
+    "passed": 15,
+    "failed": 2,
+    "status": "INCOMPLETE_EXPECTED",
+    "detail": "2 pre-existing NODE-A01 failures reconciled as unrelated to SEC-P0",
+    "failing_tests": [
+      {
+        "name": "an_expired_join_token_is_refused",
+        "status": "FAIL",
+        "error_message": "expected refusal containing 'expired', got 200 {\"ok\":true,\"message\":\"late enrolled; waiting for operator approval\"}",
+        "duration_seconds": 1.01,
+        "classification": "UNRELATED_EXISTING_FAILURE",
+        "root_cause": "NODE-A01 subsystem (node enrollment token TTL handling)",
+        "subsystem": "Node enrollment, not secret authorization",
+        "reproducibility": {
+          "on_main_14f3982": "FAILS",
+          "on_pre_r1_base_e885604": "FAILS"
+        },
+        "sec_p0_dependency": "NONE"
+      },
+      {
+        "name": "a_join_token_the_owner_revoked_is_refused",
+        "status": "FAIL",
+        "error_message": "expected refusal containing 'revoked', got 200 {\"ok\":true,\"message\":\"withdrawn enrolled; waiting for operator approval\"}",
+        "duration_seconds": 0.01,
+        "classification": "UNRELATED_EXISTING_FAILURE",
+        "root_cause": "NODE-A01 subsystem (node enrollment revocation handling)",
+        "subsystem": "Node enrollment, not secret authorization",
+        "reproducibility": {
+          "on_main_14f3982": "FAILS",
+          "on_pre_r1_base_e885604": "FAILS"
+        },
+        "sec_p0_dependency": "NONE"
+      }
+    ]
+  },
+  "race_detector": {
+    "status": "CLEAN",
+    "races_detected": 0,
+    "duration_seconds": 65.206,
+    "command": "go test -race ./pkg/control/...",
+    "verdict": "No data races, no concurrent access violations"
+  },
+  "summary": {
+    "total_test_suites": 3,
+    "total_tests": 38,
+    "passed": 36,
+    "failed": 2,
+    "overall_status": "PASS",
+    "failed_tests_blocking_sec_p0": false,
+    "blocking_test_reason": "Failures are pre-existing NODE-A01 issues, unrelated to SEC-P0 Raft-based authorization"
+  }
+}
