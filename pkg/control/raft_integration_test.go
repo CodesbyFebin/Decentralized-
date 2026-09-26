@@ -686,18 +686,9 @@ func (c *RaftQualificationCluster) startRaftWithPartition(opts raftOptions, memb
 		return nil, err
 	}
 
-	if opts.Bootstrap {
-		has, err := raft.HasExistingState(store, store, snaps)
-		if err != nil {
-			return nil, err
-		}
-		if !has {
-			f := r.BootstrapCluster(raft.Configuration{Servers: []raft.Server{{ID: cfg.LocalID, Address: raft.ServerAddress(opts.Advertise)}}})
-			if err := f.Error(); err != nil && err != raft.ErrCantBootstrap {
-				return nil, err
-			}
-		}
-	}
+	// Note: We do NOT bootstrap here. Bootstrap configuration is set by the cluster
+	// harness in Start() with the full multi-member configuration. This ensures
+	// all members get the same initial configuration and start with consistent state.
 
 	return &raftNode{r: r, trans: trans, logs: store, fsm: opts.FSM}, nil
 }
