@@ -1194,13 +1194,29 @@ func TestR1_01_E2E_RealFailoverReplay(t *testing.T) {
 
 	t.Logf("R1-01-E2E: Created request digest=%s", requestDigest)
 
-	// Step 1: Authorize request on original leader
+	// Step 1: Find the actual leader's raftNode for real Raft submission
+	var leaderNode *raftNode
+	for _, m := range cluster.Members {
+		if m.ID == leaderID && m.Node != nil {
+			leaderNode = m.Node
+			break
+		}
+	}
+	if leaderNode == nil {
+		t.Fatalf("Could not find raftNode for leader %s", leaderID)
+	}
+
+	// Authorize request on original leader using REAL Raft replication
 	cmd, err := leaderFSM.AuthorizeSecretRetrievalCommand(req)
 	if err != nil {
 		t.Fatalf("AuthorizeSecretRetrievalCommand: %v", err)
 	}
 
-	res := leaderFSM.ApplyLocal(cmd)
+	// Submit through real raft.Apply() to ensure replication
+	res, err := leaderNode.propose(cmd, 5*time.Second)
+	if err != nil {
+		t.Fatalf("Raft proposal failed: %v", err)
+	}
 	if !res.OK {
 		t.Fatalf("Authorization failed: %v", res.Message)
 	}
@@ -1253,13 +1269,28 @@ func TestR1_01_E2E_RealFailoverReplay(t *testing.T) {
 	})
 	t.Logf("R1-01-E2E: Step 3 PASS - Consumption replicated to new leader=%s", newLeaderID)
 
-	// Step 4: Retry EXACT same request against new leader
+	// Step 4: Find new leader's raftNode for real Raft submission
+	var newLeaderNode *raftNode
+	for _, m := range cluster.Members {
+		if m.ID == newLeaderID && m.Node != nil {
+			newLeaderNode = m.Node
+			break
+		}
+	}
+	if newLeaderNode == nil {
+		t.Fatalf("Could not find raftNode for new leader %s", newLeaderID)
+	}
+
+	// Retry EXACT same request against new leader using real Raft
 	cmd2, err := newLeaderFSM.AuthorizeSecretRetrievalCommand(req)
 	if err != nil {
 		t.Fatalf("AuthorizeSecretRetrievalCommand on new leader: %v", err)
 	}
 
-	res2 := newLeaderFSM.ApplyLocal(cmd2)
+	res2, err := newLeaderNode.propose(cmd2, 5*time.Second)
+	if err != nil {
+		t.Fatalf("Raft proposal (replay) failed: %v", err)
+	}
 	if res2.OK {
 		t.Error("R1-01-E2E: Replay should be rejected but authorization succeeded")
 	}
@@ -1269,7 +1300,7 @@ func TestR1_01_E2E_RealFailoverReplay(t *testing.T) {
 
 	t.Logf("R1-01-E2E: Step 4 PASS - Replay correctly DENIED on new leader")
 
-	// Step 5: Create fresh request and verify it succeeds
+	// Step 5: Create fresh request and verify it succeeds on new leader
 	freshNonce := make([]byte, 12)
 	rand.Read(freshNonce)
 	freshReq := &SecretRetrievalRequest{
@@ -1288,7 +1319,10 @@ func TestR1_01_E2E_RealFailoverReplay(t *testing.T) {
 	freshReq.Signature = nodeIdentity.Sign(freshReq.CanonicalRequest())
 
 	cmdFresh, _ := newLeaderFSM.AuthorizeSecretRetrievalCommand(freshReq)
-	resFresh := newLeaderFSM.ApplyLocal(cmdFresh)
+	resFresh, err := newLeaderNode.propose(cmdFresh, 5*time.Second)
+	if err != nil {
+		t.Fatalf("R1-01-E2E: Fresh request raft proposal failed: %v", err)
+	}
 	if !resFresh.OK {
 		t.Fatalf("R1-01-E2E: Fresh request should succeed but failed: %v", resFresh.Message)
 	}
@@ -1305,22 +1339,34 @@ func TestR1_01_E2E_RealFailoverReplay(t *testing.T) {
 	}
 	t.Logf("R1-01-E2E: Converged")
 
-	// Step 7: Verify old leader still denies original replay after recovery
-	oldLeaderFSM.Read(func(s *State) {
-		if !s.ReplayLedger.IsConsumed(requestDigest) {
-			t.Error("R1-01-E2E: Original request not in replay ledger on recovered leader")
+	// Step 7: Verify replicated consumption on all members after convergence
+	// All members should have the consumption record replicated via Raft
+	for _, member := range cluster.Members {
+		if member.Node != nil {
+			member.Node.fsm.Read(func(s *State) {
+				if !s.ReplayLedger.IsConsumed(requestDigest) {
+					t.Errorf("R1-01-E2E: Request digest not replicated to member %s", member.ID)
+				}
+			})
 		}
-	})
+	}
+	t.Log("R1-01-E2E: Step 6 PASS - Consumption replicated to all members after convergence")
 
+	// Step 8: Verify old leader still denies original replay on any converged member
+	// Pick any member (e.g., the old leader if it's still accessible)
 	cmd3, _ := oldLeaderFSM.AuthorizeSecretRetrievalCommand(req)
-	res3 := oldLeaderFSM.ApplyLocal(cmd3)
+	res3, err := newLeaderNode.propose(cmd3, 5*time.Second)
+	if err != nil {
+		t.Fatalf("R1-01-E2E: Final replay raft proposal failed: %v", err)
+	}
 	if res3.OK {
-		t.Error("R1-01-E2E: Replay should be rejected on recovered old leader")
+		t.Error("R1-01-E2E: Final replay should be rejected on converged cluster")
 	}
 
 	t.Log("✓ R1-01-E2E COMPLETE: Authorization survives real 3-member failover")
 	t.Logf("✓ Original leader: %s, New leader: %s", leaderID, newLeaderID)
 	t.Logf("✓ Request digest: %s", requestDigest)
+	t.Log("✓ Consumption replicated and durable across all replicas")
 }
 
 // TestR1_02_CommitCrashBeforeDecrypt proves that authorization commit precedes

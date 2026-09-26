@@ -1,7 +1,6 @@
 package control
 
 import (
-	"bytes"
 	"crypto/ed25519"
 	"encoding/base64"
 	"encoding/json"
@@ -90,21 +89,22 @@ func (f *FSM) AuthorizeSecretRetrievalCommand(req *SecretRetrievalRequest) (*Com
 	// Include leader's current timestamp for clock skew evaluation
 	now := time.Now().UnixNano()
 
-	// Encode the request and timestamp separately to avoid JSON number parsing issues
-	// Store as: "proposal-ts-as-string\n" + json-marshaled-request
-	var buf bytes.Buffer
-	fmt.Fprintf(&buf, "%d\n", now)
-	reqJSON, err := json.Marshal(req)
-	if err != nil {
-		return nil, fmt.Errorf("encode request: %w", err)
+	// Encode the request as JSON for Raft transmission
+	// Include proposal timestamp in the data for clock skew validation
+	payload := map[string]interface{}{
+		"proposal_ts": now,
+		"request":     req,
 	}
-	buf.Write(reqJSON)
+	dataJSON, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("encode command: %w", err)
+	}
 
 	cmd := &Command{
 		Type:  "secret-retrieval-authorize",
 		TS:    now,
 		Actor: "node/" + req.NodeID,
-		Data:  buf.Bytes(),
+		Data:  json.RawMessage(dataJSON),
 	}
 
 	// Instrumentation: record authorization proposal
@@ -136,15 +136,11 @@ func (f *FSM) Apply(l *raft.Log) any {
 
 	// Instrumentation: record successful authorization commits
 	if cmd.Type == "secret-retrieval-authorize" && res.OK && obs != nil {
-		// Extract request digest from the command for tracking
-		parts := bytes.SplitN(cmd.Data, []byte("\n"), 2)
-		if len(parts) == 2 {
-			// Minimal metadata; full details already recorded in AuthorizationProposed
-			obs.AuthorizationCommitted(map[string]string{
-				"logIndex": fmt.Sprintf("%d", l.Index),
-				"result":   res.Message,
-			})
-		}
+		// Full details already recorded in AuthorizationProposed
+		obs.AuthorizationCommitted(map[string]string{
+			"logIndex": fmt.Sprintf("%d", l.Index),
+			"result":   res.Message,
+		})
 	}
 
 	if f.onApply != nil {
@@ -163,13 +159,11 @@ func (f *FSM) ApplyLocal(cmd *Command) *Result {
 
 	// Instrumentation: record successful authorization commits (same as Apply)
 	if cmd.Type == "secret-retrieval-authorize" && res.OK && obs != nil {
-		parts := bytes.SplitN(cmd.Data, []byte("\n"), 2)
-		if len(parts) == 2 {
-			obs.AuthorizationCommitted(map[string]string{
-				"source": "ApplyLocal",
-				"result": res.Message,
-			})
-		}
+		// Full details already recorded in AuthorizationProposed
+		obs.AuthorizationCommitted(map[string]string{
+			"source": "ApplyLocal",
+			"result": res.Message,
+		})
 	}
 
 	return res
@@ -1392,20 +1386,38 @@ type secretRetrievalAuthData struct {
 }
 
 func secretRetrievalAuthorize(s *State, c *Command) *Result {
-	// Decode custom format: "proposal-ts\n" + json-request
-	parts := bytes.SplitN(c.Data, []byte("\n"), 2)
-	if len(parts) != 2 {
-		return fail("DECODE", "secret-retrieval-authorize: invalid data format")
+	// Decode wrapper payload containing proposal_ts and request
+	var payload map[string]interface{}
+	if err := json.Unmarshal(c.Data, &payload); err != nil {
+		return fail("DECODE", "secret-retrieval-authorize: invalid payload: %v", err)
 	}
 
-	proposalTSStr := string(parts[0])
+	// Extract proposal timestamp from payload
 	var proposalTS int64
-	if _, err := fmt.Sscanf(proposalTSStr, "%d", &proposalTS); err != nil {
-		return fail("DECODE", "secret-retrieval-authorize: invalid proposal timestamp: %v", err)
+	if pts, foundPTS := payload["proposal_ts"]; foundPTS {
+		switch v := pts.(type) {
+		case float64:
+			proposalTS = int64(v)
+		case int64:
+			proposalTS = v
+		default:
+			return fail("DECODE", "secret-retrieval-authorize: invalid proposal_ts type")
+		}
+	}
+
+	// Extract and decode the request
+	reqData, foundReq := payload["request"]
+	if !foundReq {
+		return fail("DECODE", "secret-retrieval-authorize: missing request in payload")
+	}
+
+	reqJSON, err := json.Marshal(reqData)
+	if err != nil {
+		return fail("DECODE", "secret-retrieval-authorize: request marshal: %v", err)
 	}
 
 	var req SecretRetrievalRequest
-	if err := json.Unmarshal(parts[1], &req); err != nil {
+	if err := json.Unmarshal(reqJSON, &req); err != nil {
 		return fail("DECODE", "secret-retrieval-authorize: invalid request: %v", err)
 	}
 
