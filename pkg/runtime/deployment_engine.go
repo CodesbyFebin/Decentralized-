@@ -12,35 +12,35 @@ import (
 type SchedulingStrategy string
 
 const (
-	StrategyFirstFit    SchedulingStrategy = "FIRST_FIT"
-	StrategyBestFit     SchedulingStrategy = "BEST_FIT"
-	StrategyRoundRobin  SchedulingStrategy = "ROUND_ROBIN"
-	StrategySpreadOut   SchedulingStrategy = "SPREAD_OUT"
-	StrategyPackDense   SchedulingStrategy = "PACK_DENSE"
+	StrategyFirstFit   SchedulingStrategy = "FIRST_FIT"
+	StrategyBestFit    SchedulingStrategy = "BEST_FIT"
+	StrategyRoundRobin SchedulingStrategy = "ROUND_ROBIN"
+	StrategySpreadOut  SchedulingStrategy = "SPREAD_OUT"
+	StrategyPackDense  SchedulingStrategy = "PACK_DENSE"
 )
 
 // ResourceConstraints specifies workload resource requirements
 type ResourceConstraints struct {
-	MemoryBytes int64              // Memory requirement in bytes
-	CPUShares   int                // CPU shares (1000 = 1 CPU)
-	DiskBytes   int64              // Disk requirement in bytes
-	Labels      map[string]string  // Workload placement labels
+	MemoryBytes int64             // Memory requirement in bytes
+	CPUShares   int               // CPU shares (1000 = 1 CPU)
+	DiskBytes   int64             // Disk requirement in bytes
+	Labels      map[string]string // Workload placement labels
 }
 
 // NodeCapacity tracks available resources on a node
 type NodeCapacity struct {
-	NodeID         string
-	TotalMemory    int64
-	AllocatedMem   int64
+	NodeID          string
+	TotalMemory     int64
+	AllocatedMem    int64
 	AvailableMemory int64
-	TotalCPU       int
-	AllocatedCPU   int
-	AvailableCPU   int
-	TotalDisk      int64
-	AllocatedDisk  int64
-	AvailableDisk  int64
-	WorkloadCount  int
-	MaxWorkloads   int
+	TotalCPU        int
+	AllocatedCPU    int
+	AvailableCPU    int
+	TotalDisk       int64
+	AllocatedDisk   int64
+	AvailableDisk   int64
+	WorkloadCount   int
+	MaxWorkloads    int
 }
 
 // AvailableCapacity returns remaining allocatable resources
@@ -126,13 +126,13 @@ type SchedulingDecision struct {
 
 // DeploymentEngine orchestrates workload scheduling
 type DeploymentEngine struct {
-	contract      *DeploymentContract
-	nlm           *NodeLifecycleManager
-	wlm           *WorkloadLifecycleManager
-	capacities    map[string]*NodeCapacity
-	decisions     map[string]*SchedulingDecision
-	strategy      SchedulingStrategy
-	mu            sync.RWMutex
+	contract   *DeploymentContract
+	nlm        *NodeLifecycleManager
+	wlm        *WorkloadLifecycleManager
+	capacities map[string]*NodeCapacity
+	decisions  map[string]*SchedulingDecision
+	strategy   SchedulingStrategy
+	mu         sync.RWMutex
 }
 
 // NewDeploymentEngine creates a new deployment engine
@@ -431,7 +431,7 @@ func (de *DeploymentEngine) ScheduleWorkload(ctx context.Context,
 	if constraints == nil {
 		constraints = &ResourceConstraints{
 			MemoryBytes: 1024 * 1024,      // 1MB default
-			CPUShares:   100,               // 0.1 CPU default
+			CPUShares:   100,              // 0.1 CPU default
 			DiskBytes:   10 * 1024 * 1024, // 10MB default
 			Labels:      make(map[string]string),
 		}

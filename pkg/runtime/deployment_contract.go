@@ -11,71 +11,71 @@ import (
 
 // ArtifactReference represents an immutable workload artifact
 type ArtifactReference struct {
-	SourceHash  string // SHA256 hash of artifact source (immutable)
-	SignerID    string // Identity of signer (control-plane or node)
-	Signature   string // Ed25519 signature over SourceHash
+	SourceHash    string // SHA256 hash of artifact source (immutable)
+	SignerID      string // Identity of signer (control-plane or node)
+	Signature     string // Ed25519 signature over SourceHash
 	SignAlgorithm string // Signing algorithm (ed25519)
-	SignedAt    int64  // Unix nanoseconds
+	SignedAt      int64  // Unix nanoseconds
 }
 
 // DeploymentSpec represents the deployment specification (decentralized.host.yaml)
 type DeploymentSpec struct {
-	WorkloadID       string                      // Unique workload identifier
-	ArtifactRef      *ArtifactReference          // Immutable artifact reference
-	ContainerImage   string                      // Container image reference (must match artifact)
-	ResourceConstraints *ResourceConstraints     // CPU, memory, disk limits
-	Environment      map[string]string           // Environment variables
-	RequiredSecrets  []string                    // Ephemeral secrets required
-	VolumeMounts     map[string]string           // Volume mount paths
-	NetworkPorts     []int                       // Exposed ports
-	Replicas         int                         // Desired replica count
-	NodeSelector     map[string]string           // Label selectors for node placement
-	SpecVersion      string                      // Schema version (v1.0)
-	SpecHash         string                      // SHA256 of canonical spec (for integrity)
+	WorkloadID          string               // Unique workload identifier
+	ArtifactRef         *ArtifactReference   // Immutable artifact reference
+	ContainerImage      string               // Container image reference (must match artifact)
+	ResourceConstraints *ResourceConstraints // CPU, memory, disk limits
+	Environment         map[string]string    // Environment variables
+	RequiredSecrets     []string             // Ephemeral secrets required
+	VolumeMounts        map[string]string    // Volume mount paths
+	NetworkPorts        []int                // Exposed ports
+	Replicas            int                  // Desired replica count
+	NodeSelector        map[string]string    // Label selectors for node placement
+	SpecVersion         string               // Schema version (v1.0)
+	SpecHash            string               // SHA256 of canonical spec (for integrity)
 }
 
 // DeploymentRequest represents a request to deploy a workload
 type DeploymentRequest struct {
-	WorkloadID       string            // Unique workload identifier
-	Spec             *DeploymentSpec   // Full deployment specification
-	NodeSelector     map[string]string // Labels to match nodes (override from spec)
-	Replicas         int               // Number of copies (override from spec)
-	RequestedAt      int64             // Unix nanoseconds
-	Timeout          time.Duration     // Deployment timeout
+	WorkloadID       string             // Unique workload identifier
+	Spec             *DeploymentSpec    // Full deployment specification
+	NodeSelector     map[string]string  // Labels to match nodes (override from spec)
+	Replicas         int                // Number of copies (override from spec)
+	RequestedAt      int64              // Unix nanoseconds
+	Timeout          time.Duration      // Deployment timeout
 	RequiredState    NodeLifecycleState // Required node state (ACTIVE, VERIFIED, etc)
-	ArtifactVerified bool              // Signature verified before request
+	ArtifactVerified bool               // Signature verified before request
 }
 
 // DeploymentEvidence records proof of deployment execution
 type DeploymentEvidence struct {
-	WorkloadID        string                     // Workload deployed
-	ArtifactHash      string                     // SHA256 of deployed artifact
-	SourceSignature   string                     // Signature of artifact source
-	SpecHash          string                     // Hash of deployment spec
-	DeploymentCommand string                     // Original deployment request hash
-	SourceSHA         string                     // Git SHA or source commit hash
-	Timestamp         int64                      // When deployment executed
-	ExecutedOn        []string                   // Node IDs where executed
-	Status            string                     // SUCCESS, PARTIAL, FAILED
+	WorkloadID        string   // Workload deployed
+	ArtifactHash      string   // SHA256 of deployed artifact
+	SourceSignature   string   // Signature of artifact source
+	SpecHash          string   // Hash of deployment spec
+	DeploymentCommand string   // Original deployment request hash
+	SourceSHA         string   // Git SHA or source commit hash
+	Timestamp         int64    // When deployment executed
+	ExecutedOn        []string // Node IDs where executed
+	Status            string   // SUCCESS, PARTIAL, FAILED
 }
 
 // DeploymentResult represents the outcome of a deployment
 type DeploymentResult struct {
-	WorkloadID      string
-	Assigned        []string           // Node IDs where workload deployed
-	Failed          []string           // Node IDs where deployment failed
-	Status          DeploymentStatus   // Overall status
-	Reason          string             // Reason for any failures
-	CompletedAt     int64              // Unix nanoseconds
-	PlacementInfo   map[string]string  // Metadata about placement decisions
-	SignedEvidence  *DeploymentEvidence // Proof of deployment
+	WorkloadID     string
+	Assigned       []string            // Node IDs where workload deployed
+	Failed         []string            // Node IDs where deployment failed
+	Status         DeploymentStatus    // Overall status
+	Reason         string              // Reason for any failures
+	CompletedAt    int64               // Unix nanoseconds
+	PlacementInfo  map[string]string   // Metadata about placement decisions
+	SignedEvidence *DeploymentEvidence // Proof of deployment
 }
 
 // DeploymentStatus represents deployment phase
 type DeploymentStatus string
 
 const (
-	DeploymentPending   DeploymentStatus = "PENDING"
+	DeploymentPending    DeploymentStatus = "PENDING"
 	DeploymentScheduling DeploymentStatus = "SCHEDULING"
 	DeploymentScheduled  DeploymentStatus = "SCHEDULED"
 	DeploymentStarting   DeploymentStatus = "STARTING"
@@ -307,10 +307,10 @@ func (dv *DeploymentValidator) ExecuteDeployment(ctx context.Context, req *Deplo
 	}
 
 	result := &DeploymentResult{
-		WorkloadID:   req.WorkloadID,
-		Status:       DeploymentScheduling,
-		Assigned:     []string{},
-		Failed:       []string{},
+		WorkloadID:    req.WorkloadID,
+		Status:        DeploymentScheduling,
+		Assigned:      []string{},
+		Failed:        []string{},
 		PlacementInfo: make(map[string]string),
 	}
 

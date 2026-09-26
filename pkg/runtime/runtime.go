@@ -36,8 +36,8 @@ type Mount struct {
 	Name      string
 	HostPath  string
 	Path      string
-	ReadOnly  bool   // Bind-mount as read-only
-	Ephemeral bool   // Temporary secret material (cleaned up after workload stops)
+	ReadOnly  bool // Bind-mount as read-only
+	Ephemeral bool // Temporary secret material (cleaned up after workload stops)
 }
 
 // Instance identifies a started workload well enough to re-adopt it after
@@ -48,8 +48,8 @@ type Instance struct {
 	ContainerID   string `json:"containerId"`
 	Port          int64  `json:"port"`
 	StartedAt     int64  `json:"startedAt"`
-	StartToken    string `json:"startToken"` // kernel start time of the pid, or container id
-	EphemeralID   string `json:"ephemeralId,omitempty"` // UUID for cleanup tracking
+	StartToken    string `json:"startToken"`              // kernel start time of the pid, or container id
+	EphemeralID   string `json:"ephemeralId,omitempty"`   // UUID for cleanup tracking
 	EphemeralPath string `json:"ephemeralPath,omitempty"` // Host path to ephemeral mount
 }
 

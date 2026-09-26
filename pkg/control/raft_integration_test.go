@@ -68,7 +68,7 @@ func generateTestTLSConfig() *tls.Config {
 // PartitionController manages network partition state for testing.
 type PartitionController struct {
 	mu       sync.RWMutex
-	blocked  map[string]bool // "A->B" or "B->A" keys for blocked directions
+	blocked  map[string]bool   // "A->B" or "B->A" keys for blocked directions
 	addrToID map[string]string // maps address string to member ID
 
 	// Pre-commit blocking: when set, blocks all responses from followers to this leader ID,
@@ -449,14 +449,14 @@ func (c *RaftQualificationCluster) Start(t testing.TB) error {
 		}
 
 		opts := raftOptions{
-			Dir:         m.DataDir,
-			ID:          m.ID,
-			Bind:        m.RaftBind,
-			Advertise:   m.RaftAdvertise,
-			TLS:         tlsConf,
-			FSM:         fsm,
-			Bootstrap:   (i == 0),
-			LogOutput:   nil,
+			Dir:          m.DataDir,
+			ID:           m.ID,
+			Bind:         m.RaftBind,
+			Advertise:    m.RaftAdvertise,
+			TLS:          tlsConf,
+			FSM:          fsm,
+			Bootstrap:    (i == 0),
+			LogOutput:    nil,
 			FastTimeouts: true,
 		}
 
@@ -680,14 +680,14 @@ func (c *RaftQualificationCluster) Restart(memberID string) error {
 	fsm.s.Cluster = "qualification-cluster"
 
 	opts := raftOptions{
-		Dir:         m.DataDir,
-		ID:          m.ID,
-		Bind:        m.RaftBind,
-		Advertise:   m.RaftAdvertise,
-		TLS:         c.TLS,
-		FSM:         fsm,
-		Bootstrap:   false,
-		LogOutput:   nil,
+		Dir:          m.DataDir,
+		ID:           m.ID,
+		Bind:         m.RaftBind,
+		Advertise:    m.RaftAdvertise,
+		TLS:          c.TLS,
+		FSM:          fsm,
+		Bootstrap:    false,
+		LogOutput:    nil,
 		FastTimeouts: true,
 	}
 
@@ -858,15 +858,15 @@ func (c *RaftQualificationCluster) getMember(id string) *QualificationMember {
 
 // tlsCABundle holds a test CA and member certificates for mutual TLS authentication.
 type tlsCABundle struct {
-	caCert    *x509.Certificate
-	caKey     *rsa.PrivateKey
-	caPEM     []byte
-	members   map[string]*tlsMemberCert // memberID -> cert
+	caCert  *x509.Certificate
+	caKey   *rsa.PrivateKey
+	caPEM   []byte
+	members map[string]*tlsMemberCert // memberID -> cert
 }
 
 type tlsMemberCert struct {
-	cert   *x509.Certificate
-	key    *rsa.PrivateKey
+	cert    *x509.Certificate
+	key     *rsa.PrivateKey
 	certPEM []byte
 	keyPEM  []byte
 }
@@ -1086,7 +1086,7 @@ func TestRaftHarness_FailoverPartition(t *testing.T) {
 	// Debug: wait for heartbeats to propagate (try multiple times)
 	for i := 0; i < 5; i++ {
 		time.Sleep(1 * time.Second)
-		t.Logf("After %d seconds of waiting:", (i+1))
+		t.Logf("After %d seconds of waiting:", (i + 1))
 		for _, m := range c.Members {
 			if m.Node != nil {
 				t.Logf("  %s: state=%v term=%d", m.ID, m.Node.r.State(), m.Node.r.CurrentTerm())

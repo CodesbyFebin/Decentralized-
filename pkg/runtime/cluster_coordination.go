@@ -8,41 +8,41 @@ import (
 
 // NodeInfo represents metadata about a cluster node
 type NodeInfo struct {
-	NodeID       string
-	Address      string
-	Port         int
-	Generation   int64 // Monotonic version for state comparison
-	Status       string // HEALTHY, UNREACHABLE, SUSPECTED
+	NodeID        string
+	Address       string
+	Port          int
+	Generation    int64  // Monotonic version for state comparison
+	Status        string // HEALTHY, UNREACHABLE, SUSPECTED
 	LastHeartbeat int64
-	Metadata     map[string]string
+	Metadata      map[string]string
 }
 
 // ClusterState represents distributed cluster-wide state
 type ClusterState struct {
-	StateID      string            // Unique state identifier
+	StateID      string // Unique state identifier
 	Nodes        map[string]*NodeInfo
-	Generation   int64             // Global generation counter
+	Generation   int64 // Global generation counter
 	Timestamp    int64
-	CommittedSeq int64             // Last committed sequence
+	CommittedSeq int64 // Last committed sequence
 }
 
 // ConsensusMessage represents inter-node communication
 type ConsensusMessage struct {
 	MessageID   string
-	Source      string              // Originating node ID
-	MessageType string              // HEARTBEAT, STATE_SYNC, VOTE, ACK
-	Term        int64               // Logical clock for ordering
+	Source      string // Originating node ID
+	MessageType string // HEARTBEAT, STATE_SYNC, VOTE, ACK
+	Term        int64  // Logical clock for ordering
 	Data        map[string]interface{}
 	Timestamp   int64
 }
 
 // LeaderState tracks leadership information
 type LeaderState struct {
-	LeaderID    string
-	Term        int64
-	ElectedAt   int64
-	Majority    int
-	Followers   map[string]bool // followerID -> acknowledged
+	LeaderID  string
+	Term      int64
+	ElectedAt int64
+	Majority  int
+	Followers map[string]bool // followerID -> acknowledged
 }
 
 // ClusterCoordinator manages multi-node consensus and state distribution
@@ -326,17 +326,22 @@ func (cc *ClusterCoordinator) GetClusterStatus() map[string]interface{} {
 	}
 
 	return map[string]interface{}{
-		"node_id":         cc.nodeID,
-		"term":            cc.term,
-		"leader_id":       func() string { if cc.leaderState != nil { return cc.leaderState.LeaderID } ; return "" }(),
-		"is_leader":       cc.leaderState != nil && cc.leaderState.LeaderID == cc.nodeID,
-		"total_nodes":     len(cc.nodes),
-		"healthy_nodes":   healthyCount,
-		"unreachable":     unreachableCount,
-		"suspected":       suspectedCount,
-		"commit_index":    cc.commitIndex,
-		"generation":      cc.clusterState.Generation,
-		"committed_seq":   cc.clusterState.CommittedSeq,
+		"node_id": cc.nodeID,
+		"term":    cc.term,
+		"leader_id": func() string {
+			if cc.leaderState != nil {
+				return cc.leaderState.LeaderID
+			}
+			return ""
+		}(),
+		"is_leader":     cc.leaderState != nil && cc.leaderState.LeaderID == cc.nodeID,
+		"total_nodes":   len(cc.nodes),
+		"healthy_nodes": healthyCount,
+		"unreachable":   unreachableCount,
+		"suspected":     suspectedCount,
+		"commit_index":  cc.commitIndex,
+		"generation":    cc.clusterState.Generation,
+		"committed_seq": cc.clusterState.CommittedSeq,
 	}
 }
 

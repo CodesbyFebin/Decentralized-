@@ -10,26 +10,26 @@ import (
 
 // PlacementRecord stores a single workload placement decision
 type PlacementRecord struct {
-	RecordID       string
-	WorkloadID     string
-	SelectedNodes  []string
-	Strategy       SchedulingStrategy
-	Constraints    *ResourceConstraints
-	Timestamp      int64
-	Status         string // SCHEDULED, RUNNING, TERMINATED, FAILED
-	StatusReason   string
-	DecisionTime   time.Duration
+	RecordID      string
+	WorkloadID    string
+	SelectedNodes []string
+	Strategy      SchedulingStrategy
+	Constraints   *ResourceConstraints
+	Timestamp     int64
+	Status        string // SCHEDULED, RUNNING, TERMINATED, FAILED
+	StatusReason  string
+	DecisionTime  time.Duration
 }
 
 // AuditEntry tracks state changes in placement
 type AuditEntry struct {
-	EntryID     string
-	RecordID    string
-	WorkloadID  string
-	OldStatus   string
-	NewStatus   string
-	Reason      string
-	Timestamp   int64
+	EntryID    string
+	RecordID   string
+	WorkloadID string
+	OldStatus  string
+	NewStatus  string
+	Reason     string
+	Timestamp  int64
 }
 
 // SchedulingStore provides persistent storage for scheduling decisions

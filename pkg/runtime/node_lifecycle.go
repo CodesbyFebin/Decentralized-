@@ -11,17 +11,17 @@ import (
 type NodeLifecycleState string
 
 const (
-	NodeDiscovered  NodeLifecycleState = "DISCOVERED"
-	NodeEnrolling   NodeLifecycleState = "ENROLLING"
-	NodeVerified    NodeLifecycleState = "VERIFIED"
-	NodeActive      NodeLifecycleState = "ACTIVE"
-	NodeCordoned    NodeLifecycleState = "CORDONED"
-	NodeDraining    NodeLifecycleState = "DRAINING"
-	NodeIdle        NodeLifecycleState = "IDLE"
-	NodeDegraded    NodeLifecycleState = "DEGRADED"
-	NodeOffline     NodeLifecycleState = "OFFLINE"
-	NodeRevoked     NodeLifecycleState = "REVOKED"
-	NodeUnknown     NodeLifecycleState = "UNKNOWN"
+	NodeDiscovered NodeLifecycleState = "DISCOVERED"
+	NodeEnrolling  NodeLifecycleState = "ENROLLING"
+	NodeVerified   NodeLifecycleState = "VERIFIED"
+	NodeActive     NodeLifecycleState = "ACTIVE"
+	NodeCordoned   NodeLifecycleState = "CORDONED"
+	NodeDraining   NodeLifecycleState = "DRAINING"
+	NodeIdle       NodeLifecycleState = "IDLE"
+	NodeDegraded   NodeLifecycleState = "DEGRADED"
+	NodeOffline    NodeLifecycleState = "OFFLINE"
+	NodeRevoked    NodeLifecycleState = "REVOKED"
+	NodeUnknown    NodeLifecycleState = "UNKNOWN"
 )
 
 // NodeStateValue represents the complete observed state with provenance
@@ -35,7 +35,7 @@ type NodeStateValue struct {
 	Cordoned      bool               // admin cordon flag
 	DrainTarget   int                // target workload count during drain (0 = fully drained)
 	LastHeartbeat int64
-	Generation    int64 // Version counter for optimistic updates
+	Generation    int64  // Version counter for optimistic updates
 	Reason        string // human-readable state reason
 }
 
@@ -43,30 +43,30 @@ type NodeStateValue struct {
 type WorkloadLifecycleState string
 
 const (
-	WorkloadDesired    WorkloadLifecycleState = "DESIRED"
-	WorkloadScheduled  WorkloadLifecycleState = "SCHEDULED"
-	WorkloadStarting   WorkloadLifecycleState = "STARTING"
-	WorkloadRunning    WorkloadLifecycleState = "RUNNING"
-	WorkloadHealthy    WorkloadLifecycleState = "HEALTHY"
-	WorkloadUnhealthy  WorkloadLifecycleState = "UNHEALTHY"
-	WorkloadStopping   WorkloadLifecycleState = "STOPPING"
-	WorkloadStopped    WorkloadLifecycleState = "STOPPED"
-	WorkloadFailed     WorkloadLifecycleState = "FAILED"
-	WorkloadUnknown    WorkloadLifecycleState = "UNKNOWN"
+	WorkloadDesired   WorkloadLifecycleState = "DESIRED"
+	WorkloadScheduled WorkloadLifecycleState = "SCHEDULED"
+	WorkloadStarting  WorkloadLifecycleState = "STARTING"
+	WorkloadRunning   WorkloadLifecycleState = "RUNNING"
+	WorkloadHealthy   WorkloadLifecycleState = "HEALTHY"
+	WorkloadUnhealthy WorkloadLifecycleState = "UNHEALTHY"
+	WorkloadStopping  WorkloadLifecycleState = "STOPPING"
+	WorkloadStopped   WorkloadLifecycleState = "STOPPED"
+	WorkloadFailed    WorkloadLifecycleState = "FAILED"
+	WorkloadUnknown   WorkloadLifecycleState = "UNKNOWN"
 )
 
 // WorkloadStateValue represents complete observed workload state with provenance
 type WorkloadStateValue struct {
-	WorkloadID   string
-	DesiredState WorkloadLifecycleState
+	WorkloadID    string
+	DesiredState  WorkloadLifecycleState
 	ObservedState WorkloadLifecycleState
-	ObservedAt   int64 // Unix nanoseconds
-	SourceID     string // agent, control-plane
-	Freshness    string // FRESH, STALE, EXPIRED, UNREACHABLE
-	ExitCode     int
-	LastError    string
-	HealthStatus string // from health checks
-	Reason       string
+	ObservedAt    int64  // Unix nanoseconds
+	SourceID      string // agent, control-plane
+	Freshness     string // FRESH, STALE, EXPIRED, UNREACHABLE
+	ExitCode      int
+	LastError     string
+	HealthStatus  string // from health checks
+	Reason        string
 }
 
 // NodeLifecycleManager manages node state transitions with persistent storage
@@ -74,10 +74,10 @@ type NodeLifecycleManager struct {
 	nodes map[string]*NodeStateValue
 	mu    sync.RWMutex
 
-	heartbeatTimeout  time.Duration
-	staleThreshold    time.Duration
-	stateStore        *NodeStateStore        // Persistent storage
-	reconStore        *ReconciliationStore   // Reconciliation tracking
+	heartbeatTimeout time.Duration
+	staleThreshold   time.Duration
+	stateStore       *NodeStateStore      // Persistent storage
+	reconStore       *ReconciliationStore // Reconciliation tracking
 }
 
 // NewNodeLifecycleManager creates a new node lifecycle manager
@@ -91,11 +91,11 @@ func NewNodeLifecycleManagerWithStore(stateStorePath, reconStorePath string) *No
 	reconStore, _ := NewReconciliationStore(reconStorePath)
 
 	return &NodeLifecycleManager{
-		nodes:             make(map[string]*NodeStateValue),
-		heartbeatTimeout:  30 * time.Second,
-		staleThreshold:    60 * time.Second,
-		stateStore:        stateStore,
-		reconStore:        reconStore,
+		nodes:            make(map[string]*NodeStateValue),
+		heartbeatTimeout: 30 * time.Second,
+		staleThreshold:   60 * time.Second,
+		stateStore:       stateStore,
+		reconStore:       reconStore,
 	}
 }
 

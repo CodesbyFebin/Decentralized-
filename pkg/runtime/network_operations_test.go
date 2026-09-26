@@ -109,11 +109,11 @@ func TestHealthCheckSetup(t *testing.T) {
 
 	// Setup TCP health check
 	config := &HealthCheckConfig{
-		Protocol:   "TCP",
-		Endpoint:   "localhost:9000",
-		Interval:   100 * time.Millisecond,
-		Timeout:    5 * time.Second,
-		Threshold:  3,
+		Protocol:  "TCP",
+		Endpoint:  "localhost:9000",
+		Interval:  100 * time.Millisecond,
+		Timeout:   5 * time.Second,
+		Threshold: 3,
 	}
 
 	err = netOps.SetupHealthCheck(ctx, "svc-health", config)
@@ -265,11 +265,11 @@ func TestHealthCheckThreshold(t *testing.T) {
 
 	// Setup health check with low threshold
 	config := &HealthCheckConfig{
-		Protocol:   "TCP",
-		Endpoint:   "localhost:6000",  // Non-existent service
-		Interval:   50 * time.Millisecond,
-		Timeout:    1 * time.Second,
-		Threshold:  2,  // Will fail quickly since port 6000 not bound
+		Protocol:  "TCP",
+		Endpoint:  "localhost:6000", // Non-existent service
+		Interval:  50 * time.Millisecond,
+		Timeout:   1 * time.Second,
+		Threshold: 2, // Will fail quickly since port 6000 not bound
 	}
 
 	_ = netOps.SetupHealthCheck(ctx, "svc-threshold", config)

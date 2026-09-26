@@ -76,14 +76,14 @@ func (s *Sandboxed) Start(spec Spec) (Instance, error) {
 	}
 	blob, _ := json.Marshal(h)
 	return Instance{
-		Runtime:         "sandbox",
-		PID:             int64(h.PID),
-		ContainerID:     string(blob),
-		Port:            h.HostPort,
-		StartedAt:       time.Now().UnixMilli(),
-		StartToken:      h.StartToken,
-		EphemeralID:     spec.EphemeralID,
-		EphemeralPath:   ephemeralPath,
+		Runtime:       "sandbox",
+		PID:           int64(h.PID),
+		ContainerID:   string(blob),
+		Port:          h.HostPort,
+		StartedAt:     time.Now().UnixMilli(),
+		StartToken:    h.StartToken,
+		EphemeralID:   spec.EphemeralID,
+		EphemeralPath: ephemeralPath,
 	}, nil
 }
 

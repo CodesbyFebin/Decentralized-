@@ -12,39 +12,39 @@ import (
 type VolumeStatus string
 
 const (
-	VolumeCreated    VolumeStatus = "CREATED"
-	VolumeAttached   VolumeStatus = "ATTACHED"
-	VolumeMounted    VolumeStatus = "MOUNTED"
-	VolumeDetached   VolumeStatus = "DETACHED"
-	VolumeDeleted    VolumeStatus = "DELETED"
+	VolumeCreated  VolumeStatus = "CREATED"
+	VolumeAttached VolumeStatus = "ATTACHED"
+	VolumeMounted  VolumeStatus = "MOUNTED"
+	VolumeDetached VolumeStatus = "DETACHED"
+	VolumeDeleted  VolumeStatus = "DELETED"
 )
 
 // WorkloadVolume represents a persistent volume for a workload
 type WorkloadVolume struct {
-	VolumeID     string
-	WorkloadID   string
-	NodeID       string
-	MountPath    string
-	Size         int64
-	Status       VolumeStatus
-	CreatedAt    int64
-	AttachedAt   int64
-	MountedAt    int64
-	LastAccess   int64
-	Owner        string // workload UID
+	VolumeID    string
+	WorkloadID  string
+	NodeID      string
+	MountPath   string
+	Size        int64
+	Status      VolumeStatus
+	CreatedAt   int64
+	AttachedAt  int64
+	MountedAt   int64
+	LastAccess  int64
+	Owner       string // workload UID
 	Permissions int    // Unix permissions (e.g., 0755)
-	Snapshot     *VolumeSnapshot
+	Snapshot    *VolumeSnapshot
 }
 
 // VolumeSnapshot represents a point-in-time snapshot of volume data
 type VolumeSnapshot struct {
-	SnapshotID   string
-	VolumeID     string
-	CreatedAt    int64
-	Size         int64
-	Path         string // Snapshot storage path
+	SnapshotID    string
+	VolumeID      string
+	CreatedAt     int64
+	Size          int64
+	Path          string // Snapshot storage path
 	RetentionDays int
-	Checksum     string // SHA256 of snapshot
+	Checksum      string // SHA256 of snapshot
 }
 
 // VolumeQuota enforces per-workload storage limits
@@ -58,11 +58,11 @@ type VolumeQuota struct {
 
 // WorkloadStorageManager manages persistent volumes for workloads
 type WorkloadStorageManager struct {
-	volumes      map[string]*WorkloadVolume    // volumeID -> volume
-	byWorkload   map[string][]*WorkloadVolume  // workloadID -> volumes
-	byNode       map[string][]*WorkloadVolume  // nodeID -> volumes
-	quotas       map[string]*VolumeQuota       // workloadID -> quota
-	snapshots    map[string]*VolumeSnapshot    // snapshotID -> snapshot
+	volumes       map[string]*WorkloadVolume   // volumeID -> volume
+	byWorkload    map[string][]*WorkloadVolume // workloadID -> volumes
+	byNode        map[string][]*WorkloadVolume // nodeID -> volumes
+	quotas        map[string]*VolumeQuota      // workloadID -> quota
+	snapshots     map[string]*VolumeSnapshot   // snapshotID -> snapshot
 	baseStorePath string
 	mu            sync.RWMutex
 }
@@ -70,11 +70,11 @@ type WorkloadStorageManager struct {
 // NewWorkloadStorageManager creates a storage manager
 func NewWorkloadStorageManager(baseStorePath string) *WorkloadStorageManager {
 	return &WorkloadStorageManager{
-		volumes:      make(map[string]*WorkloadVolume),
-		byWorkload:   make(map[string][]*WorkloadVolume),
-		byNode:       make(map[string][]*WorkloadVolume),
-		quotas:       make(map[string]*VolumeQuota),
-		snapshots:    make(map[string]*VolumeSnapshot),
+		volumes:       make(map[string]*WorkloadVolume),
+		byWorkload:    make(map[string][]*WorkloadVolume),
+		byNode:        make(map[string][]*WorkloadVolume),
+		quotas:        make(map[string]*VolumeQuota),
+		snapshots:     make(map[string]*VolumeSnapshot),
 		baseStorePath: baseStorePath,
 	}
 }
@@ -132,14 +132,14 @@ func (wsm *WorkloadStorageManager) CreateVolume(workloadID string, nodeID string
 	}
 
 	volume := &WorkloadVolume{
-		VolumeID:   volumeID,
-		WorkloadID: workloadID,
-		NodeID:     nodeID,
-		MountPath:  mountPath,
-		Size:       size,
-		Status:     VolumeCreated,
-		CreatedAt:  time.Now().UnixNano(),
-		Owner:      workloadID,
+		VolumeID:    volumeID,
+		WorkloadID:  workloadID,
+		NodeID:      nodeID,
+		MountPath:   mountPath,
+		Size:        size,
+		Status:      VolumeCreated,
+		CreatedAt:   time.Now().UnixNano(),
+		Owner:       workloadID,
 		Permissions: 0755,
 	}
 
@@ -479,10 +479,10 @@ func (wsm *WorkloadStorageManager) GetStorageStats() map[string]interface{} {
 	}
 
 	return map[string]interface{}{
-		"total_volumes":   len(wsm.volumes),
-		"mounted_volumes": mountedVolumes,
+		"total_volumes":    len(wsm.volumes),
+		"mounted_volumes":  mountedVolumes,
 		"total_size_bytes": totalSize,
-		"total_snapshots": len(wsm.snapshots),
-		"workloads":       len(wsm.byWorkload),
+		"total_snapshots":  len(wsm.snapshots),
+		"workloads":        len(wsm.byWorkload),
 	}
 }

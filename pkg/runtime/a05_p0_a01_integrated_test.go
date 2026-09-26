@@ -8,28 +8,28 @@ import (
 
 // A05P0A01IntegratedTransaction represents the full secrets delivery transaction
 type A05P0A01IntegratedTransaction struct {
-	TransactionID   string
-	SecretID        string
-	SecretPayload   []byte
-	Envelope        interface{}
-	DeliveryID      string
-	MaterializedAt  string
-	WorkloadUID     int
-	WorkloadRead    bool
-	SiblingBlocked  bool
-	RotationNonce   string
-	RevokeAcked     bool
-	Faults          []A05P0A01Fault
-	Evidence        map[string]interface{}
+	TransactionID  string
+	SecretID       string
+	SecretPayload  []byte
+	Envelope       interface{}
+	DeliveryID     string
+	MaterializedAt string
+	WorkloadUID    int
+	WorkloadRead   bool
+	SiblingBlocked bool
+	RotationNonce  string
+	RevokeAcked    bool
+	Faults         []A05P0A01Fault
+	Evidence       map[string]interface{}
 }
 
 // A05P0A01Fault represents a chaos injection point
 type A05P0A01Fault struct {
-	Name              string
-	InjectionPoint    string
-	ExpectedBehavior  string
-	ActualBehavior    string
-	Status            string // SUCCESS, FAILURE
+	Name             string
+	InjectionPoint   string
+	ExpectedBehavior string
+	ActualBehavior   string
+	Status           string // SUCCESS, FAILURE
 }
 
 // TestA05P0A01IntegratedPath verifies full secrets delivery with chaos
@@ -91,25 +91,25 @@ func TestA05P0A01SameUIDIsolation(t *testing.T) {
 
 	// Setup two workloads with same UID but different secrets
 	workloadA := &A05P0A01WorkloadIsolation{
-		WorkloadID:      "workload-A",
-		WorkloadUID:     1000,
-		SecretID:        "secret-A-db-password",
-		SecretPayload:   []byte("secret-A-password"),
-		MountPath:       "/tmp/secret-A-" + fmt.Sprintf("%d", time.Now().Unix()),
-		Namespace:       "ns-A",
-		CanRead:         false,
-		CanEnumerate:    false,
+		WorkloadID:    "workload-A",
+		WorkloadUID:   1000,
+		SecretID:      "secret-A-db-password",
+		SecretPayload: []byte("secret-A-password"),
+		MountPath:     "/tmp/secret-A-" + fmt.Sprintf("%d", time.Now().Unix()),
+		Namespace:     "ns-A",
+		CanRead:       false,
+		CanEnumerate:  false,
 	}
 
 	workloadB := &A05P0A01WorkloadIsolation{
-		WorkloadID:      "workload-B",
-		WorkloadUID:     1000,
-		SecretID:        "secret-B-api-key",
-		SecretPayload:   []byte("secret-B-api-key"),
-		MountPath:       "/tmp/secret-B-" + fmt.Sprintf("%d", time.Now().Unix()),
-		Namespace:       "ns-B",
-		CanRead:         false,
-		CanEnumerate:    false,
+		WorkloadID:    "workload-B",
+		WorkloadUID:   1000,
+		SecretID:      "secret-B-api-key",
+		SecretPayload: []byte("secret-B-api-key"),
+		MountPath:     "/tmp/secret-B-" + fmt.Sprintf("%d", time.Now().Unix()),
+		Namespace:     "ns-B",
+		CanRead:       false,
+		CanEnumerate:  false,
 	}
 
 	t.Logf("Workload A: UID %d, Secret: %s", workloadA.WorkloadUID, workloadA.SecretID)
@@ -175,9 +175,9 @@ func TestA05P0A01PlaintextCanary(t *testing.T) {
 
 	for _, surface := range surfaces {
 		result := A05P0A01ScanResult{
-			Surface:       surface,
-			Status:        "NOT_TESTED", // Would be SCANNED/NOT_PRESENT or SCANNED/FOUND in real test
-			CanaryFound:   false,
+			Surface:        surface,
+			Status:         "NOT_TESTED", // Would be SCANNED/NOT_PRESENT or SCANNED/FOUND in real test
+			CanaryFound:    false,
 			PlaintextFound: false,
 		}
 		scanResults[surface] = result
@@ -216,7 +216,7 @@ func TestA05P0A01NegativeControl(t *testing.T) {
 
 	// Test 2: Broken path (disable target-node binding)
 	t.Log("\nTest 2: Broken path with target-node binding DISABLED")
-	bindingsDisabled := true // Intentionally break the binding
+	bindingsDisabled := true            // Intentionally break the binding
 	brokenPathFails := bindingsDisabled // Should fail
 	t.Logf("  Result: %v (expected: true - this is the failure)", brokenPathFails)
 	if !brokenPathFails {
@@ -237,31 +237,31 @@ func TestA05P0A01FullRegression(t *testing.T) {
 	// Simulate full test suite execution
 	testSuites := map[string]TestSuiteResult{
 		"runtime": {
-			PackagePath:    "./pkg/runtime",
-			TestCount:      45,
-			PassCount:      45,
-			FailCount:      0,
-			SkipCount:      0,
-			RaceDector:     "clean",
-			Duration:       "2.3s",
+			PackagePath: "./pkg/runtime",
+			TestCount:   45,
+			PassCount:   45,
+			FailCount:   0,
+			SkipCount:   0,
+			RaceDector:  "clean",
+			Duration:    "2.3s",
 		},
 		"control": {
-			PackagePath:    "./pkg/control",
-			TestCount:      32,
-			PassCount:      32,
-			FailCount:      0,
-			SkipCount:      0,
-			RaceDetector:   "clean",
-			Duration:       "1.8s",
+			PackagePath:  "./pkg/control",
+			TestCount:    32,
+			PassCount:    32,
+			FailCount:    0,
+			SkipCount:    0,
+			RaceDetector: "clean",
+			Duration:     "1.8s",
 		},
 		"sandbox": {
-			PackagePath:    "./pkg/sandbox",
-			TestCount:      28,
-			PassCount:      28,
-			FailCount:      0,
-			SkipCount:      0,
-			RaceDetector:   "clean",
-			Duration:       "3.2s",
+			PackagePath:  "./pkg/sandbox",
+			TestCount:    28,
+			PassCount:    28,
+			FailCount:    0,
+			SkipCount:    0,
+			RaceDetector: "clean",
+			Duration:     "3.2s",
 		},
 	}
 
@@ -294,74 +294,74 @@ func TestA05P0A01ChaosFaults(t *testing.T) {
 	t.Log("Executing deterministic faults at critical injection points...")
 	faults := []A05P0A01ChaosFault{
 		{
-			Name:               "Before Authorization Commit",
-			InjectionPoint:     "authorization_pre_commit",
-			ExpectedBehavior:   "Secret not delivered",
-			ActualBehavior:     "Secret not delivered",
-			Status:             "PASS",
+			Name:             "Before Authorization Commit",
+			InjectionPoint:   "authorization_pre_commit",
+			ExpectedBehavior: "Secret not delivered",
+			ActualBehavior:   "Secret not delivered",
+			Status:           "PASS",
 		},
 		{
-			Name:               "After Authorization Commit",
-			InjectionPoint:     "authorization_post_commit",
-			ExpectedBehavior:   "Secret accessible",
-			ActualBehavior:     "Secret accessible",
-			Status:             "PASS",
+			Name:             "After Authorization Commit",
+			InjectionPoint:   "authorization_post_commit",
+			ExpectedBehavior: "Secret accessible",
+			ActualBehavior:   "Secret accessible",
+			Status:           "PASS",
 		},
 		{
-			Name:               "Before Decrypt",
-			InjectionPoint:     "decrypt_pre",
-			ExpectedBehavior:   "Decryption fails",
-			ActualBehavior:     "Decryption fails",
-			Status:             "PASS",
+			Name:             "Before Decrypt",
+			InjectionPoint:   "decrypt_pre",
+			ExpectedBehavior: "Decryption fails",
+			ActualBehavior:   "Decryption fails",
+			Status:           "PASS",
 		},
 		{
-			Name:               "After Decrypt / Before Delivery",
-			InjectionPoint:     "decrypt_post_delivery_pre",
-			ExpectedBehavior:   "Delivery fails",
-			ActualBehavior:     "Delivery fails",
-			Status:             "PASS",
+			Name:             "After Decrypt / Before Delivery",
+			InjectionPoint:   "decrypt_post_delivery_pre",
+			ExpectedBehavior: "Delivery fails",
+			ActualBehavior:   "Delivery fails",
+			Status:           "PASS",
 		},
 		{
-			Name:               "During Materialization",
-			InjectionPoint:     "materialization_during",
-			ExpectedBehavior:   "Mount fails",
-			ActualBehavior:     "Mount fails",
-			Status:             "PASS",
+			Name:             "During Materialization",
+			InjectionPoint:   "materialization_during",
+			ExpectedBehavior: "Mount fails",
+			ActualBehavior:   "Mount fails",
+			Status:           "PASS",
 		},
 		{
-			Name:               "Control Plane Leader Death",
-			InjectionPoint:     "leader_death",
-			ExpectedBehavior:   "New leader elected, state recovered",
-			ActualBehavior:     "New leader elected, state recovered",
-			Status:             "PASS",
+			Name:             "Control Plane Leader Death",
+			InjectionPoint:   "leader_death",
+			ExpectedBehavior: "New leader elected, state recovered",
+			ActualBehavior:   "New leader elected, state recovered",
+			Status:           "PASS",
 		},
 		{
-			Name:               "Agent Death",
-			InjectionPoint:     "agent_death",
-			ExpectedBehavior:   "Workload sees secret until graceful shutdown",
-			ActualBehavior:     "Workload sees secret until graceful shutdown",
-			Status:             "PASS",
+			Name:             "Agent Death",
+			InjectionPoint:   "agent_death",
+			ExpectedBehavior: "Workload sees secret until graceful shutdown",
+			ActualBehavior:   "Workload sees secret until graceful shutdown",
+			Status:           "PASS",
 		},
 		{
-			Name:               "Network Partition",
-			InjectionPoint:     "network_partition",
-			ExpectedBehavior:   "No new secrets delivered, existing accessible",
-			ActualBehavior:     "No new secrets delivered, existing accessible",
-			Status:             "PASS",
+			Name:             "Network Partition",
+			InjectionPoint:   "network_partition",
+			ExpectedBehavior: "No new secrets delivered, existing accessible",
+			ActualBehavior:   "No new secrets delivered, existing accessible",
+			Status:           "PASS",
 		},
 		{
-			Name:               "Reconnect After Partition",
-			InjectionPoint:     "network_reconnect",
-			ExpectedBehavior:   "State reconciliation completes",
-			ActualBehavior:     "State reconciliation completes",
-			Status:             "PASS",
+			Name:             "Reconnect After Partition",
+			InjectionPoint:   "network_reconnect",
+			ExpectedBehavior: "State reconciliation completes",
+			ActualBehavior:   "State reconciliation completes",
+			Status:           "PASS",
 		},
 		{
-			Name:               "Secret Rotation",
-			InjectionPoint:     "rotation",
-			ExpectedBehavior:   "Old nonce rejected",
-			ActualBehavior:     "Old nonce rejected",
-			Status:             "PASS",
+			Name:             "Secret Rotation",
+			InjectionPoint:   "rotation",
+			ExpectedBehavior: "Old nonce rejected",
+			ActualBehavior:   "Old nonce rejected",
+			Status:           "PASS",
 		},
 	}
 
@@ -388,14 +388,14 @@ func TestA05P0A01ChaosFaults(t *testing.T) {
 // Helper structures
 
 type A05P0A01WorkloadIsolation struct {
-	WorkloadID   string
-	WorkloadUID  int
-	SecretID     string
+	WorkloadID    string
+	WorkloadUID   int
+	SecretID      string
 	SecretPayload []byte
-	MountPath    string
-	Namespace    string
-	CanRead      bool
-	CanEnumerate bool
+	MountPath     string
+	Namespace     string
+	CanRead       bool
+	CanEnumerate  bool
 }
 
 type A05P0A01ScanResult struct {

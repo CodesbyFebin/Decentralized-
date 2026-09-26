@@ -893,7 +893,7 @@ func TestR1_01_CommitBeforeDecrypt(t *testing.T) {
 		t.Errorf("Expected 1 proposal event recorded, got %d", len(observer.ProposedEvents))
 	}
 	if observer.ProposedEvents[0]["requestDigest"] != requestDigest {
-		t.Errorf("Proposal event requestDigest mismatch: got %q, want %q", 
+		t.Errorf("Proposal event requestDigest mismatch: got %q, want %q",
 			observer.ProposedEvents[0]["requestDigest"], requestDigest)
 	}
 
@@ -959,8 +959,8 @@ func TestR1_01_DecryptBlockingAfterCommit(t *testing.T) {
 	fsm.s.Nodes[nodeID] = &Node{ID: nodeID, Status: "ready"}
 
 	fsm.s.Assignments["app-r0@"+nodeID] = &AssignmentRec{
-		Key: "app-r0@" + nodeID,
-		A: api.Assignment{ID: "app-r0", Node: nodeID, Desired: "running"},
+		Key:     "app-r0@" + nodeID,
+		A:       api.Assignment{ID: "app-r0", Node: nodeID, Desired: "running"},
 		Created: Now(),
 	}
 
@@ -1041,8 +1041,8 @@ func TestR1_01_NegativeControl_DecryptBeforeCommit(t *testing.T) {
 	nodeID = nodeIdentity.ID
 	fsm.s.Nodes[nodeID] = &Node{ID: nodeID, Status: "ready"}
 	fsm.s.Assignments["app-r0@"+nodeID] = &AssignmentRec{
-		Key: "app-r0@" + nodeID,
-		A: api.Assignment{ID: "app-r0", Node: nodeID, Desired: "running"},
+		Key:     "app-r0@" + nodeID,
+		A:       api.Assignment{ID: "app-r0", Node: nodeID, Desired: "running"},
 		Created: Now(),
 	}
 
@@ -1078,7 +1078,7 @@ func TestR1_01_NegativeControl_DecryptBeforeCommit(t *testing.T) {
 	// Scenario 1: Try to "decrypt" before commit (this should fail authorization)
 	// Create command but don't apply it
 	cmd, _ := fsm.AuthorizeSecretRetrievalCommand(req)
-	
+
 	// At this point, ledger is still empty (no commit yet)
 	if fsm.s.ReplayLedger.IsConsumed(requestDigest) {
 		t.Error("Negative control: Ledger should not be updated before Apply")
@@ -1097,7 +1097,6 @@ func TestR1_01_NegativeControl_DecryptBeforeCommit(t *testing.T) {
 
 	t.Log("✓ R1-01 Negative Control: Demonstrates ordering invariant")
 }
-
 
 // TestR1_01_E2E_RealFailoverReplay tests that authorization survives real leader failover
 // and the new leader correctly rejects replay of the same request.
@@ -1908,15 +1907,25 @@ func TestR1_02B_DecryptThenLeaderFailureBeforeResponse(t *testing.T) {
 //
 // PROPERTY TO VERIFY (inverse of R1-02):
 // valid signed request R3
-//        ↓
+//
+//	↓
+//
 // leader proposes authorization
-//        ↓
+//
+//	↓
+//
 // entry does NOT reach quorum commitment
-//        ↓
+//
+//	↓
+//
 // leader lost
-//        ↓
+//
+//	↓
+//
 // new leader elected
-//        ↓
+//
+//	↓
+//
 // R3 was never consumed
 // DecryptSecret was never invoked
 // no plaintext release
@@ -2230,9 +2239,13 @@ func TestR1_03_LeaderLossBeforeQuorumCommit(t *testing.T) {
 //
 // PROPERTY TO VERIFY (concurrent replay invariant):
 // 50 concurrent requests with same digest (R4)
-//        ↓
+//
+//	↓
+//
 // leadership transition triggered during submission window
-//        ↓
+//
+//	↓
+//
 // exactly ONE succeeds with authorization
 // 49 are denied with ALREADY_CONSUMED
 // no plaintext duplication
@@ -2568,13 +2581,21 @@ func TestR1_04_ConcurrentReplayAcrossLeadershipTransition(t *testing.T) {
 //
 // PROPERTY TO VERIFY (durable no-double-authorization invariant):
 // authorization R5 committed to leader A's log
-//        ↓
+//
+//	↓
+//
 // replicated to followers (quorum achieved)
-//        ↓
+//
+//	↓
+//
 // leader A crashes
-//        ↓
+//
+//	↓
+//
 // leader A recovers from persistent storage
-//        ↓
+//
+//	↓
+//
 // R5 was not re-executed or double-authorized
 // cluster converges with single consumption record
 // no plaintext duplication during recovery

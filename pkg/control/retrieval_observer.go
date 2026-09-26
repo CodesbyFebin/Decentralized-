@@ -33,14 +33,14 @@ type RetrievalQualificationObserver interface {
 // NoOpObserver implements RetrievalQualificationObserver with no instrumentation.
 type NoOpObserver struct{}
 
-func (o *NoOpObserver) AuthorizationProposed(metadata map[string]string)      {}
-func (o *NoOpObserver) AuthorizationCommitted(metadata map[string]string)     {}
+func (o *NoOpObserver) AuthorizationProposed(metadata map[string]string)  {}
+func (o *NoOpObserver) AuthorizationCommitted(metadata map[string]string) {}
 func (o *NoOpObserver) BeforeDecrypt(metadata map[string]string) <-chan struct{} {
 	ch := make(chan struct{})
 	close(ch)
 	return ch
 }
-func (o *NoOpObserver) AfterDecrypt(metadata map[string]string, err error)     {}
+func (o *NoOpObserver) AfterDecrypt(metadata map[string]string, err error) {}
 func (o *NoOpObserver) BeforeResponseWrite(metadata map[string]string) <-chan struct{} {
 	ch := make(chan struct{})
 	close(ch)
@@ -54,9 +54,9 @@ type R1TestObserver struct {
 	mu sync.Mutex
 
 	// Event sequence tracking
-	ProposedEvents    []map[string]string
-	CommittedEvents   []map[string]string
-	DecryptedEvents   []map[string]string
+	ProposedEvents     []map[string]string
+	CommittedEvents    []map[string]string
+	DecryptedEvents    []map[string]string
 	ResponseSentEvents []map[string]string
 
 	// Counters
@@ -73,7 +73,7 @@ type R1TestObserver struct {
 
 	// Fault injection: channels that can be set to block operations
 	// If nil, operation proceeds immediately; otherwise blocks until channel closes
-	BlockBeforeDecrypt      <-chan struct{}
+	BlockBeforeDecrypt       <-chan struct{}
 	BlockBeforeResponseWrite <-chan struct{}
 
 	// Tracking errors
@@ -82,18 +82,18 @@ type R1TestObserver struct {
 
 // RequestMetrics tracks detailed metrics for a specific secret retrieval request.
 type RequestMetrics struct {
-	RequestDigest               string
-	LeaderCommitConfirmations   int64
-	DecryptInvocations          int64
-	DecryptSuccesses            int64
-	DecryptErrors               []error
-	ResponseWriteAttempts       int64
-	ResponseWriteSuccesses      int64
-	AuthorizationCommittedTime  int64 // nanoseconds
-	DecryptStartTime            int64 // nanoseconds
-	DecryptSuccessTime          int64 // nanoseconds
-	ResponseWriteStartTime      int64 // nanoseconds
-	ResponseWriteSuccessTime    int64 // nanoseconds
+	RequestDigest              string
+	LeaderCommitConfirmations  int64
+	DecryptInvocations         int64
+	DecryptSuccesses           int64
+	DecryptErrors              []error
+	ResponseWriteAttempts      int64
+	ResponseWriteSuccesses     int64
+	AuthorizationCommittedTime int64 // nanoseconds
+	DecryptStartTime           int64 // nanoseconds
+	DecryptSuccessTime         int64 // nanoseconds
+	ResponseWriteStartTime     int64 // nanoseconds
+	ResponseWriteSuccessTime   int64 // nanoseconds
 }
 
 func NewR1TestObserver() *R1TestObserver {
@@ -250,9 +250,9 @@ func (o *R1TestObserver) GetEventsSnapshot() map[string]interface{} {
 	o.mu.Lock()
 	defer o.mu.Unlock()
 	return map[string]interface{}{
-		"ProposedEvents":    append([]map[string]string{}, o.ProposedEvents...),
-		"CommittedEvents":   append([]map[string]string{}, o.CommittedEvents...),
-		"DecryptedEvents":   append([]map[string]string{}, o.DecryptedEvents...),
+		"ProposedEvents":     append([]map[string]string{}, o.ProposedEvents...),
+		"CommittedEvents":    append([]map[string]string{}, o.CommittedEvents...),
+		"DecryptedEvents":    append([]map[string]string{}, o.DecryptedEvents...),
 		"ResponseSentEvents": append([]map[string]string{}, o.ResponseSentEvents...),
 		"Counters": map[string]int64{
 			"AuthorizationProposedCount":  o.AuthorizationProposedCount,

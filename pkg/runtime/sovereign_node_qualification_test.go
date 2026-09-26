@@ -79,9 +79,9 @@ func TestP0_SOVEREIGN_A01_EndToEndDeployment(t *testing.T) {
 	// Phase 3: Hardware Discovery
 	t.Log("\nPhase 3: Hardware Discovery and Resource Policy")
 	hardwareProfile := map[string]interface{}{
-		"cpu_cores":    8,
-		"memory_bytes": 16 * 1024 * 1024 * 1024, // 16GB
-		"disk_bytes":   500 * 1024 * 1024 * 1024, // 500GB
+		"cpu_cores":      8,
+		"memory_bytes":   16 * 1024 * 1024 * 1024,  // 16GB
+		"disk_bytes":     500 * 1024 * 1024 * 1024, // 500GB
 		"network_ifaces": []string{"eth0", "lo"},
 	}
 

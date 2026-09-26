@@ -11,34 +11,34 @@ import (
 type PipelineStage string
 
 const (
-	StageSource         PipelineStage = "SOURCE"         // Fetch source artifact
-	StageResolve        PipelineStage = "RESOLVE"        // Resolve dependencies
-	StageInstall        PipelineStage = "INSTALL"        // Install dependencies
-	StageBuild          PipelineStage = "BUILD"          // Build workload
-	StageTest           PipelineStage = "TEST"           // Run tests
-	StagePackage        PipelineStage = "PACKAGE"        // Package artifact
-	StageHash           PipelineStage = "HASH"           // Compute SHA256 hash
-	StageSign           PipelineStage = "SIGN"           // Sign artifact with Ed25519
-	StageArtifactReady  PipelineStage = "ARTIFACT_READY" // Artifact ready for deployment
-	StageMatch          PipelineStage = "MATCH"          // Match nodes to workload spec
-	StagePlace          PipelineStage = "PLACE"          // Place workload on nodes
-	StageStart          PipelineStage = "START"          // Start workload
-	StageHealth         PipelineStage = "HEALTH"         // Health check
-	StageRoute          PipelineStage = "ROUTE"          // Configure routing
-	StageObserve        PipelineStage = "OBSERVE"        // Observe metrics
-	StageEvidence       PipelineStage = "EVIDENCE"       // Record deployment evidence
+	StageSource        PipelineStage = "SOURCE"         // Fetch source artifact
+	StageResolve       PipelineStage = "RESOLVE"        // Resolve dependencies
+	StageInstall       PipelineStage = "INSTALL"        // Install dependencies
+	StageBuild         PipelineStage = "BUILD"          // Build workload
+	StageTest          PipelineStage = "TEST"           // Run tests
+	StagePackage       PipelineStage = "PACKAGE"        // Package artifact
+	StageHash          PipelineStage = "HASH"           // Compute SHA256 hash
+	StageSign          PipelineStage = "SIGN"           // Sign artifact with Ed25519
+	StageArtifactReady PipelineStage = "ARTIFACT_READY" // Artifact ready for deployment
+	StageMatch         PipelineStage = "MATCH"          // Match nodes to workload spec
+	StagePlace         PipelineStage = "PLACE"          // Place workload on nodes
+	StageStart         PipelineStage = "START"          // Start workload
+	StageHealth        PipelineStage = "HEALTH"         // Health check
+	StageRoute         PipelineStage = "ROUTE"          // Configure routing
+	StageObserve       PipelineStage = "OBSERVE"        // Observe metrics
+	StageEvidence      PipelineStage = "EVIDENCE"       // Record deployment evidence
 )
 
 // PipelineStageProgress tracks progress through a single stage
 type PipelineStageProgress struct {
-	Stage       PipelineStage
-	Status      string // "PENDING", "IN_PROGRESS", "SUCCESS", "FAILED", "SKIPPED"
-	StartTime   int64  // Nanoseconds since epoch
-	EndTime     int64  // Nanoseconds since epoch
-	Duration    int64  // Nanoseconds
-	ErrorMsg    string // Error message if failed
-	Output      string // Stage output (hash, signature, node list, etc.)
-	ExecutedOn  string // Node/component that executed this stage
+	Stage      PipelineStage
+	Status     string // "PENDING", "IN_PROGRESS", "SUCCESS", "FAILED", "SKIPPED"
+	StartTime  int64  // Nanoseconds since epoch
+	EndTime    int64  // Nanoseconds since epoch
+	Duration   int64  // Nanoseconds
+	ErrorMsg   string // Error message if failed
+	Output     string // Stage output (hash, signature, node list, etc.)
+	ExecutedOn string // Node/component that executed this stage
 }
 
 // PipelineExecution tracks full deployment pipeline execution
@@ -61,12 +61,12 @@ type PipelineExecution struct {
 // NewPipelineExecution creates a new pipeline execution
 func NewPipelineExecution(workloadID string, spec *DeploymentSpec) *PipelineExecution {
 	return &PipelineExecution{
-		WorkloadID:   workloadID,
-		SpecHash:     spec.SpecHash,
-		Stages:       make(map[PipelineStage]*PipelineStageProgress),
-		CurrentStage: StageSource,
-		Status:       "PENDING",
-		StartTime:    time.Now().UnixNano(),
+		WorkloadID:    workloadID,
+		SpecHash:      spec.SpecHash,
+		Stages:        make(map[PipelineStage]*PipelineStageProgress),
+		CurrentStage:  StageSource,
+		Status:        "PENDING",
+		StartTime:     time.Now().UnixNano(),
 		NodesExecuted: []string{},
 	}
 }

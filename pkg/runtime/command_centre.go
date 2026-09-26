@@ -11,22 +11,22 @@ import (
 type TruthState string
 
 const (
-	TruthLive      TruthState = "LIVE"
-	TruthStale     TruthState = "STALE"
-	TruthUnknown   TruthState = "UNKNOWN"
+	TruthLive        TruthState = "LIVE"
+	TruthStale       TruthState = "STALE"
+	TruthUnknown     TruthState = "UNKNOWN"
 	TruthUnavailable TruthState = "UNAVAILABLE"
-	TruthPlanned   TruthState = "PLANNED"
+	TruthPlanned     TruthState = "PLANNED"
 )
 
 // Freshness represents how current an observation is
 type Freshness string
 
 const (
-	FreshnessFresh      Freshness = "FRESH"
-	FreshnessStale      Freshness = "STALE"
-	FreshnessExpired    Freshness = "EXPIRED"
+	FreshnessFresh       Freshness = "FRESH"
+	FreshnessStale       Freshness = "STALE"
+	FreshnessExpired     Freshness = "EXPIRED"
 	FreshnessUnreachable Freshness = "UNREACHABLE"
-	FreshnessUnknown    Freshness = "UNKNOWN"
+	FreshnessUnknown     Freshness = "UNKNOWN"
 )
 
 // TruthEnvelope wraps an observed value with metadata about when and where it was observed
@@ -40,26 +40,26 @@ type TruthEnvelope struct {
 
 // NodeStateView represents a node's current state as observed and tracked by the control plane
 type NodeStateView struct {
-	NodeID            string
-	State             string // DISCOVERED, ENROLLING, VERIFIED, ACTIVE, CORDONED, DRAINING, IDLE, OFFLINE, REVOKED, DEGRADED
-	DesiredState      string
-	LastObserved      int64       // Unix nanoseconds when last observation was made
-	Freshness         Freshness   // FRESH, STALE, EXPIRED, UNREACHABLE, UNKNOWN
-	ObservedBy        string      // Which control plane or agent made this observation
-	Generation        int64       // Optimistic versioning for conflict detection
-	Convergence       string      // CONVERGED, DEGRADED, CONVERGING, DIVERGED, STOPPED, UNKNOWN
-	TruthEnvelope     *TruthEnvelope // Raw observation metadata
+	NodeID        string
+	State         string // DISCOVERED, ENROLLING, VERIFIED, ACTIVE, CORDONED, DRAINING, IDLE, OFFLINE, REVOKED, DEGRADED
+	DesiredState  string
+	LastObserved  int64          // Unix nanoseconds when last observation was made
+	Freshness     Freshness      // FRESH, STALE, EXPIRED, UNREACHABLE, UNKNOWN
+	ObservedBy    string         // Which control plane or agent made this observation
+	Generation    int64          // Optimistic versioning for conflict detection
+	Convergence   string         // CONVERGED, DEGRADED, CONVERGING, DIVERGED, STOPPED, UNKNOWN
+	TruthEnvelope *TruthEnvelope // Raw observation metadata
 }
 
 // CommandCentreBackend provides state queries and operations for the control plane UI
 type CommandCentreBackend struct {
-	nlm              *NodeLifecycleManager      // Reference to node lifecycle manager
-	sr               *ServiceRegistry           // Reference to service registry
-	npe              *NetworkPolicyEngine       // Reference to network policy engine
-	staleThreshold   time.Duration              // How old can data be before it's considered stale?
-	expiryThreshold  time.Duration              // How old before it's considered expired?
-	mu               sync.RWMutex
-	observations     map[string]*TruthEnvelope  // nodeID -> most recent observation
+	nlm             *NodeLifecycleManager // Reference to node lifecycle manager
+	sr              *ServiceRegistry      // Reference to service registry
+	npe             *NetworkPolicyEngine  // Reference to network policy engine
+	staleThreshold  time.Duration         // How old can data be before it's considered stale?
+	expiryThreshold time.Duration         // How old before it's considered expired?
+	mu              sync.RWMutex
+	observations    map[string]*TruthEnvelope // nodeID -> most recent observation
 }
 
 // NewCommandCentreBackend creates a new Command Centre backend
@@ -68,8 +68,8 @@ func NewCommandCentreBackend(nlm *NodeLifecycleManager, sr *ServiceRegistry, npe
 		nlm:             nlm,
 		sr:              sr,
 		npe:             npe,
-		staleThreshold:  30 * time.Second,  // Data > 30s old is stale
-		expiryThreshold: 5 * time.Minute,   // Data > 5min old is expired
+		staleThreshold:  30 * time.Second, // Data > 30s old is stale
+		expiryThreshold: 5 * time.Minute,  // Data > 5min old is expired
 		observations:    make(map[string]*TruthEnvelope),
 	}
 }

@@ -11,22 +11,22 @@ import (
 
 // HealthCheckConfig defines health check parameters
 type HealthCheckConfig struct {
-	Protocol    string        // HTTP, TCP, or EXEC
-	Endpoint    string        // URL path for HTTP, address:port for TCP, command for EXEC
-	Interval    time.Duration // Check interval
-	Timeout     time.Duration // Timeout per check
-	Threshold   int           // Consecutive failures before marking unhealthy
-	HttpMethod  string        // GET, POST for HTTP checks
-	HttpPort    int           // Port for HTTP checks
+	Protocol   string        // HTTP, TCP, or EXEC
+	Endpoint   string        // URL path for HTTP, address:port for TCP, command for EXEC
+	Interval   time.Duration // Check interval
+	Timeout    time.Duration // Timeout per check
+	Threshold  int           // Consecutive failures before marking unhealthy
+	HttpMethod string        // GET, POST for HTTP checks
+	HttpPort   int           // Port for HTTP checks
 }
 
 // HealthCheckResult tracks the result of a single health check
 type HealthCheckResult struct {
-	ServiceID     string
-	Timestamp     int64
-	Status        string // SUCCESS, FAILURE, TIMEOUT
-	ResponseTime  int64  // Nanoseconds
-	ErrorMsg      string
+	ServiceID        string
+	Timestamp        int64
+	Status           string // SUCCESS, FAILURE, TIMEOUT
+	ResponseTime     int64  // Nanoseconds
+	ErrorMsg         string
 	ConsecutiveFails int
 }
 
@@ -41,26 +41,26 @@ type PortBinding struct {
 
 // NetworkOperations handles real network operations
 type NetworkOperations struct {
-	registry        *ServiceRegistry
-	policyEngine    *NetworkPolicyEngine
-	portBindings    map[string]*PortBinding
-	healthChecks    map[string]*HealthCheckConfig
-	healthResults   map[string]*HealthCheckResult
+	registry         *ServiceRegistry
+	policyEngine     *NetworkPolicyEngine
+	portBindings     map[string]*PortBinding
+	healthChecks     map[string]*HealthCheckConfig
+	healthResults    map[string]*HealthCheckResult
 	workloadShutdown map[string]bool // Track which workloads requested shutdown
-	mu              sync.RWMutex
-	stopChans       map[string]chan struct{} // Stop channels for health check goroutines
+	mu               sync.RWMutex
+	stopChans        map[string]chan struct{} // Stop channels for health check goroutines
 }
 
 // NewNetworkOperations creates a network operations handler
 func NewNetworkOperations(registry *ServiceRegistry, policyEngine *NetworkPolicyEngine) *NetworkOperations {
 	return &NetworkOperations{
-		registry:        registry,
-		policyEngine:    policyEngine,
-		portBindings:    make(map[string]*PortBinding),
-		healthChecks:    make(map[string]*HealthCheckConfig),
-		healthResults:   make(map[string]*HealthCheckResult),
+		registry:         registry,
+		policyEngine:     policyEngine,
+		portBindings:     make(map[string]*PortBinding),
+		healthChecks:     make(map[string]*HealthCheckConfig),
+		healthResults:    make(map[string]*HealthCheckResult),
 		workloadShutdown: make(map[string]bool),
-		stopChans:       make(map[string]chan struct{}),
+		stopChans:        make(map[string]chan struct{}),
 	}
 }
 
@@ -155,9 +155,9 @@ func (no *NetworkOperations) SetupHealthCheck(ctx context.Context, serviceID str
 
 	// Initialize health result
 	no.healthResults[serviceID] = &HealthCheckResult{
-		ServiceID:    serviceID,
-		Status:       "UNKNOWN",
-		Timestamp:    time.Now().UnixNano(),
+		ServiceID: serviceID,
+		Status:    "UNKNOWN",
+		Timestamp: time.Now().UnixNano(),
 	}
 
 	// Start health check goroutine
@@ -378,11 +378,11 @@ func (no *NetworkOperations) GetNetworkStats(ctx context.Context) map[string]int
 	}
 
 	return map[string]interface{}{
-		"total_services":      len(no.registry.GetAllServices()),
-		"port_bindings":       len(no.portBindings),
-		"health_checks":       len(no.healthChecks),
-		"healthy_services":    healthyCount,
-		"unhealthy_services":  unhealthyCount,
-		"workloads_shutdown":  len(no.workloadShutdown),
+		"total_services":     len(no.registry.GetAllServices()),
+		"port_bindings":      len(no.portBindings),
+		"health_checks":      len(no.healthChecks),
+		"healthy_services":   healthyCount,
+		"unhealthy_services": unhealthyCount,
+		"workloads_shutdown": len(no.workloadShutdown),
 	}
 }

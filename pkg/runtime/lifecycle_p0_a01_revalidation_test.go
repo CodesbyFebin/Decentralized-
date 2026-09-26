@@ -189,7 +189,7 @@ func TestLIFECYCLE_P0_A01_EndToEndIntegration(t *testing.T) {
 	t.Log("\nPhase 9: DESIRED vs OBSERVED Reconciliation Tracking")
 	nlm2.mu.Lock()
 	node := nlm2.nodes[nodeID]
-	node.DesiredState = NodeIdle       // Set desired state
+	node.DesiredState = NodeIdle // Set desired state
 	nlm2.mu.Unlock()
 
 	if err := nlm2.ReconcileNodeState(ctx, nodeID); err != nil {

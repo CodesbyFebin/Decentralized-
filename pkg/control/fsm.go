@@ -27,7 +27,7 @@ import (
 // computes the same state.
 type Command struct {
 	Type  string          `json:"type"`
-	TS    int64           `json:"-"`  // unix nanoseconds; not marshaled to JSON (use string in protobuf/wire if needed)
+	TS    int64           `json:"-"` // unix nanoseconds; not marshaled to JSON (use string in protobuf/wire if needed)
 	Actor string          `json:"actor"`
 	Data  json.RawMessage `json:"data"`
 }
@@ -1526,12 +1526,12 @@ func secretRetrievalAuthorize(s *State, c *Command) *Result {
 
 	// Audit
 	s.audit(audit.Entry{
-		TS:     c.TS / 1e6,  // convert nanoseconds to milliseconds
-		Actor:  req.NodeID,
-		Source: audit.SourceHost,
-		Action: "secret-retrieval-authorize",
+		TS:       c.TS / 1e6, // convert nanoseconds to milliseconds
+		Actor:    req.NodeID,
+		Source:   audit.SourceHost,
+		Action:   "secret-retrieval-authorize",
 		Resource: fmt.Sprintf("secret/%s/v%d", req.SecretID, req.SecretVersion),
-		Detail: fmt.Sprintf("workload %s deployment %s env %s", req.WorkloadID, req.DeploymentID, req.Environment),
+		Detail:   fmt.Sprintf("workload %s deployment %s env %s", req.WorkloadID, req.DeploymentID, req.Environment),
 		Evidence: requestDigest,
 	})
 

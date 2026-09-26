@@ -16,10 +16,10 @@ import (
 
 const (
 	// AES-256 key size and GCM nonce size
-	dexKeySize   = 32      // 256 bits
-	gcmNonceSize = 12      // 96 bits (standard GCM)
+	dexKeySize   = 32 // 256 bits
+	gcmNonceSize = 12 // 96 bits (standard GCM)
 	aesGCMTag    = "aes-256-gcm"
-	aadVersion   = "v1"    // AAD encoding version
+	aadVersion   = "v1" // AAD encoding version
 )
 
 // CanonicalAAD constructs length-prefixed AAD with all scope and algorithm fields.
@@ -29,13 +29,13 @@ const (
 func CanonicalAAD(secretID, algorithm, keyID, clusterID, deploymentID, workloadID, environment string, version int32) []byte {
 	var buf bytes.Buffer
 	fields := []string{
-		algorithm,     // algorithm (e.g., "aes-256-gcm")
-		keyID,         // keyId (deployment-specific key identifier)
-		clusterID,     // clusterId (cluster identity)
-		secretID,      // secretId (secret identity)
-		deploymentID,  // deploymentId (deployment scoping)
-		workloadID,    // workloadId (workload scoping)
-		environment,   // environment (e.g., "prod", "staging")
+		algorithm,    // algorithm (e.g., "aes-256-gcm")
+		keyID,        // keyId (deployment-specific key identifier)
+		clusterID,    // clusterId (cluster identity)
+		secretID,     // secretId (secret identity)
+		deploymentID, // deploymentId (deployment scoping)
+		workloadID,   // workloadId (workload scoping)
+		environment,  // environment (e.g., "prod", "staging")
 	}
 	for _, f := range fields {
 		fmt.Fprintf(&buf, "%d:%s:", len(f), f)

@@ -171,13 +171,13 @@ func (nss *NodeStateStore) getNodeStatePath(nodeID string) string {
 
 // NodeStateReconciliation tracks DESIRED vs OBSERVED state
 type NodeStateReconciliation struct {
-	NodeID              string    `json:"nodeId"`
-	DesiredState        string    `json:"desiredState"`
-	ObservedState       string    `json:"observedState"`
-	Divergent           bool      `json:"divergent"`
-	LastReconciliation  int64     `json:"lastReconciliation"`
-	ReconciliationCount int       `json:"reconciliationCount"`
-	Reason              string    `json:"reason"`
+	NodeID              string `json:"nodeId"`
+	DesiredState        string `json:"desiredState"`
+	ObservedState       string `json:"observedState"`
+	Divergent           bool   `json:"divergent"`
+	LastReconciliation  int64  `json:"lastReconciliation"`
+	ReconciliationCount int    `json:"reconciliationCount"`
+	Reason              string `json:"reason"`
 }
 
 // ReconciliationStore tracks reconciliation of desired vs observed state

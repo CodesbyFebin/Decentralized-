@@ -22,7 +22,7 @@ func TestFullPipelineExecution(t *testing.T) {
 
 	// Create workload spec with artifact reference
 	spec := &DeploymentSpec{
-		WorkloadID:   "test-workload",
+		WorkloadID:     "test-workload",
 		ContainerImage: "myregistry.io/myapp:v1.0",
 		ResourceConstraints: &ResourceConstraints{
 			MemoryBytes: 512 * 1024 * 1024,
@@ -37,11 +37,11 @@ func TestFullPipelineExecution(t *testing.T) {
 
 	// Create artifact reference with hash and signature
 	spec.ArtifactRef = &ArtifactReference{
-		SourceHash:   "abcd1234abcd1234abcd1234abcd1234abcd1234abcd1234abcd1234abcd1234",
-		SignerID:     "control-plane-1",
-		Signature:    "sig1234567890abcdef1234567890abcdef",
+		SourceHash:    "abcd1234abcd1234abcd1234abcd1234abcd1234abcd1234abcd1234abcd1234",
+		SignerID:      "control-plane-1",
+		Signature:     "sig1234567890abcdef1234567890abcdef",
 		SignAlgorithm: "ed25519",
-		SignedAt:     time.Now().UnixNano(),
+		SignedAt:      time.Now().UnixNano(),
 	}
 
 	if err := contract.ValidateDeploymentSpec(ctx, spec); err != nil {
@@ -164,7 +164,7 @@ func TestPipelineStageFailure(t *testing.T) {
 	pipeline := NewDeploymentPipeline(contract)
 
 	spec := &DeploymentSpec{
-		WorkloadID:   "fail-test",
+		WorkloadID:     "fail-test",
 		ContainerImage: "myregistry.io/app:v1",
 		ResourceConstraints: &ResourceConstraints{
 			MemoryBytes: 256 * 1024 * 1024,
@@ -245,7 +245,7 @@ func TestPipelineArtifactVerification(t *testing.T) {
 	pipeline := NewDeploymentPipeline(contract)
 
 	spec := &DeploymentSpec{
-		WorkloadID:   "verify-test",
+		WorkloadID:     "verify-test",
 		ContainerImage: "registry/app:v1",
 		ResourceConstraints: &ResourceConstraints{
 			MemoryBytes: 128 * 1024 * 1024,
@@ -324,7 +324,7 @@ func TestPipelineNodeExecution(t *testing.T) {
 	pipeline := NewDeploymentPipeline(contract)
 
 	spec := &DeploymentSpec{
-		WorkloadID:   "node-track",
+		WorkloadID:     "node-track",
 		ContainerImage: "registry/app:latest",
 		ResourceConstraints: &ResourceConstraints{
 			MemoryBytes: 256 * 1024 * 1024,
@@ -400,7 +400,7 @@ func TestPipelineStatus(t *testing.T) {
 	pipeline := NewDeploymentPipeline(contract)
 
 	spec := &DeploymentSpec{
-		WorkloadID:   "status-test",
+		WorkloadID:     "status-test",
 		ContainerImage: "registry/app:v1",
 		ResourceConstraints: &ResourceConstraints{
 			MemoryBytes: 128 * 1024 * 1024,

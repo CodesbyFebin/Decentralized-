@@ -85,11 +85,11 @@ type Server struct {
 		sync.Mutex
 		at time.Time
 	}
-	mirror      *mirror
-	meshMu      sync.RWMutex
-	meshCli     meshClient
-	started     time.Time
-	lastCP      time.Time // only touched by the housekeeping goroutine
+	mirror       *mirror
+	meshMu       sync.RWMutex
+	meshCli      meshClient
+	started      time.Time
+	lastCP       time.Time             // only touched by the housekeeping goroutine
 	materializer *runtime.Materializer // [A05] for ephemeral secret delivery
 }
 

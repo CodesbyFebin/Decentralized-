@@ -12,7 +12,7 @@ func TestNodeCapacityTracking(t *testing.T) {
 	cap := &NodeCapacity{
 		NodeID:       "node-1",
 		TotalMemory:  1024 * 1024 * 1024, // 1GB
-		TotalCPU:     1000,                // 1 CPU
+		TotalCPU:     1000,               // 1 CPU
 		TotalDisk:    10 * 1024 * 1024,   // 10GB
 		MaxWorkloads: 10,
 	}
@@ -24,7 +24,7 @@ func TestNodeCapacityTracking(t *testing.T) {
 
 	constraints := &ResourceConstraints{
 		MemoryBytes: 256 * 1024 * 1024, // 256MB
-		CPUShares:   200,                // 0.2 CPU
+		CPUShares:   200,               // 0.2 CPU
 		DiskBytes:   2 * 1024 * 1024,   // 2GB
 	}
 
@@ -71,7 +71,7 @@ func TestCapacityExhaustion(t *testing.T) {
 	cap := &NodeCapacity{
 		NodeID:       "node-low-mem",
 		TotalMemory:  512 * 1024,  // 512KB
-		TotalCPU:     100,          // 0.1 CPU
+		TotalCPU:     100,         // 0.1 CPU
 		TotalDisk:    1024 * 1024, // 1MB
 		MaxWorkloads: 5,
 	}
@@ -435,7 +435,7 @@ func TestInsufficientCapacity(t *testing.T) {
 
 	cap := &NodeCapacity{
 		NodeID:       nodeID,
-		TotalMemory:  512 * 1024,  // Very limited
+		TotalMemory:  512 * 1024, // Very limited
 		TotalCPU:     100,
 		TotalDisk:    1024 * 1024,
 		MaxWorkloads: 1,

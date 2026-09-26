@@ -8,40 +8,40 @@ import (
 
 // NetworkAddress represents workload network endpoint
 type NetworkAddress struct {
-	Host      string
-	Port      int
-	Protocol  string // TCP, UDP, HTTP, gRPC, etc.
-	TLS       bool
+	Host     string
+	Port     int
+	Protocol string // TCP, UDP, HTTP, gRPC, etc.
+	TLS      bool
 }
 
 // ServiceEndpoint represents a registered service instance
 type ServiceEndpoint struct {
-	ServiceID   string
-	WorkloadID  string
-	NodeID      string
-	Address     *NetworkAddress
-	Status      string // REGISTERED, HEALTHY, UNHEALTHY, DEREGISTERED
-	RegisteredAt int64
+	ServiceID     string
+	WorkloadID    string
+	NodeID        string
+	Address       *NetworkAddress
+	Status        string // REGISTERED, HEALTHY, UNHEALTHY, DEREGISTERED
+	RegisteredAt  int64
 	LastHeartbeat int64
 }
 
 // NetworkPolicy defines access control rules
 type NetworkPolicy struct {
-	PolicyID   string
-	Name       string
-	Source     string           // Service or workload ID, or * for any
-	Destination string          // Service or workload ID, or * for any
-	Port       int              // Destination port, 0 for all
-	Action     string           // ALLOW or DENY
-	CreatedAt  int64
+	PolicyID    string
+	Name        string
+	Source      string // Service or workload ID, or * for any
+	Destination string // Service or workload ID, or * for any
+	Port        int    // Destination port, 0 for all
+	Action      string // ALLOW or DENY
+	CreatedAt   int64
 }
 
 // ServiceRegistry maintains service discovery information
 type ServiceRegistry struct {
-	services  map[string]*ServiceEndpoint    // serviceID -> endpoint
+	services   map[string]*ServiceEndpoint   // serviceID -> endpoint
 	byWorkload map[string][]*ServiceEndpoint // workloadID -> endpoints
-	byNode    map[string][]*ServiceEndpoint  // nodeID -> endpoints
-	mu        sync.RWMutex
+	byNode     map[string][]*ServiceEndpoint // nodeID -> endpoints
+	mu         sync.RWMutex
 }
 
 // NetworkPolicyEngine enforces network access control
@@ -79,12 +79,12 @@ func (sr *ServiceRegistry) RegisterService(serviceID string, workloadID string,
 	}
 
 	endpoint := &ServiceEndpoint{
-		ServiceID:    serviceID,
-		WorkloadID:   workloadID,
-		NodeID:       nodeID,
-		Address:      address,
-		Status:       "REGISTERED",
-		RegisteredAt: time.Now().UnixNano(),
+		ServiceID:     serviceID,
+		WorkloadID:    workloadID,
+		NodeID:        nodeID,
+		Address:       address,
+		Status:        "REGISTERED",
+		RegisteredAt:  time.Now().UnixNano(),
 		LastHeartbeat: time.Now().UnixNano(),
 	}
 
@@ -331,10 +331,10 @@ func (npe *NetworkPolicyEngine) GetPoliciesForService(serviceID string) []*Netwo
 
 // NetworkConfig aggregates network configuration
 type NetworkConfig struct {
-	registry      *ServiceRegistry
-	policyEngine  *NetworkPolicyEngine
-	loadBalancer  *LoadBalancerConfig
-	mu            sync.RWMutex
+	registry     *ServiceRegistry
+	policyEngine *NetworkPolicyEngine
+	loadBalancer *LoadBalancerConfig
+	mu           sync.RWMutex
 }
 
 // LoadBalancerConfig manages load balancing
