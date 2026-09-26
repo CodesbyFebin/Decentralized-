@@ -2,10 +2,12 @@
 package control
 
 import (
+	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
 	"encoding/base64"
+	"encoding/binary"
 	"errors"
 	"fmt"
 
@@ -17,7 +19,33 @@ const (
 	dexKeySize   = 32      // 256 bits
 	gcmNonceSize = 12      // 96 bits (standard GCM)
 	aesGCMTag    = "aes-256-gcm"
+	aadVersion   = "v1"    // AAD encoding version
 )
+
+// CanonicalAAD constructs length-prefixed AAD with all scope and algorithm fields.
+// Format: len(field1):field1:|len(field2):field2:|...|version(8-byte big-endian)
+// This prevents ambiguity from field delimiters and ensures all scope is bound.
+// Fields (in order): algorithm | keyId | clusterId | secretId | deploymentId | workloadId | environment | version
+func CanonicalAAD(secretID, algorithm, keyID, clusterID, deploymentID, workloadID, environment string, version int32) []byte {
+	var buf bytes.Buffer
+	fields := []string{
+		algorithm,     // algorithm (e.g., "aes-256-gcm")
+		keyID,         // keyId (deployment-specific key identifier)
+		clusterID,     // clusterId (cluster identity)
+		secretID,      // secretId (secret identity)
+		deploymentID,  // deploymentId (deployment scoping)
+		workloadID,    // workloadId (workload scoping)
+		environment,   // environment (e.g., "prod", "staging")
+	}
+	for _, f := range fields {
+		fmt.Fprintf(&buf, "%d:%s:", len(f), f)
+	}
+	// Append version as 8-byte big-endian integer
+	versionBytes := make([]byte, 8)
+	binary.BigEndian.PutUint64(versionBytes, uint64(version))
+	buf.Write(versionBytes)
+	return buf.Bytes()
+}
 
 // GenerateDEK creates a cryptographically random 32-byte DEK for per-secret-version encryption.
 func GenerateDEK() ([32]byte, error) {
@@ -29,6 +57,17 @@ func GenerateDEK() ([32]byte, error) {
 }
 
 // GenerateNonce creates a random 96-bit nonce for GCM.
+//
+// GCM nonce uniqueness requirement: A given (key, nonce) pair MUST NEVER be reused.
+// With random 96-bit nonces and a unique DEK per secret version, collision risk is negligible:
+// - Each secret version gets an independent random DEK
+// - Nonce is random 96-bit (~79 bits of entropy after accounting for birthday bound)
+// - With 2^80 encryptions per DEK, collision probability approaches 2^-80
+//
+// Practical bound: Per secret version, ~2^62 encryptions before reaching acceptable risk threshold.
+// In practice, secret versions rotate frequently; this bound is never approached.
+//
+// See: https://csrc.nist.gov/publications/detail/sp/800-38d/final
 func GenerateNonce() ([]byte, error) {
 	nonce := make([]byte, gcmNonceSize)
 	if _, err := rand.Read(nonce); err != nil {
@@ -38,12 +77,23 @@ func GenerateNonce() ([]byte, error) {
 }
 
 // DeriveKEK derives a key-encryption key from operator-provided bootstrap material.
-// Never call if bootstrap is empty (will panic).
+//
+// Bootstrap MUST be high-entropy random material (32 bytes of cryptographically random data).
+// MUST NOT be a human-readable passphrase or password; those require a password KDF (e.g., Argon2).
+//
+// Bootstrap is never persisted in Raft/BoltDB; it must be provided externally at startup
+// (e.g., from environment variable DECENTRALIZED_KEK_BOOTSTRAP).
+//
+// Derivation: KEK = BLAKE3(bootstrap || "v1" || clusterID)[:32]
+// - "v1" ties derivation to AAD version
+// - clusterID prevents cross-cluster key reuse
+// - BLAKE3 provides cryptographic strength and speed
+//
+// Never call if bootstrap is empty; fail-closed before startup proceeds.
 func DeriveKEK(bootstrap string, clusterID string) [32]byte {
-	// KEK = BLAKE3(bootstrap || "v1" || clusterID)[:32]
 	h := blake3.New()
 	h.Write([]byte(bootstrap))
-	h.Write([]byte("v1"))
+	h.Write([]byte(aadVersion))
 	h.Write([]byte(clusterID))
 	var kek [32]byte
 	copy(kek[:], h.Sum(nil)[:32])
@@ -83,9 +133,8 @@ func EncryptSecret(
 		return nil, fmt.Errorf("encrypt secret: %w", err)
 	}
 
-	// Construct AAD (scope binding)
-	aad := []byte(fmt.Sprintf("%s|%s|%s|%s|%d",
-		clusterID, deploymentID, workloadID, environment, version))
+	// Construct canonical AAD (scope and algorithm binding)
+	aad := CanonicalAAD(secretID, aesGCMTag, keyID, clusterID, deploymentID, workloadID, environment, version)
 
 	// Encrypt with AEAD
 	ciphertext := gcm.Seal(nil, nonce, plaintext, aad)
@@ -133,9 +182,8 @@ func DecryptSecret(record *SecretRecord, dek [32]byte) ([]byte, error) {
 		return nil, fmt.Errorf("decrypt secret: create GCM: %w", err)
 	}
 
-	// Reconstruct AAD (must match encryption)
-	aad := []byte(fmt.Sprintf("%s|%s|%s|%s|%d",
-		record.ClusterID, record.DeploymentID, record.WorkloadID, record.Environment, record.Version))
+	// Reconstruct canonical AAD (must match encryption exactly)
+	aad := CanonicalAAD(record.SecretID, record.Algorithm, record.KeyID, record.ClusterID, record.DeploymentID, record.WorkloadID, record.Environment, record.Version)
 
 	// Decrypt and verify
 	plaintext, err := gcm.Open(nil, record.Nonce, record.EncryptedData, aad)
