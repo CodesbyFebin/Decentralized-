@@ -1,0 +1,125 @@
+=== attempt 1 at 2026-09-26T00:25:47Z: sh -c cd command-centre && npx tsx --test --test-concurrency=1 tests/integration/controlplane.test.ts
+TAP version 13
+# Subtest: health reports the real control plane
+ok 1 - health reports the real control plane
+  ---
+  duration_ms: 80.18584
+  type: 'test'
+  ...
+# Subtest: unauthenticated and malformed credentials are rejected
+ok 2 - unauthenticated and malformed credentials are rejected
+  ---
+  duration_ms: 23.184437
+  type: 'test'
+  ...
+# Subtest: node count and health match the control plane exactly
+ok 3 - node count and health match the control plane exactly
+  ---
+  duration_ms: 33.772199
+  type: 'test'
+  ...
+# Subtest: node detail is deep-linkable by id and by name
+ok 4 - node detail is deep-linkable by id and by name
+  ---
+  duration_ms: 8.625761
+  type: 'test'
+  ...
+# Subtest: read-only capability cannot mutate (enforced by the control plane)
+ok 5 - read-only capability cannot mutate (enforced by the control plane)
+  ---
+  duration_ms: 8.573504
+  type: 'test'
+  ...
+# Subtest: mutations without the console header are rejected (CSRF)
+ok 6 - mutations without the console header are rejected (CSRF)
+  ---
+  duration_ms: 3.6097
+  type: 'test'
+  ...
+# Subtest: destructive operations require confirmation
+ok 7 - destructive operations require confirmation
+  ---
+  duration_ms: 5.448247
+  type: 'test'
+  ...
+# Subtest: invalid manifests are refused by the control plane, not accepted
+ok 8 - invalid manifests are refused by the control plane, not accepted
+  ---
+  duration_ms: 6.384066
+  type: 'test'
+  ...
+# Subtest: deployment lifecycle: accepted, progresses from real observations, reaches READY
+ok 9 - deployment lifecycle: accepted, progresses from real observations, reaches READY
+  ---
+  duration_ms: 1567.071314
+  type: 'test'
+  ...
+# Subtest: the actor recorded in the audit ledger comes from the capability, not the UI
+ok 10 - the actor recorded in the audit ledger comes from the capability, not the UI
+  ---
+  duration_ms: 11.983918
+  type: 'test'
+  ...
+# Subtest: scaling to zero needs confirmation; scaling up goes through the control plane
+ok 11 - scaling to zero needs confirmation; scaling up goes through the control plane
+  ---
+  duration_ms: 2044.278586
+  type: 'test'
+  ...
+# Subtest: drain and undrain round-trip through the control plane
+ok 12 - drain and undrain round-trip through the control plane
+  ---
+  duration_ms: 4079.910121
+  type: 'test'
+  ...
+# Subtest: operations on unknown nodes are reported as NOT_FOUND
+ok 13 - operations on unknown nodes are reported as NOT_FOUND
+  ---
+  duration_ms: 7.962296
+  type: 'test'
+  ...
+# Subtest: Copilot answers are grounded and cited; read-only principals get no action proposals
+ok 14 - Copilot answers are grounded and cited; read-only principals get no action proposals
+  ---
+  duration_ms: 39.874056
+  type: 'test'
+  ...
+# Subtest: Copilot actions require approval by the same principal and execute via the control plane
+ok 15 - Copilot actions require approval by the same principal and execute via the control plane
+  ---
+  duration_ms: 47.057533
+  type: 'test'
+  ...
+# Subtest: Copilot CRITICAL actions need typed confirmation
+ok 16 - Copilot CRITICAL actions need typed confirmation
+  ---
+  duration_ms: 6.179748
+  type: 'test'
+  ...
+# Subtest: ledger re-verification is performed by the control plane
+ok 17 - ledger re-verification is performed by the control plane
+  ---
+  duration_ms: 11.324453
+  type: 'test'
+  ...
+# Subtest: backend error text is sanitized before it reaches the browser
+ok 18 - backend error text is sanitized before it reaches the browser
+  ---
+  duration_ms: 5.689097
+  type: 'test'
+  ...
+# Subtest: secrets (env values) never leave the BFF
+ok 19 - secrets (env values) never leave the BFF
+  ---
+  duration_ms: 2.713753
+  type: 'test'
+  ...
+1..19
+# tests 19
+# suites 0
+# pass 19
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 8449.711569

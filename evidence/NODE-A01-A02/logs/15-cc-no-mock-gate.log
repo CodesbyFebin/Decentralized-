@@ -1,0 +1,6 @@
+=== attempt 1 at 2026-09-26T01:30:08Z: sh -c cd command-centre && npm run gate
+
+> decentralized-host-command-centre@0.0.0 gate
+> node scripts/no-mock-gate.mjs
+
+no-mock gate: PASS — 68 hit(s) classified as allowed, 0 forbidden, 1 exempt path(s).

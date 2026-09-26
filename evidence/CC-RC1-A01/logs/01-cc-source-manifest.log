@@ -1,0 +1,2 @@
+=== attempt 1 at 2026-09-26T00:23:44Z: sh -c node command-centre/scripts/source-manifest.mjs /home/user/Decentralized-/evidence/CC-RC1-A01/cc-source-manifest.txt
+sha256:777670d84bc289617f7912fd77868745cbf1c91e70b51550afa007ea65f4d3f3 over 69 files

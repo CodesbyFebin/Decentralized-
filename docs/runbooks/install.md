@@ -66,10 +66,12 @@ Expected `dh cp status`: one `leader`, two `follower`s, and all three voters.
 
 ## 4. Join hosts
 
-**Invites are single-use.** Create one per host:
+**Invites are single-use and short-lived** (15 minutes unless you pass
+`--ttl`). Create one per host, just before you start it:
 
 ```bash
 dh node invite --out host-1.token          # add --roles edge for an edge host, --auto to skip approval
+dh node invite-revoke host-1.token         # withdraw it if it leaked or is no longer needed
 ```
 
 On the host:

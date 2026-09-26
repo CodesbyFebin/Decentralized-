@@ -154,6 +154,7 @@ type Agent struct {
 	cp        *cpClient
 	proc      *runtime.Process
 	docker    *runtime.Docker
+	sandbox   *runtime.Sandboxed
 	dockerOK  atomic.Bool
 	dockerVer atomic.Value
 
@@ -223,6 +224,7 @@ func New(cfg Config) (*Agent, error) {
 		return nil, err
 	}
 	a := &Agent{cfg: cfg, log: cfg.Logger, proc: runtime.NewProcess(), docker: runtime.NewDocker(),
+		sandbox:   runtime.NewSandboxed(filepath.Join(cfg.DataDir, "sandbox"), []string{filepath.Join(cfg.DataDir, "work"), filepath.Join(cfg.DataDir, "volumes")}),
 		decisions: map[string]*decision{}, health: map[string]*api.HealthObs{}, healthAt: map[string]time.Time{},
 		peerIPs: map[string]string{}, peerInfo: map[string]api.Peer{}, bindOK: map[string]bool{}, rtt: map[string][2]int64{},
 		forwards: map[string]*forwarder{}, cutover: map[string]bool{}, badHolder: map[string]time.Time{}, stopc: make(chan struct{})}
@@ -358,6 +360,7 @@ func (a *Agent) key() *identity.Identity {
 // Run executes the agent loop until ctx ends.
 func (a *Agent) Run(ctx context.Context) error {
 	a.probeFacts()
+	a.factsAt = time.Now() // only the reconcile goroutine touches factsAt; background probes do not
 	a.readopt()
 	if a.cfg.StatusListen != "" {
 		if err := a.startStatus(); err != nil {
@@ -431,8 +434,11 @@ func (a *Agent) readopt() {
 }
 
 func (a *Agent) runtimeFor(name string) runtime.Runtime {
-	if name == "docker" {
+	switch name {
+	case "docker":
 		return a.docker
+	case "sandbox":
+		return a.sandbox
 	}
 	return a.proc
 }
@@ -465,7 +471,10 @@ func (a *Agent) tick() {
 }
 
 func (a *Agent) probeFacts() {
-	f := api.Facts{OS: goruntime.GOOS, Arch: arch(), CPUs: int64(goruntime.NumCPU()), MemBytes: a.cfg.MemBytes}
+	// Measured only: the capacity the operator offers (--cpu, --mem) is in the
+	// enrollment, not in facts.
+	f := api.Facts{OS: goruntime.GOOS, Arch: arch(), CPUs: int64(goruntime.NumCPU())}
+	systemProbe().measure(&f, a.cfg.DataDir)
 	f.Kernel = kernelVersion()
 	f.UDP443 = udpListening(443)
 	f.Runtimes = []string{"process"}
@@ -478,7 +487,6 @@ func (a *Agent) probeFacts() {
 	}
 	f.Probes = probeTools()
 	a.facts.Store(f)
-	a.factsAt = time.Now()
 }
 
 func arch() string {

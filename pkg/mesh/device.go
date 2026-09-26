@@ -89,16 +89,38 @@ type PeerStats struct {
 	TxBytes       int64
 }
 
+// firstContactGrace is how long the higher-key side of a new pair waits for
+// the lower-key side's handshake before it may start one itself.
+//
+// Each pair has one designated initiator: the side with the lower public key
+// sends a handshake initiation as soon as the peer is configured (startup
+// keepalive). If the other side also initiated, for example because it had
+// data to send, the two initiations cross. wireguard-go consumes the two
+// handshake messages on different goroutines, and a crossed pair can end up
+// with one direction dropping every packet until the rekey timer fires 15 s
+// later (REKEY_TIMEOUT + KEEPALIVE_TIMEOUT). So the higher-key side is given
+// the peer's endpoint only after this grace period, unless a handshake has
+// completed by then: until then it can answer an initiation but never send
+// one, and data it wants to send is staged until the handshake completes.
+//
+// The grace period covers peers that are configured on both sides within it
+// (hosts apply the same bundle within a tick or two). After it, the higher
+// side initiates itself at its next handshake retry (up to REKEY_TIMEOUT,
+// 5 s, later), so a pair where only the higher side can open the path (NAT)
+// still connects.
+var firstContactGrace = 2 * time.Second
+
 // Device is a running userspace WireGuard interface.
 type Device struct {
-	key    Key
-	ip     netip.Addr
-	port   int
-	dev    *device.Device
-	tnet   *netstack.Net
-	mu     sync.Mutex
-	peers  map[string]PeerConfig // by WGPub
-	closed bool
+	key      Key
+	ip       netip.Addr
+	port     int
+	dev      *device.Device
+	tnet     *netstack.Net
+	mu       sync.Mutex
+	peers    map[string]PeerConfig // by WGPub
+	withheld map[string]string     // WGPub → endpoint not yet given to the device (first contact)
+	closed   bool
 }
 
 // Start creates the device, binds UDP listenPort on all interfaces and
@@ -122,7 +144,7 @@ func Start(key Key, meshIP string, listenPort int) (*Device, error) {
 		dev.Close()
 		return nil, err
 	}
-	return &Device{key: key, ip: ip, port: listenPort, dev: dev, tnet: tnet, peers: map[string]PeerConfig{}}, nil
+	return &Device{key: key, ip: ip, port: listenPort, dev: dev, tnet: tnet, peers: map[string]PeerConfig{}, withheld: map[string]string{}}, nil
 }
 
 // IP returns the mesh address.
@@ -152,6 +174,7 @@ func (d *Device) SetPeers(want []PeerConfig) error {
 	var b strings.Builder
 	for pub := range d.peers {
 		if _, keep := desired[pub]; !keep {
+			delete(d.withheld, pub)
 			hexPub, err := b64ToHex(pub)
 			if err != nil {
 				continue
@@ -159,6 +182,7 @@ func (d *Device) SetPeers(want []PeerConfig) error {
 			fmt.Fprintf(&b, "public_key=%s\nremove=true\n", hexPub)
 		}
 	}
+	var release []string
 	keys := make([]string, 0, len(desired))
 	for k := range desired {
 		keys = append(keys, k)
@@ -175,18 +199,33 @@ func (d *Device) SetPeers(want []PeerConfig) error {
 			return fmt.Errorf("mesh: peer %s key: %w", p.Node, err)
 		}
 		fmt.Fprintf(&b, "public_key=%s\n", hexPub)
+		initiator := d.key.PublicString() < pub
+		var addr *net.UDPAddr
 		if p.Endpoint != "" {
-			addr, err := net.ResolveUDPAddr("udp", p.Endpoint)
-			if err != nil {
+			if addr, err = net.ResolveUDPAddr("udp", p.Endpoint); err != nil {
 				return fmt.Errorf("mesh: peer %s endpoint %q: %w", p.Node, p.Endpoint, err)
 			}
+		}
+		_, pending := d.withheld[pub]
+		switch {
+		case addr == nil:
+			delete(d.withheld, pub)
+		case pending:
+			// Still in first contact: keep the endpoint back, remember the new one.
+			d.withheld[pub] = p.Endpoint
+		case !had && !initiator:
+			// First contact and we are not the designated initiator: see
+			// firstContactGrace.
+			d.withheld[pub] = p.Endpoint
+			release = append(release, pub)
+		default:
 			fmt.Fprintf(&b, "endpoint=%s\n", addr.String())
 		}
-		// Only one side of each pair sends the startup keepalive, so two
-		// devices configured at the same instant do not cross handshake
-		// initiations. Data traffic still triggers handshakes both ways.
+		// Only the lower-key side sends the startup keepalive, which starts
+		// the pair's first handshake; the other side cannot initiate until
+		// that handshake completes or firstContactGrace passes.
 		keepalive := 0
-		if d.key.PublicString() < pub {
+		if initiator {
 			keepalive = 5
 		}
 		fmt.Fprintf(&b, "replace_allowed_ips=true\nallowed_ip=%s/32\npersistent_keepalive_interval=%d\n", p.MeshIP, keepalive)
@@ -197,7 +236,59 @@ func (d *Device) SetPeers(want []PeerConfig) error {
 		}
 	}
 	d.peers = desired
+	for _, pub := range release {
+		pub := pub
+		time.AfterFunc(firstContactGrace, func() { d.releaseEndpoint(pub) })
+	}
 	return nil
+}
+
+// releaseEndpoint ends first contact with a peer: if no handshake has
+// completed (the lower-key side could not reach us), the device gets the
+// endpoint and may initiate. After a handshake the device already knows the
+// endpoint the peer's packets came from, which is kept.
+func (d *Device) releaseEndpoint(pub string) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	ep, ok := d.withheld[pub]
+	if !ok || d.closed {
+		return
+	}
+	delete(d.withheld, pub)
+	if d.handshaked(pub) {
+		return
+	}
+	hexPub, err := b64ToHex(pub)
+	if err != nil {
+		return
+	}
+	addr, err := net.ResolveUDPAddr("udp", ep)
+	if err != nil {
+		return
+	}
+	_ = d.dev.IpcSet(fmt.Sprintf("public_key=%s\nupdate_only=true\nendpoint=%s\n", hexPub, addr.String()))
+}
+
+// handshaked reports whether the device has completed a handshake with pub.
+func (d *Device) handshaked(pub string) bool {
+	out, err := d.dev.IpcGet()
+	if err != nil {
+		return false
+	}
+	hexPub, _ := b64ToHex(pub)
+	in := false
+	for _, line := range strings.Split(out, "\n") {
+		k, v, _ := strings.Cut(line, "=")
+		switch k {
+		case "public_key":
+			in = v == hexPub
+		case "last_handshake_time_sec":
+			if in && v != "0" {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // Stats reads measured peer state from the device.

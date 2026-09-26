@@ -1,0 +1,237 @@
+=== attempt 1 at 2026-09-26T02:18:25Z: sh -c cd command-centre && npm test
+
+> decentralized-host-command-centre@0.0.0 test
+> tsx --test tests/unit/*.test.ts tests/integration/failure.test.ts
+
+TAP version 13
+# Subtest: backend offline: no data, no demo fallback, capabilities lose confidence, copilot refuses
+ok 1 - backend offline: no data, no demo fallback, capabilities lose confidence, copilot refuses
+  ---
+  duration_ms: 158.462505
+  type: 'test'
+  ...
+# Subtest: backend timeout is reported as BACKEND_TIMEOUT
+ok 2 - backend timeout is reported as BACKEND_TIMEOUT
+  ---
+  duration_ms: 414.061159
+  type: 'test'
+  ...
+# Subtest: malformed backend response is refused, not rendered
+ok 3 - malformed backend response is refused, not rendered
+  ---
+  duration_ms: 10.990848
+  type: 'test'
+  ...
+# Subtest: backend 5xx never leaks internals
+ok 4 - backend 5xx never leaks internals
+  ---
+  duration_ms: 6.941813
+  type: 'test'
+  ...
+# Subtest: failover: a dead first member does not blind the console
+ok 5 - failover: a dead first member does not blind the console
+  ---
+  duration_ms: 5.990295
+  type: 'test'
+  ...
+# Subtest: demo adapter is labelled SIMULATED and refuses every mutation
+ok 6 - demo adapter is labelled SIMULATED and refuses every mutation
+  ---
+  duration_ms: 17.785389
+  type: 'test'
+  ...
+# Subtest: configuration: no silent adapter choice; demo refused in production
+ok 7 - configuration: no silent adapter choice; demo refused in production
+  ---
+  duration_ms: 2.445276
+  type: 'test'
+  ...
+# Subtest: request ids are UUIDs; untrusted incoming ids are replaced
+ok 8 - request ids are UUIDs; untrusted incoming ids are replaced
+  ---
+  duration_ms: 6.288645
+  type: 'test'
+  ...
+# Subtest: a stale host and a lost host are named, each with its source
+ok 9 - a stale host and a lost host are named, each with its source
+  ---
+  duration_ms: 7.855271
+  type: 'test'
+  ...
+# Subtest: a healthy cluster raises no node alarms
+ok 10 - a healthy cluster raises no node alarms
+  ---
+  duration_ms: 1.819187
+  type: 'test'
+  ...
+# Subtest: an unverified audit ledger is critical
+ok 11 - an unverified audit ledger is critical
+  ---
+  duration_ms: 3.004708
+  type: 'test'
+  ...
+# Subtest: records are read as sealed, FAIL included
+ok 12 - records are read as sealed, FAIL included
+  ---
+  duration_ms: 17.435922
+  type: 'test'
+  ...
+# Subtest: ids cannot escape the evidence directory
+ok 13 - ids cannot escape the evidence directory
+  ---
+  duration_ms: 2.739743
+  type: 'test'
+  ...
+# Subtest: a step log is served only for a step the record names
+ok 14 - a step log is served only for a step the record names
+  ---
+  duration_ms: 4.954789
+  type: 'test'
+  ...
+# Subtest: without a CLI, verification is refused rather than assumed
+ok 15 - without a CLI, verification is refused rather than assumed
+  ---
+  duration_ms: 0.532818
+  type: 'test'
+  ...
+# Subtest: verification runs the platform verifier; a tampered copy is UNVERIFIED
+ok 16 - verification runs the platform verifier; a tampered copy is UNVERIFIED
+  ---
+  duration_ms: 168.790546
+  type: 'test'
+  ...
+# Subtest: fixtures are real control-plane views
+ok 17 - fixtures are real control-plane views
+  ---
+  duration_ms: 1.363262
+  type: 'test'
+  ...
+# Subtest: node counts come from the node list, not constants
+ok 18 - node counts come from the node list, not constants
+  ---
+  duration_ms: 3.123784
+  type: 'test'
+  ...
+# Subtest: stale observation degrades the node instead of staying healthy
+ok 19 - stale observation degrades the node instead of staying healthy
+  ---
+  duration_ms: 0.889027
+  type: 'test'
+  ...
+# Subtest: a lost host is OFFLINE and its stale replica is not counted as running
+ok 20 - a lost host is OFFLINE and its stale replica is not counted as running
+  ---
+  duration_ms: 0.923029
+  type: 'test'
+  ...
+# Subtest: stale replica keeps desired, admitted and observed separate
+ok 21 - stale replica keeps desired, admitted and observed separate
+  ---
+  duration_ms: 0.437938
+  type: 'test'
+  ...
+# Subtest: health derivation
+ok 22 - health derivation
+  ---
+  duration_ms: 0.203193
+  type: 'test'
+  ...
+# Subtest: app phase never claims READY without observation
+ok 23 - app phase never claims READY without observation
+  ---
+  duration_ms: 0.173326
+  type: 'test'
+  ...
+# Subtest: certificate state is computed from the observed X.509 validity
+ok 24 - certificate state is computed from the observed X.509 validity
+  ---
+  duration_ms: 0.56895
+  type: 'test'
+  ...
+# Subtest: unmeasured metrics are null + UNAVAILABLE, never zero
+ok 25 - unmeasured metrics are null + UNAVAILABLE, never zero
+  ---
+  duration_ms: 0.877747
+  type: 'test'
+  ...
+# Subtest: no environment variable values leave the mapper
+ok 26 - no environment variable values leave the mapper
+  ---
+  duration_ms: 1.036167
+  type: 'test'
+  ...
+# Subtest: domains keep desired routing, observed routing and DNS separate
+ok 27 - domains keep desired routing, observed routing and DNS separate
+  ---
+  duration_ms: 0.51845
+  type: 'test'
+  ...
+# Subtest: evidence verification comes from the ledger verification result
+ok 28 - evidence verification comes from the ledger verification result
+  ---
+  duration_ms: 0.631658
+  type: 'test'
+  ...
+# Subtest: WAF and DDoS are UNAVAILABLE, not a vanity score
+ok 29 - WAF and DDoS are UNAVAILABLE, not a vanity score
+  ---
+  duration_ms: 0.240486
+  type: 'test'
+  ...
+# Subtest: demo replay is labelled SIMULATED end to end
+ok 30 - demo replay is labelled SIMULATED end to end
+  ---
+  duration_ms: 0.556646
+  type: 'test'
+  ...
+# Subtest: capabilities lose confidence when the backend is unreachable
+ok 31 - capabilities lose confidence when the backend is unreachable
+  ---
+  duration_ms: 0.208281
+  type: 'test'
+  ...
+# Subtest: region positions are CONFIGURED, never inferred
+ok 32 - region positions are CONFIGURED, never inferred
+  ---
+  duration_ms: 1.663973
+  type: 'test'
+  ...
+# Subtest: hardware: an agent without the unknown list is not trusted for measured memory
+ok 33 - hardware: an agent without the unknown list is not trusted for measured memory
+  ---
+  duration_ms: 0.213569
+  type: 'test'
+  ...
+# Subtest: app resources are the manifest requests (cpuMilli, memBytes), not strings
+ok 34 - app resources are the manifest requests (cpuMilli, memBytes), not strings
+  ---
+  duration_ms: 0.292861
+  type: 'test'
+  ...
+# Subtest: a converged deployment is an operation that SUCCEEDED, with its source
+ok 35 - a converged deployment is an operation that SUCCEEDED, with its source
+  ---
+  duration_ms: 5.816878
+  type: 'test'
+  ...
+# Subtest: a draining host with replicas left is RUNNING, and WAITING once empty
+ok 36 - a draining host with replicas left is RUNNING, and WAITING once empty
+  ---
+  duration_ms: 1.93181
+  type: 'test'
+  ...
+# Subtest: no operation is invented when nothing is in progress
+ok 37 - no operation is invented when nothing is in progress
+  ---
+  duration_ms: 1.813744
+  type: 'test'
+  ...
+1..37
+# tests 37
+# suites 0
+# pass 37
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 5189.393942

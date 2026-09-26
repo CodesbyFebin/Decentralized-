@@ -1,0 +1,39 @@
+=== attempt 1 at 2026-09-26T02:17:33Z: go test -count=1 -v -run TestNodeA01 ./tests/integration
+=== RUN   TestNodeA01SovereignNode
+=== RUN   TestNodeA01SovereignNode/identity_is_generated_on_the_host_and_the_host_waits_for_approval
+=== RUN   TestNodeA01SovereignNode/the_private_key_never_reaches_the_control_plane
+    node_a01_test.go:154: scanned 6 control-plane files, 3 API documents and the log for 7 encodings of the host key
+=== RUN   TestNodeA01SovereignNode/the_join_token_admits_exactly_one_identity
+=== RUN   TestNodeA01SovereignNode/a_join_token_not_signed_by_the_cluster_root_is_refused
+=== RUN   TestNodeA01SovereignNode/an_expired_join_token_is_refused
+=== RUN   TestNodeA01SovereignNode/a_join_token_the_owner_revoked_is_refused
+=== RUN   TestNodeA01SovereignNode/an_enrollment_signed_by_a_key_other_than_the_enrolling_identity_is_refused
+=== RUN   TestNodeA01SovereignNode/a_replayed_enrollment_cannot_roll_the_host's_record_back
+=== RUN   TestNodeA01SovereignNode/facts_are_measured,_not_the_declared_capacity
+    node_a01_test.go:299: facts: cpus=4 model="Intel(R) Xeon(R) Processor @ 2.80GHz" cores=4 mem=16877547520 swap=0 disks=7 gpus=0 unknown=[gpus natType]
+=== RUN   TestNodeA01SovereignNode/owner_approval_makes_the_host_ACTIVE_and_FRESH
+=== RUN   TestNodeA01SovereignNode/heartbeats_are_authenticated:_replay_and_foreign_keys_are_refused
+=== RUN   TestNodeA01SovereignNode/coordinator_disconnect:_the_host_stops_claiming_freshness,_then_reconciles
+=== RUN   TestNodeA01SovereignNode/host_disconnect:_the_plane_goes_STALE_then_lost,_never_a_fabricated_live_state
+=== RUN   TestNodeA01SovereignNode/audit_tampering_is_detected
+=== RUN   TestNodeA01SovereignNode/host_ledger_tampering_is_detected_by_the_host_itself
+=== RUN   TestNodeA01SovereignNode/a_revoked_key_is_refused_on_every_host_channel
+--- PASS: TestNodeA01SovereignNode (47.71s)
+    --- PASS: TestNodeA01SovereignNode/identity_is_generated_on_the_host_and_the_host_waits_for_approval (2.21s)
+    --- PASS: TestNodeA01SovereignNode/the_private_key_never_reaches_the_control_plane (0.01s)
+    --- PASS: TestNodeA01SovereignNode/the_join_token_admits_exactly_one_identity (0.00s)
+    --- PASS: TestNodeA01SovereignNode/a_join_token_not_signed_by_the_cluster_root_is_refused (0.00s)
+    --- PASS: TestNodeA01SovereignNode/an_expired_join_token_is_refused (1.00s)
+    --- PASS: TestNodeA01SovereignNode/a_join_token_the_owner_revoked_is_refused (0.01s)
+    --- PASS: TestNodeA01SovereignNode/an_enrollment_signed_by_a_key_other_than_the_enrolling_identity_is_refused (0.00s)
+    --- PASS: TestNodeA01SovereignNode/a_replayed_enrollment_cannot_roll_the_host's_record_back (0.00s)
+    --- PASS: TestNodeA01SovereignNode/facts_are_measured,_not_the_declared_capacity (0.00s)
+    --- PASS: TestNodeA01SovereignNode/owner_approval_makes_the_host_ACTIVE_and_FRESH (0.01s)
+    --- PASS: TestNodeA01SovereignNode/heartbeats_are_authenticated:_replay_and_foreign_keys_are_refused (0.01s)
+    --- PASS: TestNodeA01SovereignNode/coordinator_disconnect:_the_host_stops_claiming_freshness,_then_reconciles (16.27s)
+    --- PASS: TestNodeA01SovereignNode/host_disconnect:_the_plane_goes_STALE_then_lost,_never_a_fabricated_live_state (16.07s)
+    --- PASS: TestNodeA01SovereignNode/audit_tampering_is_detected (0.00s)
+    --- PASS: TestNodeA01SovereignNode/host_ledger_tampering_is_detected_by_the_host_itself (0.31s)
+    --- PASS: TestNodeA01SovereignNode/a_revoked_key_is_refused_on_every_host_channel (10.02s)
+PASS
+ok  	decentralized.host/tests/integration	49.742s

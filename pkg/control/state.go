@@ -39,6 +39,7 @@ type State struct {
 	MeshNext     int64                         `json:"meshNext"`
 	LocalCACert  string                        `json:"localCaCert"`
 	LocalCAKey   string                        `json:"localCaKey"` // secret: never exported without --include-secrets
+	Secrets      SecretsStore                  `json:"secrets"`    // encrypted secrets (never persisted plaintext)
 	Index        int64                         `json:"index"`
 	IndexBase    int64                         `json:"indexBase"` // added to raft indexes after a restore so bundles never go backwards
 	Rejections   []Rejection                   `json:"rejections"`
@@ -187,6 +188,7 @@ type Invite struct {
 	Auto    bool     `json:"auto"`
 	Used    string   `json:"used"` // node id that consumed it
 	Created int64    `json:"created"`
+	Revoked int64    `json:"revoked,omitempty"` // when the owner withdrew it; a revoked invite admits nobody
 }
 
 type RepairRec struct {
@@ -229,6 +231,7 @@ func newState() *State {
 		MemberMesh:   map[string]string{},
 		MemberBind:   map[string]*envelope.Envelope{},
 		Federation:   newFederation(),
+		Secrets:      NewSecretsStore(),
 	}
 }
 
@@ -260,6 +263,9 @@ func (s *State) ensure() {
 	}
 	if s.MemberBind == nil {
 		s.MemberBind = map[string]*envelope.Envelope{}
+	}
+	if s.Secrets == nil {
+		s.Secrets = NewSecretsStore()
 	}
 	s.Federation.ensure()
 }

@@ -23,9 +23,12 @@ import (
 	"decentralized.host/pkg/audit"
 	"decentralized.host/pkg/manifest"
 	"decentralized.host/pkg/node"
+	"decentralized.host/pkg/runtime/sandbox"
 )
 
 func main() {
+	// If this process is a re-executed sandbox init, this never returns.
+	sandbox.MaybeInit()
 	if len(os.Args) > 1 {
 		switch os.Args[1] {
 		case "rotate-key":

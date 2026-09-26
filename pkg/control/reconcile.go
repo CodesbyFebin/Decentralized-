@@ -416,6 +416,7 @@ func (s *Server) signAssignment(st *State, app *App, base api.Assignment, desire
 	a := base
 	a.Generation, a.Desired = gen, desired
 	a.Runtime, a.Image, a.Digest = spec.Runtime, spec.Image, manifest.Digest(spec.Image)
+	a.Isolation = spec.Isolation
 	a.Command, a.Env, a.Resources, a.Ports, a.Health = spec.Command, spec.Env, spec.Resources, spec.Ports, spec.Health
 	a.Volumes, a.Tiers, a.ManifestHash, a.Issued = vols, spec.Placement.Tiers, app.Hash, now
 	if a.Volumes == nil {

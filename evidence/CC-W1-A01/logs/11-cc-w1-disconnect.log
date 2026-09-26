@@ -1,0 +1,54 @@
+=== attempt 1 at 2026-09-26T02:19:19Z: sh -c cd command-centre && OUT_DIR='/home/user/Decentralized-/evidence/CC-W1-A01/wave1-disconnect' node tests/e2e/wave1-disconnect.mjs
+PASS  before /: loaded, no outage shown  (alerts 0)
+PASS  before /apps: loaded, no outage shown  (alerts 0)
+PASS  before /apps/web: loaded, no outage shown  (alerts 0)
+PASS  before /nodes: loaded, no outage shown  (alerts 0)
+PASS  before /nodes/dh1a3yj4ldev35ldusztcsaz2cbak: loaded, no outage shown  (alerts 0)
+PASS  before /nodes/add: loaded, no outage shown  (alerts 0)
+PASS  before /evidence: loaded, no outage shown  (alerts 0)
+PASS  before /activity?tab=refused: loaded, no outage shown  (alerts 0)
+PASS  before /operations: loaded, no outage shown  (alerts 0)
+PASS  before /settings: loaded, no outage shown  (alerts 0)
+PASS  before /: dashboard shows FRESH
+SIGSTOP control-plane members 23702,23703,23704
+PASS  during /: CONTROL PLANE UNREACHABLE shown
+PASS  during /: last observation desaturated or error shown  (grayscale 1)
+PASS  during /: no FRESH badge  (0 visible)
+PASS  during /apps: CONTROL PLANE UNREACHABLE shown
+PASS  during /apps: last observation desaturated or error shown  (grayscale 1)
+PASS  during /apps: no FRESH badge  (0 visible)
+PASS  during /apps/web: CONTROL PLANE UNREACHABLE shown
+PASS  during /apps/web: last observation desaturated or error shown  (grayscale 1)
+PASS  during /apps/web: no FRESH badge  (0 visible)
+PASS  during /nodes: CONTROL PLANE UNREACHABLE shown
+PASS  during /nodes: last observation desaturated or error shown  (grayscale 3)
+PASS  during /nodes: no FRESH badge  (0 visible)
+PASS  during /nodes/dh1a3yj4ldev35ldusztcsaz2cbak: CONTROL PLANE UNREACHABLE shown
+PASS  during /nodes/dh1a3yj4ldev35ldusztcsaz2cbak: last observation desaturated or error shown  (grayscale 1)
+PASS  during /nodes/dh1a3yj4ldev35ldusztcsaz2cbak: no FRESH badge  (0 visible)
+PASS  during /nodes/add: CONTROL PLANE UNREACHABLE shown
+PASS  during /nodes/add: last observation desaturated or error shown  (grayscale 1)
+PASS  during /nodes/add: no FRESH badge  (0 visible)
+PASS  during /evidence: CONTROL PLANE UNREACHABLE shown
+PASS  during /evidence: last observation desaturated or error shown  (grayscale 1)
+PASS  during /evidence: no FRESH badge  (0 visible)
+PASS  during /activity?tab=refused: CONTROL PLANE UNREACHABLE shown
+PASS  during /activity?tab=refused: last observation desaturated or error shown  (grayscale 1)
+PASS  during /activity?tab=refused: no FRESH badge  (0 visible)
+PASS  during /operations: CONTROL PLANE UNREACHABLE shown
+PASS  during /operations: last observation desaturated or error shown  (grayscale 1)
+PASS  during /operations: no FRESH badge  (0 visible)
+PASS  during /settings: CONTROL PLANE UNREACHABLE shown
+SIGCONT control-plane members
+PASS  after /: recovered  (banner 0, grayscale 0)
+PASS  after /apps: recovered  (banner 0, grayscale 0)
+PASS  after /apps/web: recovered  (banner 0, grayscale 0)
+PASS  after /nodes: recovered  (banner 0, grayscale 0)
+PASS  after /nodes/dh1a3yj4ldev35ldusztcsaz2cbak: recovered  (banner 0, grayscale 0)
+PASS  after /nodes/add: recovered  (banner 0, grayscale 0)
+PASS  after /evidence: recovered  (banner 0, grayscale 0)
+PASS  after /activity?tab=refused: recovered  (banner 0, grayscale 0)
+PASS  after /operations: recovered  (banner 0, grayscale 0)
+PASS  after /settings: recovered  (banner 0, grayscale 0)
+PASS  after /: dashboard shows FRESH again
+50/50 checks passed

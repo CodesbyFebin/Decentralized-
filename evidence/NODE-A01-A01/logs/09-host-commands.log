@@ -1,0 +1,23 @@
+=== attempt 1 at 2026-09-26T00:52:11Z: go test -count=1 -v -run TestCompromisedControlPlaneCannotCommandHost|TestHardwareProbe ./pkg/node
+=== RUN   TestHardwareProbeMeasuresRecordedLinuxTree
+--- PASS: TestHardwareProbeMeasuresRecordedLinuxTree (0.00s)
+=== RUN   TestHardwareProbeReportsWhatItCannotMeasure
+--- PASS: TestHardwareProbeReportsWhatItCannotMeasure (0.00s)
+=== RUN   TestHardwareProbeNoGPUIsNotUnknown
+--- PASS: TestHardwareProbeNoGPUIsNotUnknown (0.00s)
+=== RUN   TestHardwareProbeUsesNvidiaSMI
+--- PASS: TestHardwareProbeUsesNvidiaSMI (0.00s)
+=== RUN   TestCompromisedControlPlaneCannotCommandHost
+=== RUN   TestCompromisedControlPlaneCannotCommandHost/stale_generation_is_rejected_and_the_running_instance_is_untouched
+=== RUN   TestCompromisedControlPlaneCannotCommandHost/bundle_rollback_is_rejected
+=== RUN   TestCompromisedControlPlaneCannotCommandHost/impostor_control_plane_key_is_not_trusted;_admitted_work_is_held
+=== RUN   TestCompromisedControlPlaneCannotCommandHost/roster_not_signed_by_the_pinned_root_cannot_enlarge_the_trust_set
+=== RUN   TestCompromisedControlPlaneCannotCommandHost/revocation_holds_admitted_work_and_refuses_new_work
+--- PASS: TestCompromisedControlPlaneCannotCommandHost (4.24s)
+    --- PASS: TestCompromisedControlPlaneCannotCommandHost/stale_generation_is_rejected_and_the_running_instance_is_untouched (0.32s)
+    --- PASS: TestCompromisedControlPlaneCannotCommandHost/bundle_rollback_is_rejected (0.00s)
+    --- PASS: TestCompromisedControlPlaneCannotCommandHost/impostor_control_plane_key_is_not_trusted;_admitted_work_is_held (0.21s)
+    --- PASS: TestCompromisedControlPlaneCannotCommandHost/roster_not_signed_by_the_pinned_root_cannot_enlarge_the_trust_set (0.00s)
+    --- PASS: TestCompromisedControlPlaneCannotCommandHost/revocation_holds_admitted_work_and_refuses_new_work (0.32s)
+PASS
+ok  	decentralized.host/pkg/node	4.248s

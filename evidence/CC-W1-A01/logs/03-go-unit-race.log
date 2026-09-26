@@ -1,0 +1,5 @@
+=== attempt 1 at 2026-09-26T02:17:21Z: go test -count=1 -race ./pkg/control/... ./pkg/cli/... ./pkg/node/... ./pkg/mesh/...
+?   	decentralized.host/pkg/control	[no test files]
+?   	decentralized.host/pkg/cli	[no test files]
+ok  	decentralized.host/pkg/node	6.365s
+ok  	decentralized.host/pkg/mesh	10.386s

@@ -137,6 +137,7 @@ func (a *Agent) handleAssignment(b *api.Bundle, env *envelope.Envelope, as api.A
 		Revoked: contains(b.Revoked, a.st.NodeID) || b.Node.Status == "revoked", LedgerCorrupt: a.journal.Corrupt() != nil}
 	in.CapabilityOK, in.CapabilityWhy = a.capabilityCheck(a.st.Root, as)
 	in.Attested, in.AttestDetail = a.attested(b, as.Digest)
+	in.SandboxOK, in.SandboxDetail = a.sandbox.Available()
 	if prior != nil && !prior.Stopped {
 		in.PriorGeneration = prior.Generation
 		in.PriorRunning = a.runtimeFor(prior.Runtime).Status(prior.Inst).State == "running"
@@ -254,6 +255,15 @@ func (a *Agent) allocMeshPort(id string) int64 {
 	return p
 }
 
+// effRuntime is the runtime backend for an assignment: the sandbox when an
+// isolation profile is set, otherwise the declared runtime.
+func effRuntime(as api.Assignment) string {
+	if as.Isolation != "" {
+		return "sandbox"
+	}
+	return as.Runtime
+}
+
 // overlapSafe reports whether two generations of a replica may run at the
 // same time: only without volumes (two writers must never share one) and
 // only for workloads that serve a port (otherwise nothing is handed over).
@@ -283,18 +293,19 @@ func (a *Agent) startWorkload(b *api.Bundle, as api.Assignment, raw []byte, reti
 		}
 		spec.Mounts = append(spec.Mounts, runtime.Mount{Name: v.Name, HostPath: dir, Path: v.Mount})
 	}
-	switch as.Runtime {
-	case "process":
+	switch effRuntime(as) {
+	case "process", "sandbox":
 		path, ready := a.artifactReady(b, as.Image, as.Digest)
 		if !ready {
 			a.noteStarting(as, "admitted; fetching and verifying artifact "+short(as.Digest))
 			return
 		}
 		spec.Executable = path
+		spec.Isolation = as.Isolation
 	case "docker":
 		spec.Image = as.Image
 	}
-	rt := a.runtimeFor(as.Runtime)
+	rt := a.runtimeFor(effRuntime(as))
 	if retire != nil {
 		a.meshMu.Lock()
 		a.cutover[as.ID] = true
@@ -320,7 +331,7 @@ func (a *Agent) startWorkload(b *api.Bundle, as api.Assignment, raw []byte, reti
 		a.failStart(as, raw, err.Error())
 		return
 	}
-	ad := &Admitted{ID: as.ID, App: as.App, Replica: as.Replica, Generation: as.Generation, Runtime: as.Runtime, Image: as.Image, Digest: as.Digest,
+	ad := &Admitted{ID: as.ID, App: as.App, Replica: as.Replica, Generation: as.Generation, Runtime: effRuntime(as), Image: as.Image, Digest: as.Digest,
 		CPUMilli: as.Resources.CPUMilli, MemBytes: as.Resources.MemBytes, Inst: inst, Health: as.Health, Ports: as.Ports, Volumes: as.Volumes,
 		LastState: "running", AdmittedAt: a.now(), Assignment: raw}
 	a.mu.Lock()
@@ -430,7 +441,7 @@ func (a *Agent) failStart(as api.Assignment, raw []byte, why string) {
 	a.mu.Lock()
 	ad := a.st.Admitted[as.ID]
 	if ad == nil || ad.Generation != as.Generation {
-		ad = &Admitted{ID: as.ID, App: as.App, Replica: as.Replica, Generation: as.Generation, Runtime: as.Runtime, Image: as.Image, Digest: as.Digest,
+		ad = &Admitted{ID: as.ID, App: as.App, Replica: as.Replica, Generation: as.Generation, Runtime: effRuntime(as), Image: as.Image, Digest: as.Digest,
 			CPUMilli: as.Resources.CPUMilli, MemBytes: as.Resources.MemBytes, Health: as.Health, Ports: as.Ports, Volumes: as.Volumes, AdmittedAt: a.now(), Assignment: raw}
 		a.st.Admitted[as.ID] = ad
 	}

@@ -1,0 +1,9 @@
+=== attempt 1 at 2026-09-26T00:51:12Z: go test -race -count=20 -run TestGossipMembership ./pkg/mesh
+--- FAIL: TestGossipMembership (10.02s)
+    mesh_test.go:107: join contacted 0
+--- FAIL: TestGossipMembership (10.03s)
+    mesh_test.go:107: join contacted 0
+FAIL
+FAIL	decentralized.host/pkg/mesh	55.010s
+FAIL
+=== exit 1: exit status 1

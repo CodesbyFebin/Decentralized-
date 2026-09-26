@@ -138,6 +138,7 @@ type assignOpts struct {
 	selfAnchored                     bool
 	signer                           *identity.Identity
 	desired                          string
+	capExpires                       int64 // capability expiry; default one hour ahead
 }
 
 func (f *fakeCP) assignment(o assignOpts) *envelope.Envelope {
@@ -163,8 +164,11 @@ func (f *fakeCP) assignment(o assignOpts) *envelope.Envelope {
 		o.signer = f.member
 	}
 	now := time.Now().UnixMilli()
+	if o.capExpires == 0 {
+		o.capExpires = now + 3600_000
+	}
 	cav := capability.Caveats{Actions: []string{"workload.admit"}, Resources: []string{"app/" + o.id}, Audience: o.node, Generation: o.gen,
-		Digest: o.capDigest, CPUMaxMilli: o.capCPU, MemMaxBytes: 64 << 20, Expires: now + 3600_000}
+		Digest: o.capDigest, CPUMaxMilli: o.capCPU, MemMaxBytes: 64 << 20, Expires: o.capExpires}
 	var tok *capability.Token
 	if o.selfAnchored {
 		tok, _ = capability.Mint(f.member, cav, "", "self-anchored")
@@ -258,6 +262,7 @@ func TestCompromisedControlPlaneCannotCommandHost(t *testing.T) {
 		{"resources above the capability limit", f.assignment(assignOpts{id: "big/r0", node: me, image: sleepImg, digest: sleepDigest, gen: 1, cpu: 900, capCPU: 100}), "CAPABILITY"},
 		{"runtime not allowed by host policy", f.assignment(assignOpts{id: "dock/r0", node: me, image: "evil@sha256:" + strings.Repeat("a", 64), digest: "sha256:" + strings.Repeat("a", 64), runtime: "docker", gen: 1}), "POLICY_RUNTIME"},
 		{"trust tier not accepted", f.assignment(assignOpts{id: "tier/r0", node: me, image: sleepImg, digest: sleepDigest, gen: 1, tiers: []string{"community"}}), "POLICY_TIER"},
+		{"expired command (capability expired a minute ago)", f.assignment(assignOpts{id: "late/r0", node: me, image: sleepImg, digest: sleepDigest, gen: 1, capExpires: time.Now().Add(-time.Minute).UnixMilli()}), "CAPABILITY"},
 		{"assignment signed by a non-member key", f.assignment(assignOpts{id: "imp/r0", node: me, image: sleepImg, digest: sleepDigest, gen: 1, signer: f.root}), "ASSIGNMENT_SIGNATURE"},
 	}
 	envs := []*envelope.Envelope{good}

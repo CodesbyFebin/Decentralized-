@@ -473,6 +473,28 @@ func init() {
 		return ok("invite recorded")
 	})
 
+	register("invite-revoke", func(s *State, c *Command) *Result {
+		d, err := decode[struct {
+			Nonce string `json:"nonce"`
+		}](c)
+		if err != nil {
+			return fail("DECODE", "%v", err)
+		}
+		inv := s.Invites[d.Nonce]
+		if inv == nil || len(d.Nonce) < 16 {
+			return fail("NOT_FOUND", "no invite with that nonce")
+		}
+		if inv.Used != "" {
+			return fail("CONFLICT", "invite already used by %s; revoke the host instead", inv.Used)
+		}
+		if inv.Revoked != 0 {
+			return ok("invite already revoked")
+		}
+		inv.Revoked = c.TS
+		s.audit(audit.Entry{TS: c.TS, Actor: c.Actor, Source: audit.SourceOperator, Action: "node-invite-revoke", Resource: "invite/" + d.Nonce[:8], Detail: "join token withdrawn before use"})
+		return ok("invite revoked")
+	})
+
 	register("enroll", func(s *State, c *Command) *Result {
 		d, err := decode[enrollData](c)
 		if err != nil {
@@ -492,6 +514,12 @@ func init() {
 			if !contains(n.ValidKeys(c.TS), d.Env.Pub) {
 				s.reject(Rejection{TS: c.TS, Kind: "enroll", Node: e.ID, Reason: "enrollment key is not a valid key for this host"})
 				return fail("KEY", "enrollment key is not a valid key for %s", e.ID)
+			}
+			// A validly signed but older enrollment is a replay: it would put
+			// back facts and policy the host has since replaced.
+			if e.TS <= n.Enroll.TS {
+				s.reject(Rejection{TS: c.TS, Kind: "enroll", Node: e.ID, Reason: fmt.Sprintf("stale enrollment: ts %d is not newer than the accepted %d", e.TS, n.Enroll.TS), Evidence: d.Env.Digest()})
+				return fail("STALE", "enrollment is not newer than the one already accepted for %s", n.Name)
 			}
 			n.Enroll = e
 			n.EnrollEnv = d.Env
@@ -514,6 +542,14 @@ func init() {
 		if inv.Used != "" {
 			s.reject(Rejection{TS: c.TS, Kind: "enroll", Node: e.ID, Reason: "join token already used by " + inv.Used})
 			return fail("TOKEN", "join token already used by %s", inv.Used)
+		}
+		if inv.Revoked != 0 {
+			s.reject(Rejection{TS: c.TS, Kind: "enroll", Node: e.ID, Reason: "join token was revoked by the owner"})
+			return fail("TOKEN", "join token was revoked")
+		}
+		if inv.Expires > 0 && c.TS > inv.Expires {
+			s.reject(Rejection{TS: c.TS, Kind: "enroll", Node: e.ID, Reason: "join token expired"})
+			return fail("TOKEN", "join token expired")
 		}
 		for _, n := range s.Nodes {
 			if n.Name == e.Name {
@@ -1254,4 +1290,54 @@ func short(s string) string {
 		return "-"
 	}
 	return s
+}
+
+// Secret command handlers
+
+func secretCreate(s *State, c *Command) *Result {
+	rec, err := decode[SecretRecord](c)
+	if err != nil {
+		return fail("DECODE", "secret-create: %v", err)
+	}
+	if rec.SecretID == "" {
+		return fail("INVALID", "secret-create: empty secretId")
+	}
+	if rec.Version < 1 {
+		return fail("INVALID", "secret-create: version must be >= 1")
+	}
+	if len(rec.EncryptedData) == 0 {
+		return fail("INVALID", "secret-create: encrypted data empty")
+	}
+	rec.CreatedAt = c.TS
+	rec.EncryptedAt = c.TS
+	s.Secrets.AddRecord(&rec)
+	return ok("secret %s version %d created", rec.SecretID, rec.Version)
+}
+
+func secretVersionAdd(s *State, c *Command) *Result {
+	rec, err := decode[SecretRecord](c)
+	if err != nil {
+		return fail("DECODE", "secret-version-add: %v", err)
+	}
+	if rec.SecretID == "" {
+		return fail("INVALID", "secret-version-add: empty secretId")
+	}
+	if rec.Version < 1 {
+		return fail("INVALID", "secret-version-add: version must be >= 1")
+	}
+	if len(rec.EncryptedData) == 0 {
+		return fail("INVALID", "secret-version-add: encrypted data empty")
+	}
+	existing := s.Secrets.GetRecord(rec.SecretID, rec.Version)
+	if existing != nil {
+		return fail("EXISTS", "secret %s version %d already exists", rec.SecretID, rec.Version)
+	}
+	rec.EncryptedAt = c.TS
+	s.Secrets.AddRecord(&rec)
+	return ok("secret %s version %d added", rec.SecretID, rec.Version)
+}
+
+func init() {
+	register("secret-create", secretCreate)
+	register("secret-version-add", secretVersionAdd)
 }

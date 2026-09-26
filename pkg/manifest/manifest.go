@@ -41,6 +41,7 @@ type raw struct {
 	Spec struct {
 		Replicas  *int64            `yaml:"replicas"`
 		Runtime   string            `yaml:"runtime"`
+		Isolation string            `yaml:"isolation"`
 		Image     string            `yaml:"image"`
 		Command   []string          `yaml:"command"`
 		Args      []string          `yaml:"args"`
@@ -174,6 +175,18 @@ func normalize(r *raw) (*api.Manifest, error) {
 	case "":
 	default:
 		add("spec.runtime %q is not supported (process, docker)", s.Runtime)
+	}
+
+	s.Isolation = strings.ToUpper(strings.TrimSpace(r.Spec.Isolation))
+	switch s.Isolation {
+	case "", "PRIVATE", "RESTRICTED":
+		if s.Isolation != "" && s.Runtime == "docker" {
+			add("spec.isolation applies to artifact workloads (name@b3:<hex>), not the docker runtime")
+		}
+	case "UNTRUSTED":
+		add("spec.isolation UNTRUSTED is not available: no qualified hostile-code boundary (microVM or gVisor) is implemented")
+	default:
+		add("spec.isolation %q is not supported (PRIVATE, RESTRICTED)", s.Isolation)
 	}
 
 	s.Command = append([]string{}, r.Spec.Command...)
