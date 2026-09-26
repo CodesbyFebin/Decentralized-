@@ -245,7 +245,7 @@ func (r *SecretRetrievalRequest) VerifySignature() error {
 type ConsumedAuthorization struct {
 	RequestDigest      string `json:"requestDigest"`      // SHA256(canonical request)
 	ConsumedNonce      []byte `json:"consumedNonce"`      // nonce from request (duplicate protection)
-	ConsumedAt         int64  `json:"consumedAt"`         // Unix ns when consumed (FSM timestamp)
+	ConsumedAt         string `json:"consumedAt"`         // Unix ns when consumed as decimal string (FSM timestamp, JSON safe)
 	NodeID             string `json:"nodeId"`             // requesting node
 	SecretID           string `json:"secretId"`           // target secret
 	SecretVersion      int32  `json:"secretVersion"`      // target version

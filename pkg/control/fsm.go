@@ -1440,7 +1440,7 @@ func secretRetrievalAuthorize(s *State, c *Command) *Result {
 	auth := &ConsumedAuthorization{
 		RequestDigest: requestDigest,
 		ConsumedNonce: req.Nonce,
-		ConsumedAt:    c.TS,
+		ConsumedAt:    fmt.Sprintf("%d", c.TS),
 		NodeID:        req.NodeID,
 		SecretID:      req.SecretID,
 		SecretVersion: req.SecretVersion,
@@ -1450,7 +1450,7 @@ func secretRetrievalAuthorize(s *State, c *Command) *Result {
 
 	// Audit
 	s.audit(audit.Entry{
-		TS:     c.TS,
+		TS:     c.TS / 1e6,  // convert nanoseconds to milliseconds
 		Actor:  req.NodeID,
 		Source: audit.SourceHost,
 		Action: "secret-retrieval-authorize",
