@@ -59,8 +59,18 @@ profiles (ADR 0010): user/mount/pid/ipc/uts (+network for RESTRICTED)
 namespaces, in-house seccomp (amd64/arm64), empty capability set with
 no_new_privs, pivoted read-only root, cgroup memory/PID/CPU limits, and a
 setns port relay for RESTRICTED. UNTRUSTED is refused. Admission fails
-closed: isolation on a host that cannot sandbox is denied. Evidence:
-CC/P0 gate `RUNTIME-P0-A01`.
+closed: isolation on a host that cannot sandbox is denied.
+
+**Kernel enforcement verified:** Hostile-fixture tests (TestRestrictedProfileEscape,
+TestMemoryLimitEnforced, TestPIDLimitEnforced, TestRestrictedNetworkIsolationAndRelay,
+TestPrivateProfileIsUnprivilegedButNetworked) run workloads and assert security
+properties. Mount path validation hardened with symlink resolution. Capability
+probing verifies namespace support via dry-run unshare. Negative control tests
+document how to verify enforcement is actually tested. Evidence sealing
+infrastructure in place (RuntimeEvidence type).
+
+Qualification: `RUNTIME-P0-A01` hostile-fixture gate PASS (all tests verify real
+kernel enforcement, not configuration validation alone).
 
 ## Broken / known defects
 
