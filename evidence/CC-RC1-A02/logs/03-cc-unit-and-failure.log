@@ -1,0 +1,155 @@
+=== attempt 1 at 2026-09-26T00:25:40Z: sh -c cd command-centre && npx tsx --test tests/unit/*.test.ts tests/integration/failure.test.ts
+TAP version 13
+# Subtest: backend offline: no data, no demo fallback, capabilities lose confidence, copilot refuses
+ok 1 - backend offline: no data, no demo fallback, capabilities lose confidence, copilot refuses
+  ---
+  duration_ms: 102.324157
+  type: 'test'
+  ...
+# Subtest: backend timeout is reported as BACKEND_TIMEOUT
+ok 2 - backend timeout is reported as BACKEND_TIMEOUT
+  ---
+  duration_ms: 413.733984
+  type: 'test'
+  ...
+# Subtest: malformed backend response is refused, not rendered
+ok 3 - malformed backend response is refused, not rendered
+  ---
+  duration_ms: 10.913157
+  type: 'test'
+  ...
+# Subtest: backend 5xx never leaks internals
+ok 4 - backend 5xx never leaks internals
+  ---
+  duration_ms: 6.753162
+  type: 'test'
+  ...
+# Subtest: failover: a dead first member does not blind the console
+ok 5 - failover: a dead first member does not blind the console
+  ---
+  duration_ms: 5.986399
+  type: 'test'
+  ...
+# Subtest: demo adapter is labelled SIMULATED and refuses every mutation
+ok 6 - demo adapter is labelled SIMULATED and refuses every mutation
+  ---
+  duration_ms: 13.111551
+  type: 'test'
+  ...
+# Subtest: configuration: no silent adapter choice; demo refused in production
+ok 7 - configuration: no silent adapter choice; demo refused in production
+  ---
+  duration_ms: 2.446035
+  type: 'test'
+  ...
+# Subtest: request ids are UUIDs; untrusted incoming ids are replaced
+ok 8 - request ids are UUIDs; untrusted incoming ids are replaced
+  ---
+  duration_ms: 6.608341
+  type: 'test'
+  ...
+# Subtest: fixtures are real control-plane views
+ok 9 - fixtures are real control-plane views
+  ---
+  duration_ms: 1.324769
+  type: 'test'
+  ...
+# Subtest: node counts come from the node list, not constants
+ok 10 - node counts come from the node list, not constants
+  ---
+  duration_ms: 2.794098
+  type: 'test'
+  ...
+# Subtest: stale observation degrades the node instead of staying healthy
+ok 11 - stale observation degrades the node instead of staying healthy
+  ---
+  duration_ms: 0.762919
+  type: 'test'
+  ...
+# Subtest: a lost host is OFFLINE and its stale replica is not counted as running
+ok 12 - a lost host is OFFLINE and its stale replica is not counted as running
+  ---
+  duration_ms: 3.06172
+  type: 'test'
+  ...
+# Subtest: stale replica keeps desired, admitted and observed separate
+ok 13 - stale replica keeps desired, admitted and observed separate
+  ---
+  duration_ms: 0.487222
+  type: 'test'
+  ...
+# Subtest: health derivation
+ok 14 - health derivation
+  ---
+  duration_ms: 0.172357
+  type: 'test'
+  ...
+# Subtest: app phase never claims READY without observation
+ok 15 - app phase never claims READY without observation
+  ---
+  duration_ms: 0.161468
+  type: 'test'
+  ...
+# Subtest: certificate state is computed from the observed X.509 validity
+ok 16 - certificate state is computed from the observed X.509 validity
+  ---
+  duration_ms: 0.618622
+  type: 'test'
+  ...
+# Subtest: unmeasured metrics are null + UNAVAILABLE, never zero
+ok 17 - unmeasured metrics are null + UNAVAILABLE, never zero
+  ---
+  duration_ms: 0.921714
+  type: 'test'
+  ...
+# Subtest: no environment variable values leave the mapper
+ok 18 - no environment variable values leave the mapper
+  ---
+  duration_ms: 0.979442
+  type: 'test'
+  ...
+# Subtest: domains keep desired routing, observed routing and DNS separate
+ok 19 - domains keep desired routing, observed routing and DNS separate
+  ---
+  duration_ms: 0.502552
+  type: 'test'
+  ...
+# Subtest: evidence verification comes from the ledger verification result
+ok 20 - evidence verification comes from the ledger verification result
+  ---
+  duration_ms: 0.596354
+  type: 'test'
+  ...
+# Subtest: WAF and DDoS are UNAVAILABLE, not a vanity score
+ok 21 - WAF and DDoS are UNAVAILABLE, not a vanity score
+  ---
+  duration_ms: 0.24111
+  type: 'test'
+  ...
+# Subtest: demo replay is labelled SIMULATED end to end
+ok 22 - demo replay is labelled SIMULATED end to end
+  ---
+  duration_ms: 0.529198
+  type: 'test'
+  ...
+# Subtest: capabilities lose confidence when the backend is unreachable
+ok 23 - capabilities lose confidence when the backend is unreachable
+  ---
+  duration_ms: 0.212479
+  type: 'test'
+  ...
+# Subtest: region positions are CONFIGURED, never inferred
+ok 24 - region positions are CONFIGURED, never inferred
+  ---
+  duration_ms: 1.627192
+  type: 'test'
+  ...
+1..24
+# tests 24
+# suites 0
+# pass 24
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 5003.835521
