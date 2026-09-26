@@ -94,6 +94,7 @@ func (s *Server) schedulerNodes(st *State, excludeApp string) map[string]*schedu
 
 func (s *Server) reconcileOnce() error {
 	var p reconcilePlan
+	var offlineNodes []string
 	var err error
 	s.fsm.Read(func(st *State) {
 		if st.Frozen || st.Cluster == "" {
@@ -117,9 +118,27 @@ func (s *Server) reconcileOnce() error {
 				p.removes = append(p.removes, key)
 			}
 		}
+		// P0 Qualification: Check for heartbeat timeouts and update node health
+		now := time.Now().UnixNano()
+		heartbeatTimeout := int64(30 * time.Second)
+		for _, id := range st.sortedNodeIDs() {
+			n := st.Nodes[id]
+			if n == nil || n.Status != "ready" {
+				continue
+			}
+			// If no observation received in heartbeat timeout, mark as lost
+			if n.LastObsAt > 0 && now-n.LastObsAt > heartbeatTimeout && n.Health != "lost" {
+				offlineNodes = append(offlineNodes, id)
+				p.reasons = append(p.reasons, fmt.Sprintf("node %s lost heartbeat (timeout %.1fs)", n.Name, float64(heartbeatTimeout)/1e9))
+			}
+		}
 	})
 	if err != nil {
 		return err
+	}
+	// Update health status for offline nodes
+	for _, nodeID := range offlineNodes {
+		_, _ = s.propose("node-health", "reconciler", map[string]any{"node": nodeID, "health": "lost", "detail": "heartbeat timeout"})
 	}
 	if len(p.volumes) > 0 {
 		if _, err := s.propose("volume-plan", "reconciler", map[string]any{"volumes": p.volumes}); err != nil {

@@ -719,6 +719,10 @@ func init() {
 		n.Status, n.RevokedAt = "revoked", c.TS
 		s.audit(audit.Entry{TS: c.TS, Actor: c.Actor, Source: audit.SourceOperator, Action: "node-revoke", Resource: "node/" + n.ID,
 			Detail: fmt.Sprintf("%s revoked (%s). New admission blocked; admitted processes are not killed by this record.", n.Name, d.Reason)})
+		// Update lifecycle manager for P0 qualification
+		if f.nlm != nil {
+			f.nlm.RevokeNode(context.Background(), d.Node)
+		}
 		return ok("%s revoked; it refuses new work, admitted work continues until a signed stop", n.Name)
 	})
 
@@ -737,6 +741,10 @@ func init() {
 		if d.Drain && n.Status == "ready" {
 			n.Status = "draining"
 			s.audit(audit.Entry{TS: c.TS, Actor: c.Actor, Source: audit.SourceOperator, Action: "node-drain", Resource: "node/" + n.ID, Detail: n.Name + " draining: replicas will be rescheduled"})
+			// Update lifecycle manager for P0 qualification
+			if f.nlm != nil {
+				f.nlm.DrainNode(context.Background(), d.Node, 0)
+			}
 			return ok("%s draining", n.Name)
 		}
 		if !d.Drain && n.Status == "draining" {
