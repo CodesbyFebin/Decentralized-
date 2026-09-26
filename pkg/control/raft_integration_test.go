@@ -70,6 +70,10 @@ type PartitionController struct {
 	mu       sync.RWMutex
 	blocked  map[string]bool // "A->B" or "B->A" keys for blocked directions
 	addrToID map[string]string // maps address string to member ID
+
+	// Pre-commit blocking: when set, blocks all responses from followers to this leader ID,
+	// preventing ACKs from forming quorum. Used for R1-03 (LeaderLossBeforeQuorumCommit).
+	blockFollowerResponsesToLeader string // leader ID, or "" if disabled
 }
 
 func NewPartitionController() *PartitionController {
@@ -112,7 +116,35 @@ func (pc *PartitionController) Unblock(source, dest string) {
 func (pc *PartitionController) IsBlocked(source, dest string) bool {
 	pc.mu.RLock()
 	defer pc.mu.RUnlock()
-	return pc.blocked[source+"->"+dest]
+	blocked := pc.blocked[source+"->"+dest]
+
+	// Pre-commit blocking: block all responses from followers to the designated leader
+	if !blocked && pc.blockFollowerResponsesToLeader != "" && dest == pc.blockFollowerResponsesToLeader {
+		// source is a follower, dest is the leader we're blocking
+		blocked = true
+	}
+
+	return blocked
+}
+
+// BlockFollowerResponsesToLeader enables pre-commit blocking by blocking all responses from followers to a specific leader.
+// This prevents AppendEntries ACKs from reaching the leader, preventing quorum formation.
+// Used for R1-03 (LeaderLossBeforeQuorumCommit) fault injection.
+func (pc *PartitionController) BlockFollowerResponsesToLeader(leaderID string) {
+	pc.mu.Lock()
+	defer pc.mu.Unlock()
+	pc.blockFollowerResponsesToLeader = leaderID
+	fmt.Fprintf(os.Stderr, "[PartitionController] BlockFollowerResponses enabled for leader %s\n", leaderID)
+}
+
+// UnblockFollowerResponsesToLeader disables pre-commit blocking.
+func (pc *PartitionController) UnblockFollowerResponsesToLeader() {
+	pc.mu.Lock()
+	defer pc.mu.Unlock()
+	if pc.blockFollowerResponsesToLeader != "" {
+		fmt.Fprintf(os.Stderr, "[PartitionController] BlockFollowerResponses disabled for leader %s\n", pc.blockFollowerResponsesToLeader)
+	}
+	pc.blockFollowerResponsesToLeader = ""
 }
 
 // HealAll removes all partition blocks.
