@@ -26,15 +26,17 @@ const (
 
 // NodeStateValue represents the complete observed state with provenance
 type NodeStateValue struct {
-	NodeID      string
-	State       NodeLifecycleState
-	ObservedAt  int64 // Unix nanoseconds
-	SourceID    string // control-plane, agent, audit
-	Freshness   string // FRESH, STALE, EXPIRED, UNREACHABLE
-	Cordoned    bool   // admin cordon flag
-	DrainTarget int    // target workload count during drain (0 = fully drained)
+	NodeID        string
+	State         NodeLifecycleState
+	DesiredState  NodeLifecycleState // Desired state for reconciliation
+	ObservedAt    int64              // Unix nanoseconds
+	SourceID      string             // control-plane, agent, audit
+	Freshness     string             // FRESH, STALE, EXPIRED, UNREACHABLE
+	Cordoned      bool               // admin cordon flag
+	DrainTarget   int                // target workload count during drain (0 = fully drained)
 	LastHeartbeat int64
-	Reason      string // human-readable state reason
+	Generation    int64 // Version counter for optimistic updates
+	Reason        string // human-readable state reason
 }
 
 // WorkloadLifecycleState represents observed workload execution state
@@ -67,25 +69,37 @@ type WorkloadStateValue struct {
 	Reason       string
 }
 
-// NodeLifecycleManager manages node state transitions
+// NodeLifecycleManager manages node state transitions with persistent storage
 type NodeLifecycleManager struct {
 	nodes map[string]*NodeStateValue
 	mu    sync.RWMutex
 
-	heartbeatTimeout time.Duration
-	staleThreshold   time.Duration
+	heartbeatTimeout  time.Duration
+	staleThreshold    time.Duration
+	stateStore        *NodeStateStore        // Persistent storage
+	reconStore        *ReconciliationStore   // Reconciliation tracking
 }
 
 // NewNodeLifecycleManager creates a new node lifecycle manager
 func NewNodeLifecycleManager() *NodeLifecycleManager {
+	return NewNodeLifecycleManagerWithStore("", "")
+}
+
+// NewNodeLifecycleManagerWithStore creates a lifecycle manager with persistent storage
+func NewNodeLifecycleManagerWithStore(stateStorePath, reconStorePath string) *NodeLifecycleManager {
+	stateStore, _ := NewNodeStateStore(stateStorePath)
+	reconStore, _ := NewReconciliationStore(reconStorePath)
+
 	return &NodeLifecycleManager{
 		nodes:             make(map[string]*NodeStateValue),
 		heartbeatTimeout:  30 * time.Second,
 		staleThreshold:    60 * time.Second,
+		stateStore:        stateStore,
+		reconStore:        reconStore,
 	}
 }
 
-// RegisterNode adds a node to the lifecycle manager
+// RegisterNode adds a node to the lifecycle manager with persistent storage
 func (nlm *NodeLifecycleManager) RegisterNode(ctx context.Context, nodeID string) error {
 	nlm.mu.Lock()
 	defer nlm.mu.Unlock()
@@ -94,14 +108,39 @@ func (nlm *NodeLifecycleManager) RegisterNode(ctx context.Context, nodeID string
 		return fmt.Errorf("node %s already registered", nodeID)
 	}
 
-	nlm.nodes[nodeID] = &NodeStateValue{
-		NodeID:      nodeID,
-		State:       NodeDiscovered,
-		ObservedAt:  time.Now().UnixNano(),
-		SourceID:    "agent",
-		Freshness:   "FRESH",
-		Cordoned:    false,
+	nodeState := &NodeStateValue{
+		NodeID:        nodeID,
+		State:         NodeDiscovered,
+		DesiredState:  NodeDiscovered,
+		ObservedAt:    time.Now().UnixNano(),
+		Generation:    1,
+		SourceID:      "agent",
+		Freshness:     "FRESH",
+		Cordoned:      false,
 		LastHeartbeat: time.Now().UnixNano(),
+		Reason:        "node discovered",
+	}
+
+	nlm.nodes[nodeID] = nodeState
+
+	// Persist to disk
+	if nlm.stateStore != nil {
+		persistState := &PersistentNodeState{
+			NodeID:        nodeState.NodeID,
+			State:         string(nodeState.State),
+			DesiredState:  string(nodeState.DesiredState),
+			ObservedAt:    nodeState.ObservedAt,
+			SourceID:      nodeState.SourceID,
+			Freshness:     nodeState.Freshness,
+			Cordoned:      nodeState.Cordoned,
+			DrainTarget:   nodeState.DrainTarget,
+			LastHeartbeat: nodeState.LastHeartbeat,
+			Generation:    nodeState.Generation,
+			Reason:        nodeState.Reason,
+		}
+		if err := nlm.stateStore.SaveNodeState(nodeID, persistState); err != nil {
+			return fmt.Errorf("failed to persist node state: %v", err)
+		}
 	}
 
 	return nil
@@ -129,6 +168,77 @@ func (nlm *NodeLifecycleManager) UpdateHeartbeat(ctx context.Context, nodeID str
 	return nil
 }
 
+// RecoverNodeStatesFromDisk loads previously persisted node states
+func (nlm *NodeLifecycleManager) RecoverNodeStatesFromDisk(ctx context.Context) error {
+	nlm.mu.Lock()
+	defer nlm.mu.Unlock()
+
+	if nlm.stateStore == nil {
+		return fmt.Errorf("state store not configured")
+	}
+
+	states, err := nlm.stateStore.LoadAllNodeStates()
+	if err != nil {
+		return err
+	}
+
+	for nodeID, persistedState := range states {
+		nlm.nodes[nodeID] = &NodeStateValue{
+			NodeID:        persistedState.NodeID,
+			State:         NodeLifecycleState(persistedState.State),
+			DesiredState:  NodeLifecycleState(persistedState.DesiredState),
+			ObservedAt:    persistedState.ObservedAt,
+			SourceID:      persistedState.SourceID,
+			Freshness:     persistedState.Freshness,
+			Cordoned:      persistedState.Cordoned,
+			DrainTarget:   persistedState.DrainTarget,
+			LastHeartbeat: persistedState.LastHeartbeat,
+			Generation:    persistedState.Generation,
+			Reason:        persistedState.Reason,
+		}
+	}
+
+	return nil
+}
+
+// persistNodeState saves node state to disk
+func (nlm *NodeLifecycleManager) persistNodeState(node *NodeStateValue) error {
+	if nlm.stateStore == nil {
+		return nil
+	}
+
+	persistState := &PersistentNodeState{
+		NodeID:        node.NodeID,
+		State:         string(node.State),
+		DesiredState:  string(node.DesiredState),
+		ObservedAt:    node.ObservedAt,
+		SourceID:      node.SourceID,
+		Freshness:     node.Freshness,
+		Cordoned:      node.Cordoned,
+		DrainTarget:   node.DrainTarget,
+		LastHeartbeat: node.LastHeartbeat,
+		Generation:    node.Generation,
+		Reason:        node.Reason,
+	}
+	return nlm.stateStore.SaveNodeState(node.NodeID, persistState)
+}
+
+// ReconcileNodeState tracks divergence between desired and observed state
+func (nlm *NodeLifecycleManager) ReconcileNodeState(ctx context.Context, nodeID string) error {
+	nlm.mu.RLock()
+	node, exists := nlm.nodes[nodeID]
+	nlm.mu.RUnlock()
+
+	if !exists {
+		return fmt.Errorf("node %s not found", nodeID)
+	}
+
+	if nlm.reconStore != nil {
+		return nlm.reconStore.RecordReconciliation(nodeID, string(node.DesiredState), string(node.State))
+	}
+	return nil
+}
+
 // TransitionToActive moves a node to ACTIVE state
 func (nlm *NodeLifecycleManager) TransitionToActive(ctx context.Context, nodeID string) error {
 	nlm.mu.Lock()
@@ -141,8 +251,11 @@ func (nlm *NodeLifecycleManager) TransitionToActive(ctx context.Context, nodeID 
 
 	if node.State == NodeVerified || node.State == NodeIdle {
 		node.State = NodeActive
+		node.DesiredState = NodeActive
 		node.ObservedAt = time.Now().UnixNano()
-		return nil
+		node.Generation++
+		node.Reason = "transitioned to ACTIVE"
+		return nlm.persistNodeState(node)
 	}
 
 	return fmt.Errorf("cannot transition from %s to ACTIVE", node.State)
@@ -160,10 +273,12 @@ func (nlm *NodeLifecycleManager) CordonNode(ctx context.Context, nodeID string) 
 
 	node.Cordoned = true
 	node.State = NodeCordoned
+	node.DesiredState = NodeCordoned
 	node.ObservedAt = time.Now().UnixNano()
+	node.Generation++
 	node.Reason = "cordoned by operator"
 
-	return nil
+	return nlm.persistNodeState(node)
 }
 
 // DrainNode starts graceful workload drainage
@@ -177,14 +292,16 @@ func (nlm *NodeLifecycleManager) DrainNode(ctx context.Context, nodeID string, c
 	}
 
 	node.State = NodeDraining
+	node.DesiredState = NodeDraining
 	node.DrainTarget = currentWorkloadCount
 	node.ObservedAt = time.Now().UnixNano()
+	node.Generation++
 	node.Reason = fmt.Sprintf("draining %d workloads", currentWorkloadCount)
 
-	return nil
+	return nlm.persistNodeState(node)
 }
 
-// CompleteD rain marks drainage as complete
+// CompleteDrain marks drainage as complete
 func (nlm *NodeLifecycleManager) CompleteDrain(ctx context.Context, nodeID string) error {
 	nlm.mu.Lock()
 	defer nlm.mu.Unlock()
@@ -199,11 +316,13 @@ func (nlm *NodeLifecycleManager) CompleteDrain(ctx context.Context, nodeID strin
 	}
 
 	node.State = NodeIdle
+	node.DesiredState = NodeIdle
 	node.DrainTarget = 0
 	node.ObservedAt = time.Now().UnixNano()
+	node.Generation++
 	node.Reason = "drain complete"
 
-	return nil
+	return nlm.persistNodeState(node)
 }
 
 // RevokeNode prevents any further operations on a node
@@ -217,10 +336,12 @@ func (nlm *NodeLifecycleManager) RevokeNode(ctx context.Context, nodeID string) 
 	}
 
 	node.State = NodeRevoked
+	node.DesiredState = NodeRevoked
 	node.ObservedAt = time.Now().UnixNano()
+	node.Generation++
 	node.Reason = "revoked by authority"
 
-	return nil
+	return nlm.persistNodeState(node)
 }
 
 // GetNodeState returns the current observed state of a node
