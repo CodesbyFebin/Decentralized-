@@ -414,9 +414,10 @@ func (s *Server) handleRetrieveSecret(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create authorization command on leader (triggers AuthorizationProposed observer)
+	var cmd *Command
 	var cmdErr error
 	s.fsm.Read(func(st *State) {
-		_, cmdErr = s.fsm.AuthorizeSecretRetrievalCommand(&req)
+		cmd, cmdErr = s.fsm.AuthorizeSecretRetrievalCommand(&req)
 	})
 	if cmdErr != nil {
 		writeErr(w, 400, "command: %v", cmdErr)
@@ -426,7 +427,7 @@ func (s *Server) handleRetrieveSecret(w http.ResponseWriter, r *http.Request) {
 	// CRITICAL ORCHESTRATION BOUNDARY:
 	// Submit to Raft for replication and commit confirmation
 	// This is where FSM.Apply() will be called on all replicas
-	res, err := s.propose("secret-retrieval-authorize", req.NodeID, nil)
+	res, err := s.raft().propose(cmd, 10*time.Second)
 	if err != nil {
 		writeErr(w, 503, "raft unavailable: %v", err)
 		return
