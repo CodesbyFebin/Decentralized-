@@ -39,6 +39,7 @@ type State struct {
 	MeshNext     int64                         `json:"meshNext"`
 	LocalCACert  string                        `json:"localCaCert"`
 	LocalCAKey   string                        `json:"localCaKey"` // secret: never exported without --include-secrets
+	Secrets      SecretsStore                  `json:"secrets"`    // encrypted secrets (never persisted plaintext)
 	Index        int64                         `json:"index"`
 	IndexBase    int64                         `json:"indexBase"` // added to raft indexes after a restore so bundles never go backwards
 	Rejections   []Rejection                   `json:"rejections"`
@@ -230,6 +231,7 @@ func newState() *State {
 		MemberMesh:   map[string]string{},
 		MemberBind:   map[string]*envelope.Envelope{},
 		Federation:   newFederation(),
+		Secrets:      NewSecretsStore(),
 	}
 }
 
@@ -261,6 +263,9 @@ func (s *State) ensure() {
 	}
 	if s.MemberBind == nil {
 		s.MemberBind = map[string]*envelope.Envelope{}
+	}
+	if s.Secrets == nil {
+		s.Secrets = NewSecretsStore()
 	}
 	s.Federation.ensure()
 }

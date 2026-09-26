@@ -1291,3 +1291,53 @@ func short(s string) string {
 	}
 	return s
 }
+
+// Secret command handlers
+
+func secretCreate(s *State, c *Command) *Result {
+	rec, err := decode[SecretRecord](c)
+	if err != nil {
+		return fail("DECODE", "secret-create: %v", err)
+	}
+	if rec.SecretID == "" {
+		return fail("INVALID", "secret-create: empty secretId")
+	}
+	if rec.Version < 1 {
+		return fail("INVALID", "secret-create: version must be >= 1")
+	}
+	if len(rec.EncryptedData) == 0 {
+		return fail("INVALID", "secret-create: encrypted data empty")
+	}
+	rec.CreatedAt = c.TS
+	rec.EncryptedAt = c.TS
+	s.Secrets.AddRecord(&rec)
+	return ok("secret %s version %d created", rec.SecretID, rec.Version)
+}
+
+func secretVersionAdd(s *State, c *Command) *Result {
+	rec, err := decode[SecretRecord](c)
+	if err != nil {
+		return fail("DECODE", "secret-version-add: %v", err)
+	}
+	if rec.SecretID == "" {
+		return fail("INVALID", "secret-version-add: empty secretId")
+	}
+	if rec.Version < 1 {
+		return fail("INVALID", "secret-version-add: version must be >= 1")
+	}
+	if len(rec.EncryptedData) == 0 {
+		return fail("INVALID", "secret-version-add: encrypted data empty")
+	}
+	existing := s.Secrets.GetRecord(rec.SecretID, rec.Version)
+	if existing != nil {
+		return fail("EXISTS", "secret %s version %d already exists", rec.SecretID, rec.Version)
+	}
+	rec.EncryptedAt = c.TS
+	s.Secrets.AddRecord(&rec)
+	return ok("secret %s version %d added", rec.SecretID, rec.Version)
+}
+
+func init() {
+	register("secret-create", secretCreate)
+	register("secret-version-add", secretVersionAdd)
+}
