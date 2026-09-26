@@ -1,0 +1,98 @@
+=== RUN   TestGenerateDEK
+--- PASS: TestGenerateDEK (0.00s)
+=== RUN   TestGenerateNonce
+--- PASS: TestGenerateNonce (0.00s)
+=== RUN   TestDeriveKEK
+--- PASS: TestDeriveKEK (0.00s)
+=== RUN   TestEncryptDecryptSecret_RoundTrip
+--- PASS: TestEncryptDecryptSecret_RoundTrip (0.00s)
+=== RUN   TestEncryptSecret_WrongDEK_Rejected
+--- PASS: TestEncryptSecret_WrongDEK_Rejected (0.00s)
+=== RUN   TestDecryptSecret_CiphertextTamper_Rejected
+--- PASS: TestDecryptSecret_CiphertextTamper_Rejected (0.00s)
+=== RUN   TestDecryptSecret_NonceTamper_Rejected
+--- PASS: TestDecryptSecret_NonceTamper_Rejected (0.00s)
+=== RUN   TestDecryptSecret_AADTamper_Rejected
+--- PASS: TestDecryptSecret_AADTamper_Rejected (0.00s)
+=== RUN   TestDecryptSecret_VersionTamper_Rejected
+--- PASS: TestDecryptSecret_VersionTamper_Rejected (0.00s)
+=== RUN   TestWrapUnwrapDEK_RoundTrip
+--- PASS: TestWrapUnwrapDEK_RoundTrip (0.00s)
+=== RUN   TestUnwrapDEK_WrongKEK_Rejected
+--- PASS: TestUnwrapDEK_WrongKEK_Rejected (0.00s)
+=== RUN   TestUnwrapDEK_AADTamper_Rejected
+--- PASS: TestUnwrapDEK_AADTamper_Rejected (0.00s)
+=== RUN   TestUnwrapDEK_WrappedTamper_Rejected
+--- PASS: TestUnwrapDEK_WrappedTamper_Rejected (0.00s)
+=== RUN   TestSecretVersionIndependence
+--- PASS: TestSecretVersionIndependence (0.00s)
+=== RUN   TestEncryptSecret_EmptyPlaintext_Rejected
+--- PASS: TestEncryptSecret_EmptyPlaintext_Rejected (0.00s)
+=== RUN   TestEncodeDecodeBootstrap
+--- PASS: TestEncodeDecodeBootstrap (0.00s)
+=== RUN   TestDecodeBootstrap_InvalidSize_Rejected
+--- PASS: TestDecodeBootstrap_InvalidSize_Rejected (0.00s)
+=== RUN   TestBootstrapHash
+--- PASS: TestBootstrapHash (0.00s)
+=== RUN   TestNonceUniqueness
+--- PASS: TestNonceUniqueness (0.00s)
+=== RUN   TestFSMSnapshot_ReplayLedgerPersists
+--- PASS: TestFSMSnapshot_ReplayLedgerPersists (0.00s)
+=== RUN   TestFSMSnapshot_SnapshotRecovery
+--- PASS: TestFSMSnapshot_SnapshotRecovery (0.00s)
+=== RUN   TestSecretRetrievalAuthorize_Positive
+    retrieval_authorization_test.go:73: DEBUG: Command created successfully, Type=secret-retrieval-authorize, Data length=437
+    retrieval_authorization_test.go:76: DEBUG: ApplyLocal result: OK=true, Message=authorization succeeded; request digest 61be017204dd159f
+--- PASS: TestSecretRetrievalAuthorize_Positive (0.00s)
+=== RUN   TestSecretRetrievalAuthorize_BadSignature
+--- PASS: TestSecretRetrievalAuthorize_BadSignature (0.00s)
+=== RUN   TestSecretRetrievalAuthorize_RevokedNode
+--- PASS: TestSecretRetrievalAuthorize_RevokedNode (0.00s)
+=== RUN   TestSecretRetrievalAuthorize_MissingSecret
+--- PASS: TestSecretRetrievalAuthorize_MissingSecret (0.00s)
+=== RUN   TestSecretRetrievalAuthorize_AssignmentNotRunning
+--- PASS: TestSecretRetrievalAuthorize_AssignmentNotRunning (0.00s)
+=== RUN   TestSecretRetrievalAuthorize_ScopeMismatch
+--- PASS: TestSecretRetrievalAuthorize_ScopeMismatch (0.00s)
+=== RUN   TestSecretRetrievalAuthorize_Replay
+--- PASS: TestSecretRetrievalAuthorize_Replay (0.00s)
+=== RUN   TestSecretRetrievalAuthorize_Concurrent
+--- PASS: TestSecretRetrievalAuthorize_Concurrent (0.00s)
+=== RUN   TestSecretRetrievalAuthorize_HighContention
+--- PASS: TestSecretRetrievalAuthorize_HighContention (0.01s)
+=== RUN   TestSecretRetrievalAuthorize_ClockSkew
+--- PASS: TestSecretRetrievalAuthorize_ClockSkew (0.00s)
+=== RUN   TestSecretRetrievalAuthorize_CanaryLeakTest
+--- PASS: TestSecretRetrievalAuthorize_CanaryLeakTest (0.00s)
+=== RUN   TestSecretRetrievalAuthorize_Failover
+--- PASS: TestSecretRetrievalAuthorize_Failover (0.00s)
+=== RUN   TestSecretRetrievalAuthorize_NegativeControl_DisableSignatureCheck
+--- PASS: TestSecretRetrievalAuthorize_NegativeControl_DisableSignatureCheck (0.00s)
+=== RUN   TestSecretRetrievalAuthorize_NegativeControl_BypassNodeRevocationCheck
+--- PASS: TestSecretRetrievalAuthorize_NegativeControl_BypassNodeRevocationCheck (0.00s)
+=== RUN   TestSecretRetrievalAuthorize_NegativeControl_BypassReplayCheck
+--- PASS: TestSecretRetrievalAuthorize_NegativeControl_BypassReplayCheck (0.00s)
+=== RUN   TestRaftPersistence
+--- PASS: TestRaftPersistence (0.00s)
+=== RUN   TestSecretVersionAdd
+--- PASS: TestSecretVersionAdd (0.00s)
+=== RUN   TestDuplicateVersionRejected
+--- PASS: TestDuplicateVersionRejected (0.00s)
+=== RUN   TestPlaintextCanary
+--- PASS: TestPlaintextCanary (0.00s)
+=== RUN   TestBoltDBCanary
+--- PASS: TestBoltDBCanary (0.00s)
+=== RUN   TestSnapshotCanary
+--- PASS: TestSnapshotCanary (0.00s)
+=== RUN   TestRestartUnlocks
+--- PASS: TestRestartUnlocks (0.00s)
+=== RUN   TestExportCanary
+--- PASS: TestExportCanary (0.00s)
+=== RUN   TestNegativeControl_DisableAADBinding_TamperedScopeDetected
+--- PASS: TestNegativeControl_DisableAADBinding_TamperedScopeDetected (0.00s)
+=== RUN   TestNegativeControl_PlaintextPersistence_CanaryDetects
+--- PASS: TestNegativeControl_PlaintextPersistence_CanaryDetects (0.00s)
+=== RUN   TestNegativeControl_AuthTagBypass_TamperDetected
+--- PASS: TestNegativeControl_AuthTagBypass_TamperDetected (0.00s)
+PASS
+ok  	decentralized.host/pkg/control	(cached)

@@ -2,7 +2,15 @@
 package control
 
 import (
+	"bytes"
+	"crypto/ed25519"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
 	"time"
 )
 
@@ -158,4 +166,140 @@ type SecretCommand struct {
 // Now returns current Unix nanoseconds (used in tests to mock time).
 func Now() int64 {
 	return time.Now().UnixNano()
+}
+
+// SecretRetrievalRequest is a signed authorization request from a node for secret decryption.
+// Version 1: Ed25519-signed request with nonce-based replay protection.
+// Replay identity combines request digest and nonce: caller cannot change requestId/other fields while reusing same request.
+type SecretRetrievalRequest struct {
+	Version        int    `json:"version"`        // always 1
+	RequestID      string `json:"requestId"`      // unique request identifier
+	SecretID       string `json:"secretId"`       // target secret
+	SecretVersion  int32  `json:"secretVersion"`  // target version
+	NodeID         string `json:"nodeId"`         // requesting node (dh1...)
+	WorkloadID     string `json:"workloadId"`     // workload scope (matches assignment)
+	DeploymentID   string `json:"deploymentId"`   // deployment scope (matches assignment)
+	Environment    string `json:"environment"`    // environment scope (matches assignment)
+	Timestamp      string `json:"timestamp"`      // Unix nanoseconds as decimal string (clock skew tolerance ±5s)
+	Nonce          []byte `json:"nonce"`          // unique per-request nonce (for replay ledger)
+	NodePublicKey  string `json:"nodePublicKey"`  // wire-encoded Ed25519 public key
+	Signature      []byte `json:"signature"`      // Ed25519 signature over canonical request (excluding signature field)
+}
+
+// CanonicalRequest returns the canonical form of the request for signing/verification.
+// Fields are hashed in deterministic order (version through nonce, excluding signature).
+// All fields encoded as text for JSON compatibility and canonical reproducibility.
+func (r *SecretRetrievalRequest) CanonicalRequest() []byte {
+	var buf bytes.Buffer
+	fmt.Fprintf(&buf, "v%d", r.Version)
+	buf.WriteByte('|')
+	io.WriteString(&buf, r.RequestID)
+	buf.WriteByte('|')
+	io.WriteString(&buf, r.SecretID)
+	buf.WriteByte('|')
+	fmt.Fprintf(&buf, "%d", r.SecretVersion)
+	buf.WriteByte('|')
+	io.WriteString(&buf, r.NodeID)
+	buf.WriteByte('|')
+	io.WriteString(&buf, r.WorkloadID)
+	buf.WriteByte('|')
+	io.WriteString(&buf, r.DeploymentID)
+	buf.WriteByte('|')
+	io.WriteString(&buf, r.Environment)
+	buf.WriteByte('|')
+	io.WriteString(&buf, r.Timestamp)
+	buf.WriteByte('|')
+	io.WriteString(&buf, base64.RawURLEncoding.EncodeToString(r.Nonce))
+	return buf.Bytes()
+}
+
+// RequestDigest returns the SHA256 hash of the canonical request (for replay identity).
+func (r *SecretRetrievalRequest) RequestDigest() string {
+	h := sha256.Sum256(r.CanonicalRequest())
+	return hex.EncodeToString(h[:])
+}
+
+// VerifySignature validates the request signature against the node's public key.
+func (r *SecretRetrievalRequest) VerifySignature() error {
+	if r.Version != 1 {
+		return errors.New("request version not supported")
+	}
+	if len(r.Signature) == 0 {
+		return errors.New("signature empty")
+	}
+	pub, err := base64.RawURLEncoding.DecodeString(r.NodePublicKey)
+	if err != nil {
+		return fmt.Errorf("decode node public key: %w", err)
+	}
+	if len(pub) != ed25519.PublicKeySize {
+		return fmt.Errorf("public key has %d bytes, want 32", len(pub))
+	}
+	if !ed25519.Verify(ed25519.PublicKey(pub), r.CanonicalRequest(), r.Signature) {
+		return errors.New("signature verification failed")
+	}
+	return nil
+}
+
+// ConsumedAuthorization records a consumed authorization in the replay ledger.
+// Persisted to Raft FSM, survives leader change/restart/failover.
+type ConsumedAuthorization struct {
+	RequestDigest      string `json:"requestDigest"`      // SHA256(canonical request)
+	ConsumedNonce      []byte `json:"consumedNonce"`      // nonce from request (duplicate protection)
+	ConsumedAt         string `json:"consumedAt"`         // Unix ns when consumed as decimal string (FSM timestamp, JSON safe)
+	NodeID             string `json:"nodeId"`             // requesting node
+	SecretID           string `json:"secretId"`           // target secret
+	SecretVersion      int32  `json:"secretVersion"`      // target version
+	Outcome            string `json:"outcome"`            // "SUCCESS" | "DENIED" (audit)
+	DenyReason         string `json:"denyReason,omitempty"` // why denied (audit)
+}
+
+// ReplayLedger holds all consumed authorizations, indexed by requestDigest.
+// Shared within FSM to prevent concurrent identical requests from both succeeding.
+type ReplayLedger map[string]*ConsumedAuthorization
+
+// NewReplayLedger creates an empty replay ledger.
+func NewReplayLedger() ReplayLedger {
+	return make(ReplayLedger)
+}
+
+// IsConsumed checks if a request has already been authorized.
+func (l ReplayLedger) IsConsumed(requestDigest string) bool {
+	_, exists := l[requestDigest]
+	return exists
+}
+
+// Record records a successful authorization consumption.
+func (l ReplayLedger) Record(auth *ConsumedAuthorization) {
+	l[auth.RequestDigest] = auth
+}
+
+// MarshalJSON serializes the replay ledger for Raft persistence.
+func (l ReplayLedger) MarshalJSON() ([]byte, error) {
+	// Convert to a slice for deterministic JSON ordering
+	type entry struct {
+		Digest string                 `json:"digest"`
+		Auth   *ConsumedAuthorization `json:"auth"`
+	}
+	entries := make([]entry, 0, len(l))
+	for digest, auth := range l {
+		entries = append(entries, entry{Digest: digest, Auth: auth})
+	}
+	return json.Marshal(entries)
+}
+
+// UnmarshalJSON deserializes the replay ledger from Raft.
+func (l *ReplayLedger) UnmarshalJSON(data []byte) error {
+	type entry struct {
+		Digest string                 `json:"digest"`
+		Auth   *ConsumedAuthorization `json:"auth"`
+	}
+	var entries []entry
+	if err := json.Unmarshal(data, &entries); err != nil {
+		return err
+	}
+	*l = NewReplayLedger()
+	for _, e := range entries {
+		(*l)[e.Digest] = e.Auth
+	}
+	return nil
 }

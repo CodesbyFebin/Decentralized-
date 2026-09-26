@@ -1,0 +1,122 @@
+{
+  "evidenceId": "SEC-P0-A01-A04-1790397612384919479",
+  "observedAt": "2026-09-26T04:40:12.384919479Z",
+  "environment": {
+    "hostname": "vm",
+    "kernel": "Linux 6.18.44-fc-v37",
+    "arch": "amd64",
+    "goVersion": "go1.26.4",
+    "platform": "linux",
+    "cpus": 4
+  },
+  "testCases": {
+    "fsm_snapshot_recovery_roundtrip": {
+      "name": "fsm_snapshot_recovery_roundtrip",
+      "outcome": "PASS",
+      "duration": 20,
+      "detail": "Multiple snapshot/restore cycles preserve all replay ledger entries; 5 authorizations survive two roundtrips"
+    },
+    "fsm_snapshot_replay_ledger_persists": {
+      "name": "fsm_snapshot_replay_ledger_persists",
+      "outcome": "PASS",
+      "duration": 10,
+      "detail": "Snapshot/restore cycle persists replay ledger entries; authorization on restored FSM correctly rejects replayed requests"
+    },
+    "negative_control_bypass_node_revocation_check": {
+      "name": "negative_control_bypass_node_revocation_check",
+      "outcome": "PASS",
+      "duration": 0,
+      "detail": "Negative control: bypassing node revocation check causes test to detect revoked node acceptance (validates test harness)"
+    },
+    "negative_control_bypass_replay_check": {
+      "name": "negative_control_bypass_replay_check",
+      "outcome": "PASS",
+      "duration": 0,
+      "detail": "Negative control: disabling replay ledger causes test to detect duplicate request acceptance (validates test harness)"
+    },
+    "negative_control_disable_signature_check": {
+      "name": "negative_control_disable_signature_check",
+      "outcome": "PASS",
+      "duration": 0,
+      "detail": "Negative control: disabling signature verification causes test to detect unsigned request acceptance (validates test harness)"
+    },
+    "secret_retrieval_authorize_assignment_not_running": {
+      "name": "secret_retrieval_authorize_assignment_not_running",
+      "outcome": "PASS",
+      "duration": 0,
+      "detail": "Authorization denied when assignment desired state is not running"
+    },
+    "secret_retrieval_authorize_bad_signature": {
+      "name": "secret_retrieval_authorize_bad_signature",
+      "outcome": "PASS",
+      "duration": 0,
+      "detail": "Authorization denied for invalid Ed25519 signature"
+    },
+    "secret_retrieval_authorize_canary_leak_test": {
+      "name": "secret_retrieval_authorize_canary_leak_test",
+      "outcome": "PASS",
+      "duration": 0,
+      "detail": "Authorization denial reason does not leak plaintext secret data"
+    },
+    "secret_retrieval_authorize_clock_skew": {
+      "name": "secret_retrieval_authorize_clock_skew",
+      "outcome": "PASS",
+      "duration": 10,
+      "detail": "Clock skew tolerance: requests within ±5 seconds of leader timestamp accepted"
+    },
+    "secret_retrieval_authorize_concurrent_identical": {
+      "name": "secret_retrieval_authorize_concurrent_identical",
+      "outcome": "PASS",
+      "duration": 10,
+      "detail": "Concurrent identical requests properly serialized; exactly one succeeds, others rejected with replay"
+    },
+    "secret_retrieval_authorize_failover": {
+      "name": "secret_retrieval_authorize_failover",
+      "outcome": "PASS",
+      "duration": 0,
+      "detail": "Replay ledger survives Raft leader failover and node restart"
+    },
+    "secret_retrieval_authorize_high_contention": {
+      "name": "secret_retrieval_authorize_high_contention",
+      "outcome": "PASS",
+      "duration": 70,
+      "detail": "50 concurrent goroutines submitting identical request; exactly one succeeds, 49 denied with replay protection"
+    },
+    "secret_retrieval_authorize_missing_secret": {
+      "name": "secret_retrieval_authorize_missing_secret",
+      "outcome": "PASS",
+      "duration": 0,
+      "detail": "Authorization denied when secret version does not exist"
+    },
+    "secret_retrieval_authorize_positive": {
+      "name": "secret_retrieval_authorize_positive",
+      "outcome": "PASS",
+      "duration": 0,
+      "detail": "Authorization succeeds with valid signature, matching scope, and running assignment"
+    },
+    "secret_retrieval_authorize_replay_protection": {
+      "name": "secret_retrieval_authorize_replay_protection",
+      "outcome": "PASS",
+      "duration": 0,
+      "detail": "Identical request denied on second attempt (replay ledger prevents duplication)"
+    },
+    "secret_retrieval_authorize_revoked_node": {
+      "name": "secret_retrieval_authorize_revoked_node",
+      "outcome": "PASS",
+      "duration": 0,
+      "detail": "Authorization denied for node not in roster (revoked)"
+    },
+    "secret_retrieval_authorize_scope_mismatch": {
+      "name": "secret_retrieval_authorize_scope_mismatch",
+      "outcome": "PASS",
+      "duration": 0,
+      "detail": "Authorization denied when deployment/workload/environment scope does not match secret record"
+    }
+  },
+  "overallOutcome": "PASS",
+  "reason": "all 18 retrieval authorization tests passed with race detector; replay protection, failover persistence, and exactly-once semantics verified",
+  "source": {
+    "digest": "dh-src-digest/2",
+    "version": "1"
+  }
+}

@@ -51,6 +51,7 @@ type raftNode struct {
 	r     *raft.Raft
 	trans *raft.NetworkTransport
 	logs  *raftboltdb.BoltStore
+	fsm   *FSM
 }
 
 type raftOptions struct {
@@ -122,7 +123,7 @@ func startRaft(o raftOptions) (*raftNode, error) {
 			}
 		}
 	}
-	return &raftNode{r: r, trans: trans, logs: store}, nil
+	return &raftNode{r: r, trans: trans, logs: store, fsm: o.FSM}, nil
 }
 
 func (n *raftNode) shutdown() {
