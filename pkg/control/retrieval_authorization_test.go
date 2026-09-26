@@ -1096,3 +1096,229 @@ func TestR1_01_NegativeControl_DecryptBeforeCommit(t *testing.T) {
 
 	t.Log("✓ R1-01 Negative Control: Demonstrates ordering invariant")
 }
+
+
+// TestR1_01_E2E_RealFailoverReplay tests that authorization survives real leader failover
+// and the new leader correctly rejects replay of the same request.
+// This is the END-TO-END qualification for R1-01 real-world scenario.
+func TestR1_01_E2E_RealFailoverReplay(t *testing.T) {
+	// Setup: 3-member mTLS cluster with CA bundle
+	caBundle, err := generateTestCABundle()
+	if err != nil {
+		t.Fatalf("generateTestCABundle: %v", err)
+	}
+
+	tmpDir := t.TempDir()
+	cluster := NewRaftQualificationClusterWithCA(tmpDir, caBundle)
+	defer cluster.Close()
+
+	if err := cluster.Start(t); err != nil {
+		t.Fatalf("cluster.Start: %v", err)
+	}
+
+	// Establish initial leader
+	leaderID, term1, err := cluster.WaitForLeader(10 * time.Second)
+	if err != nil {
+		t.Fatalf("WaitForLeader: %v", err)
+	}
+	t.Logf("R1-01-E2E: Initial leader=%s term=%d", leaderID, term1)
+
+	// Find leader member by ID
+	var leaderFSM *FSM
+	for _, m := range cluster.Members {
+		if m.ID == leaderID && m.Node != nil {
+			leaderFSM = m.Node.fsm
+			break
+		}
+	}
+	if leaderFSM == nil {
+		t.Fatalf("Could not find FSM for leader %s", leaderID)
+	}
+
+	// Save reference to original leader FSM for later verification
+	oldLeaderFSM := leaderFSM
+
+	// Setup: Create node, assignment, and secret on all members
+	nodeID := "dh1r1e2eaaaaaaaaaaaaaa01"
+	nodeIdentity, _ := identity.Generate()
+	nodeID = nodeIdentity.ID
+
+	// Apply setup on all members to ensure consistency
+	for _, member := range cluster.Members {
+		if member.Node != nil {
+			member.Node.fsm.Read(func(s *State) {
+				s.Cluster = "test-cluster"
+				s.Nodes[nodeID] = &Node{
+					ID:     nodeID,
+					Name:   "r1-e2e-node",
+					Status: "ready",
+				}
+				s.Assignments["app-r1@"+nodeID] = &AssignmentRec{
+					Key: "app-r1@" + nodeID,
+					A: api.Assignment{
+						ID:      "app-r1",
+						Node:    nodeID,
+						Desired: "running",
+					},
+					Created: Now(),
+				}
+
+				// Create secret
+				secretID := "secret-r1-e2e"
+				dek, _ := GenerateDEK()
+				plaintext := []byte("r1-e2e-secret-data")
+				record, _ := EncryptSecret(plaintext, secretID, 1, dek, "test-cluster", "deploy-r1", "workload-r1", "prod", "key-r1")
+				s.Secrets.AddRecord(record)
+			})
+		}
+	}
+
+	// Create signed SecretRetrievalRequest
+	nonce := make([]byte, 12)
+	rand.Read(nonce)
+	req := &SecretRetrievalRequest{
+		Version:       1,
+		RequestID:     "r1-e2e-req-001",
+		SecretID:      "secret-r1-e2e",
+		SecretVersion: 1,
+		NodeID:        nodeID,
+		WorkloadID:    "workload-r1",
+		DeploymentID:  "deploy-r1",
+		Environment:   "prod",
+		Timestamp:     fmt.Sprintf("%d", Now()),
+		Nonce:         nonce,
+		NodePublicKey: base64.RawURLEncoding.EncodeToString(nodeIdentity.Pub),
+	}
+	req.Signature = nodeIdentity.Sign(req.CanonicalRequest())
+	requestDigest := req.RequestDigest()
+
+	t.Logf("R1-01-E2E: Created request digest=%s", requestDigest)
+
+	// Step 1: Authorize request on original leader
+	cmd, err := leaderFSM.AuthorizeSecretRetrievalCommand(req)
+	if err != nil {
+		t.Fatalf("AuthorizeSecretRetrievalCommand: %v", err)
+	}
+
+	res := leaderFSM.ApplyLocal(cmd)
+	if !res.OK {
+		t.Fatalf("Authorization failed: %v", res.Message)
+	}
+
+	// Verify consumption recorded on leader
+	leaderFSM.Read(func(s *State) {
+		if !s.ReplayLedger.IsConsumed(requestDigest) {
+			t.Error("R1-01-E2E: Request digest not consumed on leader after authorization")
+		}
+	})
+	t.Logf("R1-01-E2E: Step 1 PASS - Authorization committed on leader=%s", leaderID)
+
+	// Step 2: Partition leader to trigger failover
+	if err := cluster.Partition(leaderID); err != nil {
+		t.Fatalf("Partition: %v", err)
+	}
+	t.Logf("R1-01-E2E: Partitioned leader=%s", leaderID)
+
+	// Wait for new leader election
+	newLeaderID, term2, err := cluster.WaitForNewLeader(leaderID, 10*time.Second)
+	if err != nil {
+		t.Fatalf("WaitForNewLeader: %v", err)
+	}
+
+	if newLeaderID == leaderID {
+		t.Fatal("R1-01-E2E: New leader is same as old leader (failover failed)")
+	}
+	if term2 <= term1 {
+		t.Fatalf("R1-01-E2E: New term %d should be > old term %d", term2, term1)
+	}
+
+	t.Logf("R1-01-E2E: Step 2 PASS - New leader=%s term=%d", newLeaderID, term2)
+
+	// Step 3: Find new leader member and verify consumption replicated
+	var newLeaderFSM *FSM
+	for _, m := range cluster.Members {
+		if m.ID == newLeaderID && m.Node != nil {
+			newLeaderFSM = m.Node.fsm
+			break
+		}
+	}
+	if newLeaderFSM == nil {
+		t.Fatalf("Could not find FSM for new leader %s", newLeaderID)
+	}
+
+	newLeaderFSM.Read(func(s *State) {
+		if !s.ReplayLedger.IsConsumed(requestDigest) {
+			t.Error("R1-01-E2E: Request digest not replicated to new leader")
+		}
+	})
+	t.Logf("R1-01-E2E: Step 3 PASS - Consumption replicated to new leader=%s", newLeaderID)
+
+	// Step 4: Retry EXACT same request against new leader
+	cmd2, err := newLeaderFSM.AuthorizeSecretRetrievalCommand(req)
+	if err != nil {
+		t.Fatalf("AuthorizeSecretRetrievalCommand on new leader: %v", err)
+	}
+
+	res2 := newLeaderFSM.ApplyLocal(cmd2)
+	if res2.OK {
+		t.Error("R1-01-E2E: Replay should be rejected but authorization succeeded")
+	}
+	if !strings.Contains(res2.Message, "already authorized") {
+		t.Errorf("R1-01-E2E: Expected 'already authorized' message, got: %v", res2.Message)
+	}
+
+	t.Logf("R1-01-E2E: Step 4 PASS - Replay correctly DENIED on new leader")
+
+	// Step 5: Create fresh request and verify it succeeds
+	freshNonce := make([]byte, 12)
+	rand.Read(freshNonce)
+	freshReq := &SecretRetrievalRequest{
+		Version:       1,
+		RequestID:     "r1-e2e-req-002",
+		SecretID:      "secret-r1-e2e",
+		SecretVersion: 1,
+		NodeID:        nodeID,
+		WorkloadID:    "workload-r1",
+		DeploymentID:  "deploy-r1",
+		Environment:   "prod",
+		Timestamp:     fmt.Sprintf("%d", Now()),
+		Nonce:         freshNonce,
+		NodePublicKey: base64.RawURLEncoding.EncodeToString(nodeIdentity.Pub),
+	}
+	freshReq.Signature = nodeIdentity.Sign(freshReq.CanonicalRequest())
+
+	cmdFresh, _ := newLeaderFSM.AuthorizeSecretRetrievalCommand(freshReq)
+	resFresh := newLeaderFSM.ApplyLocal(cmdFresh)
+	if !resFresh.OK {
+		t.Fatalf("R1-01-E2E: Fresh request should succeed but failed: %v", resFresh.Message)
+	}
+
+	t.Logf("R1-01-E2E: Step 5 PASS - Fresh request authorized on new leader")
+
+	// Step 6: Heal partition and wait for convergence
+	cluster.Heal(leaderID)
+	cluster.Controller.HealAll()
+	t.Logf("R1-01-E2E: Healed partition")
+
+	if err := cluster.WaitForConvergence(10 * time.Second); err != nil {
+		t.Fatalf("WaitForConvergence: %v", err)
+	}
+	t.Logf("R1-01-E2E: Converged")
+
+	// Step 7: Verify old leader still denies original replay after recovery
+	oldLeaderFSM.Read(func(s *State) {
+		if !s.ReplayLedger.IsConsumed(requestDigest) {
+			t.Error("R1-01-E2E: Original request not in replay ledger on recovered leader")
+		}
+	})
+
+	cmd3, _ := oldLeaderFSM.AuthorizeSecretRetrievalCommand(req)
+	res3 := oldLeaderFSM.ApplyLocal(cmd3)
+	if res3.OK {
+		t.Error("R1-01-E2E: Replay should be rejected on recovered old leader")
+	}
+
+	t.Log("✓ R1-01-E2E COMPLETE: Authorization survives real 3-member failover")
+	t.Logf("✓ Original leader: %s, New leader: %s", leaderID, newLeaderID)
+	t.Logf("✓ Request digest: %s", requestDigest)
+}
