@@ -305,3 +305,91 @@ func (l *ReplayLedger) UnmarshalJSON(data []byte) error {
 	}
 	return nil
 }
+
+// SecretDeliveryEnvelope is a signed authorization for agent-side secret materialization.
+// A05-P1-R1: Control plane prepares this envelope; agent verifies signature before materializing.
+// Binds all context required to validate the delivery: node, deployment, workload, environment,
+// secret identity, version, and authorization digest. Prevents transplantation across contexts.
+type SecretDeliveryEnvelope struct {
+	ProtocolVersion    int    `json:"protocolVersion"`    // always 1
+	DeliveryID         string `json:"deliveryId"`         // unique delivery identifier
+	AuthorizationDigest string `json:"authorizationDigest"` // SHA256(canonical authorization)
+
+	ClusterID    string `json:"clusterId"`    // cluster scope
+	NodeID       string `json:"nodeId"`       // target node (must match agent identity)
+	DeploymentID string `json:"deploymentId"` // deployment scope
+	WorkloadID   string `json:"workloadId"`   // workload scope
+	Environment  string `json:"environment"`  // environment scope
+
+	SecretID      string `json:"secretId"`      // which secret
+	SecretVersion int32  `json:"secretVersion"` // which version
+
+	IssuedAt  int64  `json:"issuedAt"`  // Unix ns when envelope was created
+	ExpiresAt int64  `json:"expiresAt"` // Unix ns when envelope expires
+	Nonce     []byte `json:"nonce"`     // unique per-delivery nonce (replay protection)
+
+	PlaintextPayload []byte `json:"plaintextPayload"` // the actual secret plaintext (in memory only)
+	Signature        []byte `json:"signature"`        // Ed25519 signature over canonical envelope
+}
+
+// CanonicalEnvelope returns the canonical form of the envelope for signing/verification.
+// Fields are hashed in deterministic order (all fields except signature).
+func (e *SecretDeliveryEnvelope) CanonicalEnvelope() []byte {
+	var buf bytes.Buffer
+	fmt.Fprintf(&buf, "v%d", e.ProtocolVersion)
+	buf.WriteByte('|')
+	io.WriteString(&buf, e.DeliveryID)
+	buf.WriteByte('|')
+	io.WriteString(&buf, e.AuthorizationDigest)
+	buf.WriteByte('|')
+	io.WriteString(&buf, e.ClusterID)
+	buf.WriteByte('|')
+	io.WriteString(&buf, e.NodeID)
+	buf.WriteByte('|')
+	io.WriteString(&buf, e.DeploymentID)
+	buf.WriteByte('|')
+	io.WriteString(&buf, e.WorkloadID)
+	buf.WriteByte('|')
+	io.WriteString(&buf, e.Environment)
+	buf.WriteByte('|')
+	io.WriteString(&buf, e.SecretID)
+	buf.WriteByte('|')
+	fmt.Fprintf(&buf, "%d", e.SecretVersion)
+	buf.WriteByte('|')
+	fmt.Fprintf(&buf, "%d", e.IssuedAt)
+	buf.WriteByte('|')
+	fmt.Fprintf(&buf, "%d", e.ExpiresAt)
+	buf.WriteByte('|')
+	io.WriteString(&buf, base64.RawURLEncoding.EncodeToString(e.Nonce))
+	buf.WriteByte('|')
+	io.WriteString(&buf, base64.RawURLEncoding.EncodeToString(e.PlaintextPayload))
+	return buf.Bytes()
+}
+
+// EnvelopeDigest returns the SHA256 hash of the canonical envelope (for verification).
+func (e *SecretDeliveryEnvelope) EnvelopeDigest() string {
+	h := sha256.Sum256(e.CanonicalEnvelope())
+	return hex.EncodeToString(h[:])
+}
+
+// VerifySignature validates the envelope signature using the control plane's public key.
+// The controlPlanePublicKey must be the base64-encoded Ed25519 public key.
+func (e *SecretDeliveryEnvelope) VerifySignature(controlPlanePublicKey string) error {
+	if e.ProtocolVersion != 1 {
+		return errors.New("envelope version not supported")
+	}
+	if len(e.Signature) == 0 {
+		return errors.New("signature empty")
+	}
+	pub, err := base64.RawURLEncoding.DecodeString(controlPlanePublicKey)
+	if err != nil {
+		return fmt.Errorf("decode control plane public key: %w", err)
+	}
+	if len(pub) != ed25519.PublicKeySize {
+		return fmt.Errorf("public key has %d bytes, want 32", len(pub))
+	}
+	if !ed25519.Verify(ed25519.PublicKey(pub), e.CanonicalEnvelope(), e.Signature) {
+		return errors.New("envelope signature verification failed")
+	}
+	return nil
+}
