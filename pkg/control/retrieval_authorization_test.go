@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -418,6 +419,93 @@ func TestSecretRetrievalAuthorize_Concurrent(t *testing.T) {
 	res2 := fsm.ApplyLocal(cmd2)
 	if res2.OK {
 		t.Error("second concurrent request should be denied (already consumed)")
+	}
+}
+
+// TestSecretRetrievalAuthorize_HighContention verifies exactly-once semantics under high concurrency.
+// Simulates many goroutines trying to authorize the same request simultaneously.
+func TestSecretRetrievalAuthorize_HighContention(t *testing.T) {
+	fsm := NewFSM()
+	fsm.s.Cluster = "test-cluster"
+
+	nodeID := "dh1testaaaaaaaaaaaaaaaaaa"
+	nodeIdentity, _ := identity.Generate()
+	nodeID = nodeIdentity.ID
+	fsm.s.Nodes[nodeID] = &Node{ID: nodeID, Status: "ready"}
+
+	secretID := "secret-001"
+	dek, _ := GenerateDEK()
+	plaintext := []byte("password")
+	record, _ := EncryptSecret(plaintext, secretID, 1, dek, "test-cluster", "deploy-1", "workload-1", "prod", "key-1")
+	fsm.s.Secrets.AddRecord(record)
+
+	fsm.s.Assignments["app-r0@"+nodeID] = &AssignmentRec{
+		Key: "app-r0@" + nodeID,
+		A:   api.Assignment{ID: "app-r0", Node: nodeID, Desired: "running"},
+	}
+
+	nonce := make([]byte, 12)
+	rand.Read(nonce)
+	req := &SecretRetrievalRequest{
+		Version:       1,
+		RequestID:     "req-high-contention",
+		SecretID:      secretID,
+		SecretVersion: 1,
+		NodeID:        nodeID,
+		WorkloadID:    "workload-1",
+		DeploymentID:  "deploy-1",
+		Environment:   "prod",
+		Timestamp:     fmt.Sprintf("%d", Now()),
+		Nonce:         nonce,
+		NodePublicKey: base64.RawURLEncoding.EncodeToString(nodeIdentity.Pub),
+	}
+	req.Signature = nodeIdentity.Sign(req.CanonicalRequest())
+
+	// Create multiple identical commands
+	numGoroutines := 50
+	results := make(chan *Result, numGoroutines)
+
+	// Apply commands concurrently via goroutines
+	// In practice, these serialize through Raft, but we verify the replay ledger works correctly
+	for i := 0; i < numGoroutines; i++ {
+		go func() {
+			cmd, _ := fsm.AuthorizeSecretRetrievalCommand(req)
+			res := fsm.ApplyLocal(cmd)
+			results <- res
+		}()
+	}
+
+	// Collect results
+	successCount := 0
+	denyCount := 0
+	for i := 0; i < numGoroutines; i++ {
+		res := <-results
+		if res.OK {
+			successCount++
+		} else if strings.Contains(res.Message, "already authorized") || strings.Contains(res.Message, "replay") {
+			denyCount++
+		} else {
+			t.Logf("Unexpected result: %v", res.Message)
+		}
+	}
+
+	if successCount != 1 {
+		t.Errorf("expected exactly 1 success, got %d", successCount)
+	}
+	if denyCount != numGoroutines-1 {
+		t.Errorf("expected %d denials (replay), got %d", numGoroutines-1, denyCount)
+	}
+
+	// Verify ledger has exactly one entry for this request
+	requestDigest := req.RequestDigest()
+	if !fsm.s.ReplayLedger.IsConsumed(requestDigest) {
+		t.Error("request digest should be in replay ledger")
+	}
+
+	// Count ledger entries (there should be exactly 1)
+	ledgerCount := len(fsm.s.ReplayLedger)
+	if ledgerCount != 1 {
+		t.Errorf("expected 1 entry in replay ledger, got %d", ledgerCount)
 	}
 }
 
