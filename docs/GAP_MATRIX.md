@@ -69,7 +69,9 @@ revoked key refused on the heartbeat and bundle channels. On the host side,
 replayed/rolled-back bundles, wrong signer, wrong target, expired capability,
 stale generation and revocation are refused. Out of scope, as proposed:
 marketplace, leases, settlement, tokens, external DePIN, ZK, federation of
-coordinators. Not covered by NODE-A01: a distinct CORDONED state and
+coordinators. First attempt: `evidence/NODE-A01-A01`, **FAIL** (VERIFIED).
+All NODE-A01 checks passed; the record fails on a pre-existing gossip-join
+defect (`docs/qualification/NODE-A01.md`). Not covered by NODE-A01: a distinct CORDONED state and
 owner-reserved capacity as a first-class record (§9–12).
 
 ## Recommended next steps (in order)
