@@ -1030,8 +1030,14 @@ func TestRaftHarness_ClusterFormation(t *testing.T) {
 // TestRaftHarness_FailoverPartition verifies network isolation triggers failover.
 // HARNESS-FAILOVER-01: Network partition isolation + new leader election
 func TestRaftHarness_FailoverPartition(t *testing.T) {
+	// Generate CA bundle for production-equivalent mTLS peer identity extraction
+	caBundle, err := generateTestCABundle()
+	if err != nil {
+		t.Fatalf("Failed to generate test CA bundle: %v", err)
+	}
+
 	tmpDir := t.TempDir()
-	c := NewRaftQualificationCluster(tmpDir, nil)
+	c := NewRaftQualificationClusterWithCA(tmpDir, caBundle)
 	defer c.Close()
 
 	if err := c.Start(t); err != nil {
@@ -1123,8 +1129,14 @@ func TestRaftHarness_FailoverPartition(t *testing.T) {
 // TestRaftHarness_FailoverProcessRestart verifies restart recovery.
 // HARNESS-FAILOVER-02: Process failure + restart from persistent data
 func TestRaftHarness_FailoverProcessRestart(t *testing.T) {
+	// Generate CA bundle for production-equivalent mTLS peer identity extraction
+	caBundle, err := generateTestCABundle()
+	if err != nil {
+		t.Fatalf("Failed to generate test CA bundle: %v", err)
+	}
+
 	tmpDir := t.TempDir()
-	c := NewRaftQualificationCluster(tmpDir, nil)
+	c := NewRaftQualificationClusterWithCA(tmpDir, caBundle)
 	defer c.Close()
 
 	if err := c.Start(t); err != nil {
