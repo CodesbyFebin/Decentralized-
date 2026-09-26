@@ -89,8 +89,9 @@ type Server struct {
 	meshMu       sync.RWMutex
 	meshCli      meshClient
 	started      time.Time
-	lastCP       time.Time             // only touched by the housekeeping goroutine
-	materializer *runtime.Materializer // [A05] for ephemeral secret delivery
+	lastCP       time.Time                     // only touched by the housekeeping goroutine
+	materializer *runtime.Materializer         // [A05] for ephemeral secret delivery
+	nlm          *runtime.NodeLifecycleManager // [LIFECYCLE-P0-A01] node state machine
 }
 
 // New creates a member; call Run to serve.
@@ -123,9 +124,21 @@ func New(cfg Config) (*Server, error) {
 	if err := os.MkdirAll(ephemeralDir, 0o700); err != nil {
 		return nil, fmt.Errorf("create ephemeral secrets dir: %w", err)
 	}
+	// Initialize NodeLifecycleManager for P0 qualification
+	nlmStateDir := filepath.Join(cfg.DataDir, "nlm-state")
+	reconDir := filepath.Join(cfg.DataDir, "nlm-recon")
+	if err := os.MkdirAll(nlmStateDir, 0o700); err != nil {
+		return nil, fmt.Errorf("create nlm-state dir: %w", err)
+	}
+	if err := os.MkdirAll(reconDir, 0o700); err != nil {
+		return nil, fmt.Errorf("create nlm-recon dir: %w", err)
+	}
+	nlm := runtime.NewNodeLifecycleManagerWithStore(nlmStateDir, reconDir)
+
 	s := &Server{cfg: cfg, id: id, fsm: NewFSM(), log: cfg.Logger, cas: cas, kick: make(chan struct{}, 1),
 		stop: make(chan struct{}), stopped: make(chan struct{}), obs: newObsCache(), plans: newPlanCache(), local: &localRejections{}, started: time.Now(),
-		materializer: runtime.NewMaterializer(ephemeralDir)}
+		materializer: runtime.NewMaterializer(ephemeralDir), nlm: nlm}
+	s.fsm.SetNodeLifecycleManager(nlm)
 	s.fsm.onApply = func(*Command, *Result) { s.wake() }
 	if b, err := os.ReadFile(s.credsPath()); err == nil {
 		var c Credentials

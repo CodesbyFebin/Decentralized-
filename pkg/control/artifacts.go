@@ -25,7 +25,7 @@ func (b *b3hasher) Write(p []byte) (int, error) { return b.h.Write(p) }
 func (b *b3hasher) hex() string                 { return hex.EncodeToString(b.h.Sum(nil)) }
 
 func init() {
-	register("operator-note", func(s *State, c *Command) *Result {
+	register("operator-note", func(f *FSM, s *State, c *Command) *Result {
 		d, err := decode[struct {
 			Action   string `json:"action"`
 			Resource string `json:"resource"`
