@@ -2,6 +2,7 @@ package control
 
 import (
 	"sync"
+	"time"
 )
 
 // RetrievalQualificationObserver instruments the authorization→decryption boundary
@@ -66,6 +67,10 @@ type R1TestObserver struct {
 	BeforeResponseWriteCount    int64
 	AfterResponseWriteCount     int64
 
+	// Per-request tracking for R1-02B precision
+	// Maps requestDigest -> RequestMetrics
+	RequestMetrics map[string]*RequestMetrics
+
 	// Fault injection: channels that can be set to block operations
 	// If nil, operation proceeds immediately; otherwise blocks until channel closes
 	BlockBeforeDecrypt      <-chan struct{}
@@ -75,6 +80,22 @@ type R1TestObserver struct {
 	DecryptErrors []error
 }
 
+// RequestMetrics tracks detailed metrics for a specific secret retrieval request.
+type RequestMetrics struct {
+	RequestDigest               string
+	LeaderCommitConfirmations   int64
+	DecryptInvocations          int64
+	DecryptSuccesses            int64
+	DecryptErrors               []error
+	ResponseWriteAttempts       int64
+	ResponseWriteSuccesses      int64
+	AuthorizationCommittedTime  int64 // nanoseconds
+	DecryptStartTime            int64 // nanoseconds
+	DecryptSuccessTime          int64 // nanoseconds
+	ResponseWriteStartTime      int64 // nanoseconds
+	ResponseWriteSuccessTime    int64 // nanoseconds
+}
+
 func NewR1TestObserver() *R1TestObserver {
 	return &R1TestObserver{
 		ProposedEvents:     make([]map[string]string, 0),
@@ -82,6 +103,7 @@ func NewR1TestObserver() *R1TestObserver {
 		DecryptedEvents:    make([]map[string]string, 0),
 		ResponseSentEvents: make([]map[string]string, 0),
 		DecryptErrors:      make([]error, 0),
+		RequestMetrics:     make(map[string]*RequestMetrics),
 	}
 }
 
@@ -92,17 +114,42 @@ func (o *R1TestObserver) AuthorizationProposed(metadata map[string]string) {
 	o.AuthorizationProposedCount++
 }
 
+// getOrCreateMetrics returns the RequestMetrics for a digest, creating if needed.
+func (o *R1TestObserver) getOrCreateMetrics(requestDigest string) *RequestMetrics {
+	if m, ok := o.RequestMetrics[requestDigest]; ok {
+		return m
+	}
+	m := &RequestMetrics{RequestDigest: requestDigest}
+	o.RequestMetrics[requestDigest] = m
+	return m
+}
+
 func (o *R1TestObserver) AuthorizationCommitted(metadata map[string]string) {
 	o.mu.Lock()
 	defer o.mu.Unlock()
 	o.CommittedEvents = append(o.CommittedEvents, copyMetadata(metadata))
 	o.AuthorizationCommittedCount++
+
+	// Track per-request metrics
+	if requestDigest, ok := metadata["requestDigest"]; ok {
+		m := o.getOrCreateMetrics(requestDigest)
+		m.LeaderCommitConfirmations++
+		m.AuthorizationCommittedTime = time.Now().UnixNano()
+	}
 }
 
 func (o *R1TestObserver) BeforeDecrypt(metadata map[string]string) <-chan struct{} {
 	o.mu.Lock()
 	o.BeforeDecryptCount++
 	blockChan := o.BlockBeforeDecrypt
+
+	// Track per-request metrics
+	if requestDigest, ok := metadata["requestDigest"]; ok {
+		m := o.getOrCreateMetrics(requestDigest)
+		m.DecryptInvocations++
+		m.DecryptStartTime = time.Now().UnixNano()
+	}
+
 	o.mu.Unlock()
 
 	if blockChan != nil {
@@ -125,12 +172,31 @@ func (o *R1TestObserver) AfterDecrypt(metadata map[string]string, err error) {
 	if err != nil {
 		o.DecryptErrors = append(o.DecryptErrors, err)
 	}
+
+	// Track per-request metrics
+	if requestDigest, ok := metadata["requestDigest"]; ok {
+		m := o.getOrCreateMetrics(requestDigest)
+		if err == nil {
+			m.DecryptSuccesses++
+			m.DecryptSuccessTime = time.Now().UnixNano()
+		} else {
+			m.DecryptErrors = append(m.DecryptErrors, err)
+		}
+	}
 }
 
 func (o *R1TestObserver) BeforeResponseWrite(metadata map[string]string) <-chan struct{} {
 	o.mu.Lock()
 	o.BeforeResponseWriteCount++
 	blockChan := o.BlockBeforeResponseWrite
+
+	// Track per-request metrics
+	if requestDigest, ok := metadata["requestDigest"]; ok {
+		m := o.getOrCreateMetrics(requestDigest)
+		m.ResponseWriteAttempts++
+		m.ResponseWriteStartTime = time.Now().UnixNano()
+	}
+
 	o.mu.Unlock()
 
 	if blockChan != nil {
@@ -147,6 +213,15 @@ func (o *R1TestObserver) AfterResponseWrite(metadata map[string]string, err erro
 	defer o.mu.Unlock()
 	o.ResponseSentEvents = append(o.ResponseSentEvents, copyMetadata(metadata))
 	o.AfterResponseWriteCount++
+
+	// Track per-request metrics
+	if requestDigest, ok := metadata["requestDigest"]; ok {
+		m := o.getOrCreateMetrics(requestDigest)
+		if err == nil {
+			m.ResponseWriteSuccesses++
+			m.ResponseWriteSuccessTime = time.Now().UnixNano()
+		}
+	}
 }
 
 // GetCommittedCount returns the number of authorizations committed.
@@ -189,6 +264,32 @@ func (o *R1TestObserver) GetEventsSnapshot() map[string]interface{} {
 		},
 		"DecryptErrors": o.DecryptErrors,
 	}
+}
+
+// GetRequestMetrics returns a copy of the RequestMetrics for a specific digest.
+// Used by R1-02B to verify exact accounting.
+func (o *R1TestObserver) GetRequestMetrics(requestDigest string) *RequestMetrics {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	m, ok := o.RequestMetrics[requestDigest]
+	if !ok {
+		return nil
+	}
+	// Return a copy to prevent external mutation
+	copy := *m
+	return &copy
+}
+
+// GetAllRequestMetrics returns a map of all request metrics.
+func (o *R1TestObserver) GetAllRequestMetrics() map[string]*RequestMetrics {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	result := make(map[string]*RequestMetrics, len(o.RequestMetrics))
+	for k, v := range o.RequestMetrics {
+		copy := *v
+		result[k] = &copy
+	}
+	return result
 }
 
 // copyMetadata returns a shallow copy of the metadata map.

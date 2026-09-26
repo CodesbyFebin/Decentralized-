@@ -136,10 +136,22 @@ func (f *FSM) Apply(l *raft.Log) any {
 
 	// Instrumentation: record successful authorization commits
 	if cmd.Type == "secret-retrieval-authorize" && res.OK && obs != nil {
-		// Full details already recorded in AuthorizationProposed
+		// Extract requestDigest from command payload for metrics tracking
+		var payload map[string]interface{}
+		var requestDigest string
+		if err := json.Unmarshal(cmd.Data, &payload); err == nil {
+			if reqData, ok := payload["request"]; ok {
+				reqJSON, _ := json.Marshal(reqData)
+				var req SecretRetrievalRequest
+				if json.Unmarshal(reqJSON, &req) == nil {
+					requestDigest = req.RequestDigest()
+				}
+			}
+		}
 		obs.AuthorizationCommitted(map[string]string{
-			"logIndex": fmt.Sprintf("%d", l.Index),
-			"result":   res.Message,
+			"logIndex":      fmt.Sprintf("%d", l.Index),
+			"requestDigest": requestDigest,
+			"result":        res.Message,
 		})
 	}
 
