@@ -55,10 +55,21 @@ type FSM struct {
 	// onApply is called (outside the lock) after each command; the server
 	// uses it to wake the reconciler and the evidence mirror.
 	onApply func(cmd *Command, res *Result)
+	// retrievalObserver instruments the authorization→decryption boundary for testing
+	retrievalObserver RetrievalQualificationObserver
 }
 
 // NewFSM returns an empty state machine.
-func NewFSM() *FSM { return &FSM{s: newState()} }
+func NewFSM() *FSM { return &FSM{s: newState(), retrievalObserver: &NoOpObserver{}} }
+
+// SetRetrievalObserver sets the observer for authorization→decryption boundary instrumentation.
+func (f *FSM) SetRetrievalObserver(obs RetrievalQualificationObserver) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if obs != nil {
+		f.retrievalObserver = obs
+	}
+}
 
 // Read runs fn with a read lock on the state.
 func (f *FSM) Read(fn func(s *State)) {
@@ -95,6 +106,19 @@ func (f *FSM) AuthorizeSecretRetrievalCommand(req *SecretRetrievalRequest) (*Com
 		Actor: "node/" + req.NodeID,
 		Data:  buf.Bytes(),
 	}
+
+	// Instrumentation: record authorization proposal
+	requestDigest := req.RequestDigest()
+	if f.retrievalObserver != nil {
+		f.retrievalObserver.AuthorizationProposed(map[string]string{
+			"requestDigest": requestDigest,
+			"requestID":     req.RequestID,
+			"nodeID":        req.NodeID,
+			"secretID":      req.SecretID,
+			"timestamp":     fmt.Sprintf("%d", now),
+		})
+	}
+
 	return cmd, nil
 }
 
@@ -107,7 +131,22 @@ func (f *FSM) Apply(l *raft.Log) any {
 	f.mu.Lock()
 	res := f.apply(&cmd)
 	f.s.Index = f.s.IndexBase + int64(l.Index)
+	obs := f.retrievalObserver
 	f.mu.Unlock()
+
+	// Instrumentation: record successful authorization commits
+	if cmd.Type == "secret-retrieval-authorize" && res.OK && obs != nil {
+		// Extract request digest from the command for tracking
+		parts := bytes.SplitN(cmd.Data, []byte("\n"), 2)
+		if len(parts) == 2 {
+			// Minimal metadata; full details already recorded in AuthorizationProposed
+			obs.AuthorizationCommitted(map[string]string{
+				"logIndex": fmt.Sprintf("%d", l.Index),
+				"result":   res.Message,
+			})
+		}
+	}
+
 	if f.onApply != nil {
 		f.onApply(&cmd, res)
 	}
@@ -117,9 +156,22 @@ func (f *FSM) Apply(l *raft.Log) any {
 // ApplyLocal applies a command without raft (tests and restore).
 func (f *FSM) ApplyLocal(cmd *Command) *Result {
 	f.mu.Lock()
-	defer f.mu.Unlock()
 	res := f.apply(cmd)
 	f.s.Index++
+	obs := f.retrievalObserver
+	f.mu.Unlock()
+
+	// Instrumentation: record successful authorization commits (same as Apply)
+	if cmd.Type == "secret-retrieval-authorize" && res.OK && obs != nil {
+		parts := bytes.SplitN(cmd.Data, []byte("\n"), 2)
+		if len(parts) == 2 {
+			obs.AuthorizationCommitted(map[string]string{
+				"source": "ApplyLocal",
+				"result": res.Message,
+			})
+		}
+	}
+
 	return res
 }
 
