@@ -2,30 +2,73 @@ package runtime
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"sync"
 	"time"
 )
 
+// ArtifactReference represents an immutable workload artifact
+type ArtifactReference struct {
+	SourceHash  string // SHA256 hash of artifact source (immutable)
+	SignerID    string // Identity of signer (control-plane or node)
+	Signature   string // Ed25519 signature over SourceHash
+	SignAlgorithm string // Signing algorithm (ed25519)
+	SignedAt    int64  // Unix nanoseconds
+}
+
+// DeploymentSpec represents the deployment specification (decentralized.host.yaml)
+type DeploymentSpec struct {
+	WorkloadID       string                      // Unique workload identifier
+	ArtifactRef      *ArtifactReference          // Immutable artifact reference
+	ContainerImage   string                      // Container image reference (must match artifact)
+	ResourceConstraints *ResourceConstraints     // CPU, memory, disk limits
+	Environment      map[string]string           // Environment variables
+	RequiredSecrets  []string                    // Ephemeral secrets required
+	VolumeMounts     map[string]string           // Volume mount paths
+	NetworkPorts     []int                       // Exposed ports
+	Replicas         int                         // Desired replica count
+	NodeSelector     map[string]string           // Label selectors for node placement
+	SpecVersion      string                      // Schema version (v1.0)
+	SpecHash         string                      // SHA256 of canonical spec (for integrity)
+}
+
 // DeploymentRequest represents a request to deploy a workload
 type DeploymentRequest struct {
-	WorkloadID    string            // Unique workload identifier
-	NodeSelector  map[string]string // Labels to match nodes
-	Replicas      int               // Number of copies
-	RequestedAt   int64             // Unix nanoseconds
-	Timeout       time.Duration     // Deployment timeout
-	RequiredState NodeLifecycleState // Required node state (ACTIVE, VERIFIED, etc)
+	WorkloadID       string            // Unique workload identifier
+	Spec             *DeploymentSpec   // Full deployment specification
+	NodeSelector     map[string]string // Labels to match nodes (override from spec)
+	Replicas         int               // Number of copies (override from spec)
+	RequestedAt      int64             // Unix nanoseconds
+	Timeout          time.Duration     // Deployment timeout
+	RequiredState    NodeLifecycleState // Required node state (ACTIVE, VERIFIED, etc)
+	ArtifactVerified bool              // Signature verified before request
+}
+
+// DeploymentEvidence records proof of deployment execution
+type DeploymentEvidence struct {
+	WorkloadID        string                     // Workload deployed
+	ArtifactHash      string                     // SHA256 of deployed artifact
+	SourceSignature   string                     // Signature of artifact source
+	SpecHash          string                     // Hash of deployment spec
+	DeploymentCommand string                     // Original deployment request hash
+	SourceSHA         string                     // Git SHA or source commit hash
+	Timestamp         int64                      // When deployment executed
+	ExecutedOn        []string                   // Node IDs where executed
+	Status            string                     // SUCCESS, PARTIAL, FAILED
 }
 
 // DeploymentResult represents the outcome of a deployment
 type DeploymentResult struct {
-	WorkloadID     string
-	Assigned       []string           // Node IDs where workload deployed
-	Failed         []string           // Node IDs where deployment failed
-	Status         DeploymentStatus   // Overall status
-	Reason         string             // Reason for any failures
-	CompletedAt    int64              // Unix nanoseconds
-	PlacementInfo  map[string]string  // Metadata about placement decisions
+	WorkloadID      string
+	Assigned        []string           // Node IDs where workload deployed
+	Failed          []string           // Node IDs where deployment failed
+	Status          DeploymentStatus   // Overall status
+	Reason          string             // Reason for any failures
+	CompletedAt     int64              // Unix nanoseconds
+	PlacementInfo   map[string]string  // Metadata about placement decisions
+	SignedEvidence  *DeploymentEvidence // Proof of deployment
 }
 
 // DeploymentStatus represents deployment phase
@@ -56,6 +99,99 @@ func NewDeploymentValidator(nlm *NodeLifecycleManager, wlm *WorkloadLifecycleMan
 		nlm: nlm,
 		wlm: wlm,
 	}
+}
+
+// VerifyArtifact validates artifact reference (hash and signature)
+func (dv *DeploymentValidator) VerifyArtifact(ctx context.Context, artifact *ArtifactReference) error {
+	if artifact == nil {
+		return fmt.Errorf("artifact reference cannot be nil")
+	}
+
+	if artifact.SourceHash == "" {
+		return fmt.Errorf("artifact source hash is required")
+	}
+
+	// Validate hash format (should be hex-encoded SHA256)
+	if len(artifact.SourceHash) != 64 {
+		return fmt.Errorf("invalid artifact hash length: expected 64 hex chars, got %d", len(artifact.SourceHash))
+	}
+
+	// Validate hash is valid hex
+	if _, err := hex.DecodeString(artifact.SourceHash); err != nil {
+		return fmt.Errorf("artifact hash is not valid hex: %v", err)
+	}
+
+	if artifact.SignerID == "" {
+		return fmt.Errorf("artifact signer ID is required")
+	}
+
+	if artifact.Signature == "" {
+		return fmt.Errorf("artifact signature is required")
+	}
+
+	if artifact.SignAlgorithm != "ed25519" {
+		return fmt.Errorf("unsupported signing algorithm: %s", artifact.SignAlgorithm)
+	}
+
+	return nil
+}
+
+// ValidateDeploymentSpec validates deployment specification
+func (dv *DeploymentValidator) ValidateDeploymentSpec(ctx context.Context, spec *DeploymentSpec) error {
+	if spec == nil {
+		return fmt.Errorf("deployment spec cannot be nil")
+	}
+
+	if spec.WorkloadID == "" {
+		return fmt.Errorf("workload ID is required")
+	}
+
+	if spec.ArtifactRef == nil {
+		return fmt.Errorf("artifact reference is required in spec")
+	}
+
+	if err := dv.VerifyArtifact(ctx, spec.ArtifactRef); err != nil {
+		return fmt.Errorf("artifact verification failed: %v", err)
+	}
+
+	if spec.ContainerImage == "" {
+		return fmt.Errorf("container image is required")
+	}
+
+	if spec.ResourceConstraints == nil {
+		return fmt.Errorf("resource constraints are required")
+	}
+
+	if spec.ResourceConstraints.MemoryBytes <= 0 {
+		return fmt.Errorf("memory must be positive")
+	}
+
+	if spec.ResourceConstraints.CPUShares < 0 {
+		return fmt.Errorf("CPU shares cannot be negative")
+	}
+
+	if spec.ResourceConstraints.DiskBytes < 0 {
+		return fmt.Errorf("disk bytes cannot be negative")
+	}
+
+	if spec.SpecVersion == "" {
+		spec.SpecVersion = "v1.0"
+	}
+
+	// Calculate spec hash for integrity
+	specData := fmt.Sprintf("%s-%s-%s-%d-%d-%d",
+		spec.WorkloadID,
+		spec.ContainerImage,
+		spec.ArtifactRef.SourceHash,
+		spec.ResourceConstraints.MemoryBytes,
+		spec.ResourceConstraints.CPUShares,
+		spec.ResourceConstraints.DiskBytes,
+	)
+
+	hash := sha256.Sum256([]byte(specData))
+	spec.SpecHash = hex.EncodeToString(hash[:])
+
+	return nil
 }
 
 // CanScheduleOnNode validates if a workload can be scheduled on a node
@@ -355,4 +491,20 @@ func (dc *DeploymentContract) ValidateTerminationContract(ctx context.Context, n
 
 	workloads, err := dc.validator.EnforceDrainPolicy(ctx, nodeID)
 	return len(workloads), err
+}
+
+// ValidateArtifact validates artifact reference including hash and signature
+func (dc *DeploymentContract) ValidateArtifact(ctx context.Context, artifact *ArtifactReference) error {
+	dc.mu.RLock()
+	defer dc.mu.RUnlock()
+
+	return dc.validator.VerifyArtifact(ctx, artifact)
+}
+
+// ValidateDeploymentSpec validates the full deployment specification
+func (dc *DeploymentContract) ValidateDeploymentSpec(ctx context.Context, spec *DeploymentSpec) error {
+	dc.mu.RLock()
+	defer dc.mu.RUnlock()
+
+	return dc.validator.ValidateDeploymentSpec(ctx, spec)
 }

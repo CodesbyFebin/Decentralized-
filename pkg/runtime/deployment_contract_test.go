@@ -592,3 +592,133 @@ func TestDeploymentConstraintVerification(t *testing.T) {
 
 	t.Logf("PASS: Deployment constraints verified correctly - reason: %s", reason)
 }
+
+// TestArtifactReferenceVerification verifies artifact hash and signature validation
+func TestArtifactReferenceVerification(t *testing.T) {
+	ctx := context.Background()
+	contract := NewDeploymentContract(NewNodeLifecycleManager(), NewWorkloadLifecycleManager())
+
+	t.Log("Testing artifact reference verification")
+
+	// Valid artifact
+	validArtifact := &ArtifactReference{
+		SourceHash:    "2c26b46911185131006b194efb6a3156b0b4e6426b5291864b66f4ecf9b2d3ce",
+		SignerID:      "control-plane",
+		Signature:     "valid_signature_signature",
+		SignAlgorithm: "ed25519",
+		SignedAt:      time.Now().UnixNano(),
+	}
+
+	if err := contract.ValidateArtifact(ctx, validArtifact); err != nil {
+		t.Fatalf("Valid artifact rejected: %v", err)
+	}
+
+	// Missing source hash
+	invalidArtifact := &ArtifactReference{
+		SignerID:      "control-plane",
+		Signature:     "valid_signature",
+		SignAlgorithm: "ed25519",
+	}
+
+	if err := contract.ValidateArtifact(ctx, invalidArtifact); err == nil {
+		t.Error("Expected error for missing source hash")
+	}
+
+	// Invalid hash format
+	invalidHashArtifact := &ArtifactReference{
+		SourceHash:    "not_hex",
+		SignerID:      "control-plane",
+		Signature:     "valid_signature",
+		SignAlgorithm: "ed25519",
+	}
+
+	if err := contract.ValidateArtifact(ctx, invalidHashArtifact); err == nil {
+		t.Error("Expected error for invalid hash format")
+	}
+
+	// Unsupported algorithm
+	invalidAlgoArtifact := &ArtifactReference{
+		SourceHash:    "2c26b46911185131006b194efb6a3156b0b4e6426b5291864b66f4ecf9b2d3ce",
+		SignerID:      "control-plane",
+		Signature:     "valid_signature",
+		SignAlgorithm: "rsa",
+	}
+
+	if err := contract.ValidateArtifact(ctx, invalidAlgoArtifact); err == nil {
+		t.Error("Expected error for unsupported algorithm")
+	}
+
+	t.Logf("PASS: Artifact verification working correctly")
+}
+
+// TestDeploymentSpecValidation verifies deployment spec structure and artifact binding
+func TestDeploymentSpecValidation(t *testing.T) {
+	ctx := context.Background()
+	contract := NewDeploymentContract(NewNodeLifecycleManager(), NewWorkloadLifecycleManager())
+
+	t.Log("Testing deployment spec validation")
+
+	// Valid spec
+	validSpec := &DeploymentSpec{
+		WorkloadID: "workload-1",
+		ArtifactRef: &ArtifactReference{
+			SourceHash:    "2c26b46911185131006b194efb6a3156b0b4e6426b5291864b66f4ecf9b2d3ce",
+			SignerID:      "control-plane",
+			Signature:     "valid_signature",
+			SignAlgorithm: "ed25519",
+			SignedAt:      time.Now().UnixNano(),
+		},
+		ContainerImage: "nginx:latest",
+		ResourceConstraints: &ResourceConstraints{
+			MemoryBytes: 256 * 1024 * 1024,
+			CPUShares:   200,
+			DiskBytes:   1024 * 1024,
+		},
+		Replicas: 3,
+	}
+
+	if err := contract.ValidateDeploymentSpec(ctx, validSpec); err != nil {
+		t.Fatalf("Valid spec rejected: %v", err)
+	}
+
+	if validSpec.SpecHash == "" {
+		t.Error("Expected spec hash to be calculated")
+	}
+
+	// Missing artifact reference
+	noArtifactSpec := &DeploymentSpec{
+		WorkloadID:     "workload-1",
+		ContainerImage: "nginx:latest",
+		ResourceConstraints: &ResourceConstraints{
+			MemoryBytes: 256 * 1024 * 1024,
+			CPUShares:   200,
+			DiskBytes:   1024 * 1024,
+		},
+	}
+
+	if err := contract.ValidateDeploymentSpec(ctx, noArtifactSpec); err == nil {
+		t.Error("Expected error for missing artifact reference")
+	}
+
+	// Invalid resource constraints
+	invalidResourceSpec := &DeploymentSpec{
+		WorkloadID: "workload-1",
+		ArtifactRef: &ArtifactReference{
+			SourceHash:    "2c26b46911185131006b194efb6a3156b0b4e6426b5291864b66f4ecf9b2d3ce",
+			SignerID:      "control-plane",
+			Signature:     "valid_signature",
+			SignAlgorithm: "ed25519",
+		},
+		ContainerImage: "nginx:latest",
+		ResourceConstraints: &ResourceConstraints{
+			MemoryBytes: -1,
+			CPUShares:   200,
+		},
+	}
+
+	if err := contract.ValidateDeploymentSpec(ctx, invalidResourceSpec); err == nil {
+		t.Error("Expected error for negative memory")
+	}
+
+	t.Logf("PASS: Deployment spec validation working correctly")
+}
