@@ -1,0 +1,11 @@
+{
+  "cleanup_ownership": "SUPERVISOR",
+  "tests": [
+    {"name": "Normal workload exit triggers cleanup", "status": "PASS"},
+    {"name": "Startup failure triggers cleanup", "status": "PASS"},
+    {"name": "Timeout-based stale removal", "status": "PASS", "timeout_minutes": 5},
+    {"name": "Per-secret independent cleanup", "status": "PASS"},
+    {"name": "Assignment directory isolation", "status": "PASS"}
+  ],
+  "timestamp": "2026-09-26T10:49:15Z"
+}

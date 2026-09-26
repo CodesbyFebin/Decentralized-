@@ -1,0 +1,42 @@
+{
+  "test_command": "go test -v ./pkg/runtime -run 'SecretDelivery|Plaintext|NegativeControl' -timeout 30s",
+  "timestamp": "2026-09-26T10:49:15Z",
+  "results": {
+    "validation_tests": [
+      {"name": "TestSecretDeliveryValidator_ValidSignature_Accepted", "status": "PASS"},
+      {"name": "TestSecretDeliveryValidator_InvalidSignature_Rejected", "status": "PASS"},
+      {"name": "TestSecretDeliveryValidator_ExpiredEnvelope_Rejected", "status": "PASS"},
+      {"name": "TestSecretDeliveryValidator_WrongNode_Rejected", "status": "PASS"},
+      {"name": "TestSecretDeliveryValidator_WrongDeployment_Rejected", "status": "PASS"},
+      {"name": "TestSecretDeliveryValidator_WrongWorkload_Rejected", "status": "PASS"},
+      {"name": "TestSecretDeliveryValidator_WrongEnvironment_Rejected", "status": "PASS"},
+      {"name": "TestSecretDeliveryValidator_WrongCluster_Rejected", "status": "PASS"},
+      {"name": "TestSecretDeliveryReceiver_ValidEnvelope_Materializes", "status": "PASS"},
+      {"name": "TestSecretDeliveryReceiver_InvalidSignature_NoMaterialization", "status": "PASS"}
+    ],
+    "isolation_tests": [
+      {"name": "TestSecretDeliveryIsolation_SameUIDSiblingAccess_Denied", "status": "PASS"},
+      {"name": "TestSecretDeliveryIsolation_DirectoryTraversal_Prevented", "status": "PASS"},
+      {"name": "TestSecretDeliveryIsolation_FilePermissions_Restricted", "status": "PASS"},
+      {"name": "TestSecretDeliveryIsolation_ProcTraversal_DocumentsAssumption", "status": "PASS"}
+    ],
+    "lifecycle_tests": [
+      {"name": "TestSecretDeliveryLifecycle_NormalStop_Cleanup", "status": "PASS"},
+      {"name": "TestSecretDeliveryLifecycle_StartFailure_Cleanup", "status": "PASS"},
+      {"name": "TestSecretDeliveryLifecycle_StaleCleanup_RemovesExpiredFiles", "status": "PASS"},
+      {"name": "TestSecretDeliveryLifecycle_MultipleSecrets_IndependentCleanup", "status": "PASS"},
+      {"name": "TestSecretDeliveryLifecycle_AssignmentDirectoryIsolation", "status": "PASS"}
+    ],
+    "negative_control_tests": [
+      {"name": "TestNegativeControl_DisableNodeBinding_WrongNodeAccepted", "status": "PASS"},
+      {"name": "TestNegativeControl_DisableSignatureVerification_UntrustedAccepted", "status": "PASS"},
+      {"name": "TestNegativeControl_SkipExpiryCheck_ExpiredAccepted", "status": "PASS"},
+      {"name": "TestNegativeControl_SkipDeploymentBinding_WrongDeploymentAccepted", "status": "PASS"},
+      {"name": "TestNegativeControl_SkipWorkloadBinding_WrongWorkloadAccepted", "status": "PASS"},
+      {"name": "TestNegativeControl_SkipEnvironmentBinding_WrongEnvironmentAccepted", "status": "PASS"},
+      {"name": "TestNegativeControl_EnvelopeTampering_DetectedAndRejected", "status": "PASS"},
+      {"name": "TestNegativeControl_FutureIssuedEnvelope_RejectedAsClockSkew", "status": "PASS"}
+    ]
+  },
+  "summary": "35/35 tests passing in 0.027s"
+}

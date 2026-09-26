@@ -1,0 +1,16 @@
+{
+  "matrix": {
+    "valid_delivery": "PASS",
+    "wrong_node": "DENIED",
+    "wrong_workload": "DENIED",
+    "wrong_deployment": "DENIED",
+    "wrong_environment": "DENIED",
+    "unsigned_envelope": "DENIED",
+    "wrong_signer": "DENIED",
+    "modified_payload": "DENIED",
+    "expired_envelope": "DENIED",
+    "path_traversal": "DENIED",
+    "same_uid_sibling_read": "DENIED"
+  },
+  "timestamp": "2026-09-26T10:49:15Z"
+}

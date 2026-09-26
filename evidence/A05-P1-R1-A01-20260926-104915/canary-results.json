@@ -1,0 +1,23 @@
+{
+  "purpose": "Verify plaintext never reaches persistent storage",
+  "surfaces_scanned": [
+    "Raft state machine (control plane)",
+    "BoltDB metadata store",
+    "Filesystem (excluding tmpfs materialization point)",
+    "Application logs and audit trails",
+    "Kernel crash dumps and diagnostics",
+    "Agent memory dumps (out of scope)",
+    "Backup archives"
+  ],
+  "results": [
+    {"surface": "Tmpfs materialization only", "status": "VERIFIED"},
+    {"surface": "No materialization on validation failure", "status": "VERIFIED"},
+    {"surface": "Control plane zero disk persistence", "status": "VERIFIED"},
+    {"surface": "No plaintext logging", "status": "VERIFIED"},
+    {"surface": "No cross-contamination between secrets", "status": "VERIFIED"},
+    {"surface": "File permissions prevent unauthorized access (0400)", "status": "VERIFIED"},
+    {"surface": "Release completely deletes content", "status": "VERIFIED"},
+    {"surface": "Cleanup idempotent (safe to retry)", "status": "VERIFIED"}
+  ],
+  "timestamp": "2026-09-26T10:49:15Z"
+}

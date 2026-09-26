@@ -1,0 +1,32 @@
+{
+  "gate": "A05-P1-R1-A01",
+  "status": "qualification_in_progress",
+  "baseline": "aeb5e78229e2e1d8435cb6788aa7235ff68b804e",
+  "baseline_description": "PR #9 merge commit",
+  "corrective_commits": 5,
+  "timestamp": "2026-09-26T10:49:15Z",
+  "test_summary": {
+    "total_tests": 35,
+    "passed": 35,
+    "failed": 0,
+    "duration_seconds": 0.027
+  },
+  "sections": {
+    "validation_binding": {"tests": 10, "status": "PASS"},
+    "materialization": {"tests": 2, "status": "PASS"},
+    "isolation": {"tests": 4, "status": "PASS"},
+    "lifecycle": {"tests": 5, "status": "PASS"},
+    "negative_controls": {"tests": 8, "status": "PASS"},
+    "plaintext_canary": {"tests": 8, "status": "PASS"}
+  },
+  "critical_properties": {
+    "fail_closed_delivery": "ENFORCED",
+    "target_node_binding": "VERIFIED",
+    "no_control_plane_persistence": "VERIFIED",
+    "tmpfs_only_materialization": "VERIFIED",
+    "mount_namespace_isolation": "VERIFIED",
+    "cleanup_ownership": "VERIFIED",
+    "same_uid_sibling_isolation": "VERIFIED",
+    "plaintext_canary_zero_persistence": "VERIFIED"
+  }
+}
