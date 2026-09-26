@@ -15,6 +15,7 @@
  */
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
+import http from 'node:http';
 
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const CC = process.env.CC_URL || 'http://127.0.0.1:3100';
@@ -48,14 +49,18 @@ const api = async (method, path, body) => {
     return { status: 0, json: null, err: e.message };
   }
 };
-const edge = async () => {
-  try {
-    const r = await fetch(EDGE + '/', { headers: { Host: EDGE_HOST, 'X-DH-No-Redirect': '1' }, signal: AbortSignal.timeout(5000) });
-    return r.status;
-  } catch {
-    return 0;
-  }
-};
+// fetch() drops a custom Host header, so the edge probe uses node:http, which sends it.
+const edge = () =>
+  new Promise((resolve) => {
+    const u = new URL(EDGE);
+    const req = http.request({ host: u.hostname, port: u.port, path: '/', headers: { Host: EDGE_HOST, 'X-DH-No-Redirect': '1' }, timeout: 5000 }, (res) => {
+      res.resume();
+      resolve(res.statusCode);
+    });
+    req.on('timeout', () => req.destroy());
+    req.on('error', () => resolve(0));
+    req.end();
+  });
 const signal = (sig) => execFileSync('kill', [`-${sig}`, ...pids]);
 
 const browser = await chromium.launch();

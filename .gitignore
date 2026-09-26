@@ -24,5 +24,7 @@ bootstrap.fingerprint
 !/evidence/REF-MAC-A02/
 !/evidence/REF-MAC-A03/
 !/evidence/pv1.1-linux-parity-docker-20260924T143020Z/
+!/evidence/CC-RC1-A01/
+!/evidence/CC-RC1-A02/
 !/evidence/*/**/*.key
 /chaos-reports/runner/

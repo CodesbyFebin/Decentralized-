@@ -1,0 +1,62 @@
+[
+  {
+    "name": "before: nodes API answers",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "before: edge serves the workload",
+    "ok": false,
+    "detail": ""
+  },
+  {
+    "name": "during: existing workload still served by the edge",
+    "ok": false,
+    "detail": ""
+  },
+  {
+    "name": "during: nodes API returns an error, not data",
+    "ok": true,
+    "detail": "504 BACKEND_TIMEOUT"
+  },
+  {
+    "name": "during: copilot refuses to claim current state",
+    "ok": true,
+    "detail": "I cannot verify current platform state: No control-plane member answered within 5000ms. I will not guess."
+  },
+  {
+    "name": "during: deployment cannot complete",
+    "ok": true,
+    "detail": "504 BACKEND_TIMEOUT"
+  },
+  {
+    "name": "during: capabilities lose confidence",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "during: UI shows CONTROL PLANE UNREACHABLE",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "during: UI desaturates last observations",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "after: all hosts healthy again",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "after: UI banner cleared",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "after: nothing left desaturated",
+    "ok": true,
+    "detail": ""
+  }
+]

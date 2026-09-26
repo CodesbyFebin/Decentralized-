@@ -1,0 +1,17 @@
+=== attempt 1 at 2026-09-26T00:24:03Z: sh -c cd command-centre && node tests/e2e/disconnect.mjs
+PASS  before: nodes API answers
+FAIL  before: edge serves the workload
+SIGSTOP control-plane members 3370,3371,3372
+FAIL  during: existing workload still served by the edge
+PASS  during: nodes API returns an error, not data  (504 BACKEND_TIMEOUT)
+PASS  during: copilot refuses to claim current state  (I cannot verify current platform state: No control-plane member answered within 5000ms. I will not guess.)
+PASS  during: deployment cannot complete  (504 BACKEND_TIMEOUT)
+PASS  during: capabilities lose confidence
+PASS  during: UI shows CONTROL PLANE UNREACHABLE
+PASS  during: UI desaturates last observations
+SIGCONT control-plane members
+PASS  after: all hosts healthy again
+PASS  after: UI banner cleared
+PASS  after: nothing left desaturated
+10/12 checks passed
+=== exit 1: exit status 1
