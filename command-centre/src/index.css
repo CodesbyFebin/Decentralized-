@@ -300,3 +300,18 @@
   -webkit-mask-image: radial-gradient(ellipse 62% 60% at 56% 48%, #000 62%, transparent 100%);
   mask-image: radial-gradient(ellipse 62% 60% at 56% 48%, #000 62%, transparent 100%);
 }
+
+/* Shared form input: visible focus ring, readable size. */
+.dh-input {
+  border-radius: 0.5rem;
+  background: rgb(0 0 0 / 0.3);
+  border: 1px solid rgba(125, 190, 255, 0.2);
+  padding: 0.5rem 0.625rem;
+  font-size: 13px;
+  color: #e2e8f0;
+  outline: none;
+}
+.dh-input:focus-visible {
+  border-color: rgba(34, 211, 238, 0.6);
+  box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.35);
+}

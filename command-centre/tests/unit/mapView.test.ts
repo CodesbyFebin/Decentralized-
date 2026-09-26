@@ -170,3 +170,12 @@ test('hardware: an agent without the unknown list is not trusted for measured me
   const unmeasured = measuredHardware({ cpus: 4, memBytes: 0, unknown: ['memBytes'] });
   assert.equal(unmeasured.memBytes, null);
 });
+
+test('app resources are the manifest requests (cpuMilli, memBytes), not strings', () => {
+  const s = mapView(healthy, opts(healthy));
+  const web = s.apps.find((a) => a.name === 'web')!;
+  const raw = (healthy.apps ?? []).find((a) => a.name === 'web')!.manifest!.spec!.resources!;
+  assert.equal(web.resources.cpuMilli, raw.cpuMilli);
+  assert.equal(web.resources.memBytes, raw.memBytes);
+  assert.ok(web.resources.cpuMilli! > 0);
+});

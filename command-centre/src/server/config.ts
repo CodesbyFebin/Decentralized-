@@ -13,6 +13,10 @@ export interface BffConfig {
   secureCookies: boolean;
   copilotModel: 'gemini' | null;
   production: boolean;
+  /** Directory of sealed validation records (the repository's evidence/). */
+  evidenceDir: string | null;
+  /** dh CLI used to verify records (`dh evidence verify`). */
+  cli: string | null;
 }
 
 export class ConfigError extends Error {}
@@ -62,6 +66,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): BffConfig {
     regionLocations,
     secureCookies: env.COOKIE_SECURE ? env.COOKIE_SECURE === '1' : production,
     copilotModel: env.COPILOT_MODEL === 'gemini' && !!env.GEMINI_API_KEY ? 'gemini' : null,
-    production
+    production,
+    evidenceDir: env.DH_EVIDENCE_DIR?.trim() || null,
+    cli: env.DH_CLI?.trim() || null
   };
 }

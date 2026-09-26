@@ -250,7 +250,7 @@ function mapApp(a: CPApp): AppRec {
     replicas,
     ingress: (a.ingress ?? []).map((i) => ({ host: i.host, port: i.port, tls: i.tls ?? '' })),
     history: a.history ?? [],
-    resources: { cpu: spec.resources?.cpu ?? '', mem: spec.resources?.mem ?? '' },
+    resources: { cpuMilli: spec.resources?.cpuMilli || null, memBytes: spec.resources?.memBytes || null },
     // Only variable NAMES leave the BFF; values can hold secrets.
     envNames: Object.keys(spec.env ?? {}),
     volumes: (spec.volumes ?? []).map((v) => v.name),
@@ -446,7 +446,8 @@ export function mapView(v: CPView, opts: MapOptions): RealitySnapshot {
     certificates,
     evidence,
     security: deriveSecurity(nodes, certificates, cluster, evidence, opts, derived),
-    diagnostics: (v.diagnostics ?? []).map((d) => ({ subject: d.subject, item: d.item, value: d.value, basis: d.basis, detail: d.detail ?? '' }))
+    diagnostics: (v.diagnostics ?? []).map((d) => ({ subject: d.subject, item: d.item, value: d.value, basis: d.basis, detail: d.detail ?? '' })),
+    rejections: (v.rejections ?? []).map((r) => ({ ts: r.ts, kind: r.kind, node: r.node || null, reason: r.reason, seq: r.seq || null, evidence: r.evidence || null }))
   };
 }
 
@@ -546,6 +547,7 @@ export function measuredHardware(f: NonNullable<CPNode['facts']>) {
         ? (f.gpus ?? []).map((g) => ({ vendor: g.vendor, model: g.model ?? '', vramBytes: g.vramBytes ?? null, driver: g.driver ?? '', source: g.source }))
         : null,
     dataFs: f.dataFs ? { path: f.dataFs.path, totalBytes: f.dataFs.totalBytes ?? 0, freeBytes: f.dataFs.freeBytes ?? 0 } : null,
+    uptimeSec: measured('uptimeSec', f.uptimeSec),
     unknown
   };
 }

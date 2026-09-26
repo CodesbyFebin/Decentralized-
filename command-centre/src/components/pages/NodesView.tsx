@@ -8,7 +8,8 @@ import { HoloGlobe } from '../common/HoloGlobe';
 import { SurfaceLayout, SurfaceHero, Eyebrow, regionGroups, groupMarkers, meshArcs, NoGeoNote } from '../common/CommandSurface';
 import { Glass, KpiTile, PageTabs, FilterChips, TableToolbar, RailPanel, RailItem, NetworkRow, PanelHeader, IconTile, StatusPill, Grad, PrimaryButton, GhostButton, Legend, ViewAll, Tone } from '../common/ui';
 import { Gate, FreshnessPill, fmtBytes, since, TruthTag, Unavailable, Empty, Note } from '../common/states';
-import { ConnectDialog, ConnectTarget } from '../common/ConnectDialog';
+import type { ConnectTarget } from '../common/ConnectDialog';
+import { FreshnessBadge, viewFreshness } from '../common/truth';
 
 type Tab = 'overview' | 'mine' | 'workloads' | 'contributions' | 'depin' | 'activity';
 type Chip = 'all' | 'healthy' | 'degraded' | 'offline' | 'unknown' | 'edge';
@@ -28,7 +29,7 @@ export const ADD_TARGETS: (ConnectTarget & { icon: React.ReactNode; tone: Tone }
   { id: 'home', title: 'Home Server', subtitle: 'Your on-premise machine', hostName: 'homelab-01', icon: <Home className="w-5 h-5" />, tone: 'emerald' },
   { id: 'vps', title: 'VPS', subtitle: 'DigitalOcean, Hetzner, Linode, etc.', hostName: 'vps-01', edge: true, icon: <Cloud className="w-5 h-5" />, tone: 'slate', note: 'VPS hosts usually have a public address, so they are invited with the edge role and can terminate TLS for your domains.' },
   { id: 'pi', title: 'Raspberry Pi / ARM', subtitle: 'ARM devices and SBCs', hostName: 'raspberry-pi', arch: 'arm64', icon: <CircuitBoard className="w-5 h-5" />, tone: 'violet' },
-  { id: 'gpu', title: 'GPU Machine', subtitle: 'NVIDIA, AMD, or Apple Silicon', hostName: 'gpu-01', icon: <Gpu className="w-5 h-5" />, tone: 'emerald', note: 'GPU discovery and scheduling are not implemented yet: the host joins as a normal CPU host. Use the docker runtime for enforced resource limits.' },
+  { id: 'gpu', title: 'GPU Machine', subtitle: 'NVIDIA, AMD, or Apple Silicon', hostName: 'gpu-01', icon: <Gpu className="w-5 h-5" />, tone: 'emerald', note: 'GPUs are discovered (sysfs, nvidia-smi) and reported as measured facts. GPU scheduling is not implemented: the host runs CPU workloads.' },
   { id: 'k8s', title: 'Kubernetes Host', subtitle: 'Existing K8s cluster', hostName: 'k8s-node-01', icon: <Boxes className="w-5 h-5" />, tone: 'blue', note: 'dh-noded runs as a host agent next to kubelet. There is no Kubernetes operator; the host admits work under its own policy like any other host.' },
   { id: 'other', title: 'Other', subtitle: 'Manual installation', hostName: 'host-01', icon: <Settings2 className="w-5 h-5" />, tone: 'slate' }
 ];
@@ -47,10 +48,11 @@ export default function NodesView() {
   const [chip, setChip] = useState<Chip>('all');
   const [search, setSearch] = useState('');
   const [sortDesc, setSortDesc] = useState(false);
-  const [connect, setConnect] = useState<ConnectTarget | null>(params.get('add') ? ADD_TARGETS[0] : null);
   const { capabilities, can } = useSession();
   const navigate = useNavigate();
   const caps = capabilities?.items;
+  const KIND: Record<string, string> = { this: 'this', linux: 'linux', home: 'home', vps: 'vps', pi: 'arm', gpu: 'gpu', k8s: 'other', other: 'other' };
+  const setConnect = (t: ConnectTarget) => navigate(`/nodes/add?kind=${KIND[t.id] ?? 'other'}`);
 
   const nodes = res.data?.nodes ?? [];
   const groups = useMemo(() => regionGroups(nodes), [nodes]);
@@ -74,13 +76,15 @@ export default function NodesView() {
 
   const observed = nodes.filter((n) => n.facts);
   const memMeasured = observed.filter((n) => n.facts!.memBytes !== null);
+  const fsMeasured = observed.filter((n) => n.facts!.dataFs !== null);
+  const gpuMeasured = observed.filter((n) => n.facts!.gpus !== null);
   const sum = (f: (n: NodeRec) => number) => observed.reduce((a, n) => a + f(n), 0);
   const stale = res.stale;
 
   const rail = (
     <>
       <RailPanel icon={<IconTile tone="cyan"><Network className="w-5 h-5" /></IconTile>} title="Add a Node" subtitle="Turn any machine into a node">
-        {!can('api.admin') && <Note>Creating join invites needs an admin capability; the commands below still show the flow.</Note>}
+        {!can('api.admin') && <Note>Listing and revoking invites needs an admin capability; the enrolment commands are the same for everyone.</Note>}
         <div className="space-y-1.5 mt-2">
           {ADD_TARGETS.map((t) => (
             <RailItem key={t.id} icon={t.icon} tone={t.tone} title={t.title} subtitle={t.subtitle} onClick={() => setConnect(t)} />
@@ -188,12 +192,13 @@ export default function NodesView() {
               <>
                 {tab === 'overview' && (
                   <>
-                    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3">
-                      <KpiTile tone="cyan" icon={<Server className="w-6 h-6" />} label="Hosts" value={d.nodes.length} sub={<><span className="text-emerald-400">{counts.healthy} fresh</span>{counts.degraded + counts.offline + counts.unknown > 0 && <> · <span className="text-rose-300">{counts.degraded + counts.offline + counts.unknown} not fresh</span></>}</>} />
-                      <KpiTile tone="blue" icon={<Cpu className="w-6 h-6" />} label="CPUs (measured)" value={observed.length ? sum((n) => n.facts!.cpus) : '—'} sub={`${(d.metrics.cpuDeclaredMilli.value ?? 0) / 1000} cores declared`} />
-                      <KpiTile tone="violet" icon={<MemoryStick className="w-6 h-6" />} label="Memory (measured)" value={memMeasured.length ? fmtBytes(memMeasured.reduce((a, n) => a + (n.facts!.memBytes ?? 0), 0)) : '—'} sub={`${memMeasured.length}/${nodes.length} hosts measured · ${fmtBytes(d.metrics.memDeclaredBytes.value)} declared`} />
-                      <KpiTile tone="amber" icon={<HardDrive className="w-6 h-6" />} label="Storage used / quota" value={fmtBytes(d.metrics.storageUsedBytes.value)} sub={`of ${fmtBytes(d.metrics.storageCapacityBytes.value)} quota`} />
-                      <KpiTile tone="emerald" icon={<Layers className="w-6 h-6" />} label="Workloads observed" value={nodes.some((n) => n.workloads !== null) ? nodes.reduce((a, n) => a + (n.workloads ?? 0), 0) : '—'} sub="from fresh + stale observations" />
+                    <div className="grid grid-cols-2 md:grid-cols-3 2xl:grid-cols-6 gap-3">
+                      <KpiTile tone="cyan" icon={<Server className="w-6 h-6" />} label="Nodes" value={d.nodes.length} sub={<><span className="text-emerald-400">{counts.healthy} fresh</span>{counts.degraded + counts.offline + counts.unknown > 0 && <> · <span className="text-rose-300">{counts.degraded + counts.offline + counts.unknown} not fresh</span></>}</>} />
+                      <KpiTile tone="blue" icon={<Cpu className="w-6 h-6" />} label="Observed CPU" value={observed.length ? `${sum((n) => n.facts!.cpus)} logical` : 'Not measured'} sub={`sum of ${observed.length}/${nodes.length} host reports · ${(d.metrics.cpuDeclaredMilli.value ?? 0) / 1000} cores declared`} />
+                      <KpiTile tone="violet" icon={<MemoryStick className="w-6 h-6" />} label="Observed memory" value={memMeasured.length ? fmtBytes(memMeasured.reduce((a, n) => a + (n.facts!.memBytes ?? 0), 0)) : 'Not measured'} sub={`sum of ${memMeasured.length}/${nodes.length} host measurements · ${fmtBytes(d.metrics.memDeclaredBytes.value)} declared`} />
+                      <KpiTile tone="amber" icon={<HardDrive className="w-6 h-6" />} label="Observed storage" value={fsMeasured.length ? fmtBytes(fsMeasured.reduce((a, n) => a + n.facts!.dataFs!.totalBytes, 0)) : 'Not measured'} sub={`${fsMeasured.length}/${nodes.length} hosts measured (agent data filesystem; hosts sharing a disk each count it) · ${fmtBytes(fsMeasured.reduce((a, n) => a + n.facts!.dataFs!.freeBytes, 0))} free`} />
+                      <KpiTile tone="emerald" icon={<Gpu className="w-6 h-6" />} label="GPU capacity" value={gpuMeasured.length ? `${gpuMeasured.reduce((a, n) => a + n.facts!.gpus!.length, 0)} GPU(s)` : 'Not measured'} sub={`${gpuMeasured.length}/${nodes.length} hosts measured · no GPU scheduling yet`} />
+                      <KpiTile tone="blue" icon={<Layers className="w-6 h-6" />} label="Running workloads" value={nodes.some((n) => n.workloads !== null) ? nodes.reduce((a, n) => a + (n.workloads ?? 0), 0) : 'Unknown'} sub={`reported by ${nodes.filter((n) => n.workloads !== null).length}/${nodes.length} hosts`} />
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)] gap-4">
@@ -252,13 +257,14 @@ export default function NodesView() {
                         <thead>
                           <tr>
                             <th>Node</th>
-                            <th>Health</th>
                             <th>Lifecycle</th>
-                            <th>Observation</th>
-                            <th>Resources (measured)</th>
-                            <th>Region</th>
-                            <th>Workloads</th>
+                            <th>Freshness</th>
+                            <th>CPU</th>
+                            <th>Memory</th>
                             <th>Storage</th>
+                            <th>GPU</th>
+                            <th>Workloads</th>
+                            <th>Last seen</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -273,21 +279,19 @@ export default function NodesView() {
                                   </div>
                                 </Link>
                               </td>
-                              <td title={n.healthReason}><StatusPill status={n.health} /></td>
-                              <td><StatusPill status={n.lifecycle} dot={false} /></td>
-                              <td><FreshnessPill f={n.observation.freshness} ageMs={n.observation.ageMs} /></td>
-                              <td className="tabular-nums text-slate-300">{n.facts ? `${n.facts.cpus} CPU · ${n.facts.memBytes === null ? 'memory not measured' : fmtBytes(n.facts.memBytes)} · ${n.arch}` : '—'}</td>
-                              <td>
-                                <div className="text-slate-200">{n.region || '—'}</div>
-                                <div className="text-[11px] text-slate-500">{n.host}</div>
-                              </td>
-                              <td className="tabular-nums">{n.workloads ?? '—'}</td>
-                              <td className="tabular-nums text-slate-300">{n.storage ? `${fmtBytes(n.storage.usedBytes)} / ${fmtBytes(n.storage.quotaBytes)}` : '—'}</td>
+                              <td><StatusPill status={n.lifecycle} dot={false} /><div className="text-[11px] text-slate-500 mt-0.5" title={n.healthReason}>{n.health.toLowerCase()} · {n.region || 'no region'}</div></td>
+                              <td><FreshnessBadge f={viewFreshness({ pageStale: stale, observation: n.observation.freshness, lost: n.health === 'OFFLINE' && n.lifecycle !== 'REVOKED' })} observedAt={n.observation.observedAt} /></td>
+                              <td className="tabular-nums text-slate-300">{n.facts ? `${n.facts.cpus} logical` : <span className="text-slate-500">not measured</span>}</td>
+                              <td className="tabular-nums text-slate-300">{n.facts?.memBytes != null ? fmtBytes(n.facts.memBytes) : <span className="text-slate-500">not measured</span>}</td>
+                              <td className="tabular-nums text-slate-300">{n.facts?.dataFs ? `${fmtBytes(n.facts.dataFs.freeBytes)} free / ${fmtBytes(n.facts.dataFs.totalBytes)}` : <span className="text-slate-500">not measured</span>}</td>
+                              <td className="text-slate-300">{n.facts?.gpus == null ? <span className="text-slate-500">not measured</span> : n.facts.gpus.length ? n.facts.gpus.map((g) => g.model || g.vendor).join(', ') : 'none'}</td>
+                              <td className="tabular-nums">{n.workloads ?? <span className="text-slate-500">unknown</span>}</td>
+                              <td className="text-slate-400" title={n.observation.observedAt ? new Date(n.observation.observedAt).toLocaleString() : undefined}>{n.observation.observedAt ? since(n.observation.observedAt) : 'never'}</td>
                             </tr>
                           ))}
                           {rows.length === 0 && (
                             <tr>
-                              <td colSpan={8} className="text-center text-slate-500 py-8">No nodes match this filter.</td>
+                              <td colSpan={9} className="text-center text-slate-500 py-8">No nodes match this filter.</td>
                             </tr>
                           )}
                         </tbody>
@@ -303,7 +307,6 @@ export default function NodesView() {
           }
         </Gate>
       </SurfaceLayout>
-      <ConnectDialog target={connect} onClose={() => { setConnect(null); if (params.get('add')) setParams((p) => (p.delete('add'), p), { replace: true }); }} />
     </>
   );
 }

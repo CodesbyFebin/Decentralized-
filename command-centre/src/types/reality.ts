@@ -49,7 +49,8 @@ export type CapabilityKey =
   | 'billing'
   | 'teamDirectory'
   | 'copilot'
-  | 'geolocation';
+  | 'geolocation'
+  | 'validationRecords';
 
 export interface CapabilityEntry {
   state: TruthState;
@@ -109,6 +110,7 @@ export interface NodeRec {
     disks: { name: string; sizeBytes: number; rotational: boolean; removable: boolean; model: string }[] | null;
     gpus: { vendor: string; model: string; vramBytes: number | null; driver: string; source: string }[] | null;
     dataFs: { path: string; totalBytes: number; freeBytes: number } | null;
+    uptimeSec: number | null;
     /** Facts the host says it could not measure; null when the agent does not report this list. */
     unknown: string[] | null;
     runtimes: string[];
@@ -179,7 +181,8 @@ export interface AppRec {
   replicas: ReplicaRec[];
   ingress: { host: string; port: string; tls: string }[];
   history: { generation: number; hash: string; ts: number; actor: string; change: string }[];
-  resources: { cpu: string; mem: string };
+  /** Requested per replica, from the manifest; null when not declared. */
+  resources: { cpuMilli: number | null; memBytes: number | null };
   envNames: string[];
   volumes: string[];
   federated: boolean;
@@ -365,6 +368,17 @@ export interface RealitySnapshot {
   evidence: EvidenceBundle;
   security: SecurityControl[];
   diagnostics: { subject: string; item: string; value: string; basis: string; detail: string }[];
+  /** Messages the control plane refused (signature, replay, token), newest first, at most 100. */
+  rejections: RejectionRec[];
+}
+
+export interface RejectionRec {
+  ts: number;
+  kind: string;
+  node: string | null;
+  reason: string;
+  seq: number | null;
+  evidence: string | null;
 }
 
 /* ----------------------------------------------------------------- errors */
@@ -377,4 +391,91 @@ export interface Envelope<T> {
   data: T;
   provenance: Provenance;
   request_id: string;
+}
+
+/* --------------------------------------------------------------- invites */
+
+export interface InviteRec {
+  /** Invite id (the join capability's single-use nonce). */
+  nonce: string;
+  createdAt: number;
+  expiresAt: number | null;
+  roles: string[];
+  note: string;
+  autoApprove: boolean;
+  usedBy: string | null;
+  revokedAt: number | null;
+  /** Decided by the control plane at `serverTime`. */
+  state: 'ACTIVE' | 'USED' | 'REVOKED' | 'EXPIRED';
+}
+
+/* ---------------------------------------------------- validation records */
+
+/** A signed validation record (`dh evidence seal`), as stored on disk. */
+export interface ValidationRecord {
+  id: string;
+  dir: string;
+  stage: string;
+  attempt: string;
+  parent: string | null;
+  outcome: 'PASS' | 'FAIL' | 'INFRA_FAILURE' | 'UNKNOWN';
+  outcomeReason: string;
+  claim: string;
+  scope: string;
+  exclusions: string[];
+  limitations: string[];
+  commit: string | null;
+  sourceDigest: string | null;
+  digestVersion: string;
+  schemaVersion: string;
+  signer: string;
+  signerPub: string;
+  signature: string;
+  startedAt: number | null;
+  endedAt: number | null;
+  requiredSteps: string[];
+  steps: { name: string; exit: number | null; attempts: number; durationMs: number | null; command: string[]; log: string | null; logHash: string | null }[];
+  binaries: Record<string, string>;
+  files: number;
+}
+
+/** Result of running the platform verifier on a record. Never inferred. */
+export interface ValidationVerification {
+  state: 'VERIFIED' | 'UNVERIFIED' | 'ERROR';
+  detail: string;
+  verifiedAt: number;
+  verifier: string;
+}
+
+/* ------------------------------------------------------------- attention */
+
+/** A condition the snapshot proves, with the record it came from. */
+export interface AttentionItem {
+  severity: 'critical' | 'warning' | 'info';
+  kind: string;
+  subject: string;
+  title: string;
+  detail: string;
+  href: string;
+  source: string;
+  observedAt: number | null;
+}
+
+/* ------------------------------------------------------------ operations */
+
+/** A long-running operation derived from state (the platform has no Operation resource). */
+export interface OperationRec {
+  id: string;
+  kind: 'deployment' | 'drain' | 'replication';
+  target: string;
+  targetHref: string;
+  title: string;
+  actor: string | null;
+  startedAt: number | null;
+  updatedAt: number | null;
+  status: 'QUEUED' | 'RUNNING' | 'WAITING' | 'SUCCEEDED' | 'FAILED' | 'CANCELLED';
+  detail: string;
+  steps: { label: string; state: string; detail: string }[];
+  error: string | null;
+  source: string;
 }

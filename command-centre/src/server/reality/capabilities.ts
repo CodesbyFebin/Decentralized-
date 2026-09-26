@@ -14,6 +14,8 @@ export function deriveCapabilities(input: {
   detail: string;
   hasRegionLocations: boolean;
   copilotModel: boolean;
+  /** Description of the configured validation-record store, or null when none is configured. */
+  validationRecords?: string | null;
 }): Capabilities {
   const { mode, snapshot: s, reachable, now } = input;
   const live: TruthState = mode === 'demo' ? 'SIMULATED' : 'LIVE';
@@ -47,6 +49,9 @@ export function deriveCapabilities(input: {
     copilot: ok
       ? on(input.copilotModel ? 'answers grounded in the view you are authorized to read (model-assisted)' : 'answers grounded in the view you are authorized to read (no model configured; deterministic retrieval)', 'DERIVED')
       : down('cannot ground answers without the control plane'),
+    validationRecords: input.validationRecords
+      ? { state: 'LIVE', source: 'DH_EVIDENCE_DIR', detail: input.validationRecords }
+      : UNAVAILABLE('no evidence directory configured (DH_EVIDENCE_DIR)'),
     geolocation: input.hasRegionLocations
       ? { state: 'CONFIGURED', source: 'DH_REGION_LOCATIONS', detail: 'map positions configured per region by the operator' }
       : UNAVAILABLE('hosts do not report geographic coordinates; set DH_REGION_LOCATIONS to place regions on the map')

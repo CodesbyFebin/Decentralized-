@@ -358,6 +358,7 @@ func (a *Agent) key() *identity.Identity {
 // Run executes the agent loop until ctx ends.
 func (a *Agent) Run(ctx context.Context) error {
 	a.probeFacts()
+	a.factsAt = time.Now() // only the reconcile goroutine touches factsAt; background probes do not
 	a.readopt()
 	if a.cfg.StatusListen != "" {
 		if err := a.startStatus(); err != nil {
@@ -481,7 +482,6 @@ func (a *Agent) probeFacts() {
 	}
 	f.Probes = probeTools()
 	a.facts.Store(f)
-	a.factsAt = time.Now()
 }
 
 func arch() string {

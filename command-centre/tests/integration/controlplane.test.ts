@@ -244,3 +244,101 @@ test('secrets (env values) never leave the BFF', { skip }, async () => {
   assert.ok(r.json.data.app.envNames.includes('MESSAGE'));
   assert.equal(JSON.stringify(r.json).includes('hello from a sovereign host'), false);
 });
+
+/* ------------------------------------------------------------------ Wave 1 */
+
+test('invites: admin can list them; a read-only capability is refused by the control plane', { skip }, async () => {
+  const a = await bff.call('GET', '/invites', { token: ADMIN });
+  assert.equal(a.status, 200);
+  assert.ok(Array.isArray(a.json.data.invites));
+  assert.equal(a.json.provenance.state, 'LIVE');
+  assert.equal(JSON.stringify(a.json).includes('dhcap1.'), false, 'no token material');
+  const r = await bff.call('GET', '/invites', { token: READ });
+  assert.equal(r.status, 403);
+  assert.equal(r.json.error.code, 'PERMISSION_DENIED');
+});
+
+test('invites: revoking goes through the control plane, is audited, and needs the console header', { skip }, async () => {
+  // Record an invite directly (the join token itself would need the root key, which tests do not hold).
+  const nonce = [...crypto.getRandomValues(new Uint8Array(16))].map((b) => b.toString(16).padStart(2, '0')).join('');
+  const rec = await fetch(`${URLS[0]}/api/v1/invites`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${ADMIN}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ nonce, expires: Date.now() + 600_000, roles: [], note: 'cc wave1', auto: false })
+  });
+  assert.equal(rec.status, 200);
+  assert.equal((await bff.call('POST', `/invites/${nonce}/revoke`, { token: ADMIN, csrf: false })).status, 403);
+  assert.equal((await bff.call('POST', `/invites/${nonce}/revoke`, { token: READ })).status, 403);
+  const ok = await bff.call('POST', `/invites/${nonce}/revoke`, { token: ADMIN });
+  assert.equal(ok.status, 200);
+  assert.equal(ok.json.data.ok, true);
+  const list = await bff.call('GET', '/invites', { token: ADMIN });
+  assert.equal(list.json.data.invites.find((i: any) => i.nonce === nonce)?.state, 'REVOKED');
+  const audit = await bff.call('GET', '/audit?limit=20', { token: READ });
+  assert.ok(audit.json.data.entries.some((e: any) => e.action === 'node-invite-revoke' && e.resource === `invite/${nonce.slice(0, 8)}`));
+  assert.equal((await bff.call('POST', '/invites/not-hex/revoke', { token: ADMIN })).status, 422);
+});
+
+test('node detail derives allocation from the manifests of replicas desired on it', { skip }, async () => {
+  const v = await viewDirect(READ);
+  const web = v.apps.find((a: any) => a.name === 'web');
+  const row = web.rows.find((r: any) => r.desired === 'RUNNING');
+  const n = await bff.call('GET', `/nodes/${row.node}`, { token: READ });
+  const onNode = v.apps.flatMap((a: any) => (a.rows ?? []).filter((r: any) => r.node === row.node && r.desired === 'RUNNING').map(() => a.manifest.spec.resources?.cpuMilli ?? 0));
+  assert.equal(n.json.data.allocated.cpuMilli, onNode.reduce((x: number, y: number) => x + y, 0));
+  assert.ok(n.json.data.allocated.cpuMilli > 0);
+});
+
+test('operations are derived from state and labelled so', { skip }, async () => {
+  const r = await bff.call('GET', '/operations', { token: READ });
+  assert.equal(r.status, 200);
+  assert.equal(r.json.provenance.state, 'DERIVED');
+  const d = r.json.data.operations.find((o: any) => o.kind === 'deployment' && o.target === 'web');
+  assert.ok(d, 'web deployment listed');
+  assert.ok(['SUCCEEDED', 'RUNNING'].includes(d.status));
+  assert.ok(d.source);
+});
+
+test('refusals come from the control plane log', { skip }, async () => {
+  // A heartbeat from an unknown host is refused and recorded.
+  await fetch(`${URLS[0]}/v1/observe`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ observations: [{ kind: 'observation', signer: 'dh1aaaaaaaaaaaaaaaaaaaaaaaaaa', pub: 'x', sig: 'x', payload: { seq: 1 } }] }) });
+  const r = await bff.call('GET', '/rejections', { token: READ });
+  assert.equal(r.status, 200);
+  assert.ok(Array.isArray(r.json.data.rejections));
+});
+
+test('settings expose configuration, never credentials', { skip }, async () => {
+  const r = await bff.call('GET', '/settings', { token: ADMIN });
+  assert.equal(r.status, 200);
+  const body = JSON.stringify(r.json);
+  assert.equal(body.includes(ADMIN), false);
+  assert.equal(body.includes('dhcap1.'), false);
+  assert.equal(r.json.data.adapter, 'controlplane');
+});
+
+test('validation records are listed as sealed and verified by the platform verifier', { skip, timeout: 60_000 }, async () => {
+  const repo = new URL('../../../', import.meta.url).pathname;
+  const { existsSync } = await import('node:fs');
+  const cli = existsSync(`${repo}bin/dh`) ? `${repo}bin/dh` : null;
+  const ev = await startBff(new ControlPlaneAdapter({ endpoints: URLS, timeoutMs: 5000 }), { evidenceDir: `${repo}evidence`, cli });
+  try {
+    const caps = await ev.call('GET', '/capabilities', { token: READ });
+    assert.equal(caps.json.data.items.validationRecords.state, 'LIVE');
+    const list = await ev.call('GET', '/evidence/records', { token: READ });
+    assert.equal(list.status, 200);
+    const fail = list.json.data.records.find((x: any) => x.id === 'NODE-A01-A01');
+    assert.equal(fail.outcome, 'FAIL', 'failed records are listed');
+    assert.equal((await ev.call('GET', '/evidence/records', {})).status, 401);
+    assert.ok([404, 422].includes((await ev.call('GET', '/evidence/records/..%2F..%2Fpkg', { token: READ })).status), 'path traversal refused');
+    if (cli) {
+      const v = await ev.call('POST', '/evidence/records/NODE-A01-A02/verify', { token: READ });
+      assert.equal(v.status, 200);
+      assert.equal(v.json.data.state, 'VERIFIED');
+    }
+    const raw = await ev.call('GET', '/evidence/records/NODE-A01-A02/record.json', { token: READ });
+    assert.equal(raw.status, 200);
+    assert.match(raw.text, /"kind":\s*"validation-record"/);
+  } finally {
+    await ev.close();
+  }
+});

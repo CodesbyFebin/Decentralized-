@@ -9,7 +9,7 @@
  */
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import type { AuditEntryRec, LedgerVerification, RealitySnapshot } from '../../types/reality';
+import type { AuditEntryRec, InviteRec, LedgerVerification, RealitySnapshot } from '../../types/reality';
 import { mapView } from '../reality/mapView';
 import { isCPView, type CPView } from '../reality/cpTypes';
 import { AdapterError, type BackendHealth, type OperationResult, type PlatformAdapter, type RequestCtx } from './types';
@@ -75,6 +75,12 @@ export class DemoPlatformAdapter implements PlatformAdapter {
     this.refuse();
   }
   async deleteApp(): Promise<OperationResult> {
+    this.refuse();
+  }
+  async listInvites(): Promise<{ invites: InviteRec[]; serverTime: number }> {
+    throw new AdapterError('NOT_SUPPORTED', 'Invites are not part of the demo replay.', 409);
+  }
+  async revokeInvite(): Promise<OperationResult> {
     this.refuse();
   }
 }

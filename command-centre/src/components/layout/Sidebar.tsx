@@ -14,6 +14,8 @@ import {
   Bot,
   Settings,
   FileCheck2,
+  Activity,
+  ListChecks,
   ArrowRight,
   Hexagon
 } from 'lucide-react';
@@ -22,7 +24,7 @@ import { useSession } from '../../lib/session';
 
 const NAV: { to: string; label: string; icon: React.FC<{ className?: string }> }[] = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/apps', label: 'Websites & Apps', icon: AppWindow },
+  { to: '/apps', label: 'Applications', icon: AppWindow },
   { to: '/deploy', label: 'Deploy', icon: Boxes },
   { to: '/nodes', label: 'Nodes & Compute', icon: Server },
   { to: '/storage', label: 'Storage', icon: HardDrive },
@@ -32,7 +34,9 @@ const NAV: { to: string; label: string; icon: React.FC<{ className?: string }> }
   { to: '/billing', label: 'Billing', icon: Receipt },
   { to: '/team', label: 'Team', icon: Users },
   { to: '/copilot', label: 'RAG Copilot', icon: Bot },
-  { to: '/evidence', label: 'Evidence Ledger', icon: FileCheck2 },
+  { to: '/evidence', label: 'Evidence', icon: FileCheck2 },
+  { to: '/activity', label: 'Activity', icon: Activity },
+  { to: '/operations', label: 'Operations', icon: ListChecks },
   { to: '/settings', label: 'Settings', icon: Settings }
 ];
 
@@ -40,7 +44,7 @@ const NAV: { to: string; label: string; icon: React.FC<{ className?: string }> }
 const HERO: Record<string, { title: string; sub?: string; cta: string; to: string }> = {
   deploy: { title: 'Deploy anywhere. Own the infrastructure.', cta: 'New Deployment', to: '/deploy/new' },
   storage: { title: 'Distributed Storage for a Sovereign Internet.', cta: 'Add Storage', to: '/storage?add=1' },
-  nodes: { title: 'Turn your hardware into a global edge node.', cta: 'Add Your Machine', to: '/nodes?add=1' }
+  nodes: { title: 'Turn your hardware into a global edge node.', cta: 'Add Your Machine', to: '/nodes/add' }
 };
 const DEFAULT_HERO = { title: 'Decentralized Hosting', sub: 'Distributed. Private. Resilient.', cta: 'Deploy an app', to: '/deploy/new' };
 

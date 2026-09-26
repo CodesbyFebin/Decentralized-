@@ -9,7 +9,7 @@
  *   blind the console (followers relay the leader's view or flag staleness).
  */
 import { createHash } from 'node:crypto';
-import type { AuditEntryRec, LedgerVerification, NodeOperation, RealitySnapshot } from '../../types/reality';
+import type { AuditEntryRec, InviteRec, LedgerVerification, NodeOperation, RealitySnapshot } from '../../types/reality';
 import { mapView } from '../reality/mapView';
 import { isCPView } from '../reality/cpTypes';
 import { AdapterError, type BackendHealth, type OperationResult, type PlatformAdapter, type RequestCtx } from './types';
@@ -252,5 +252,31 @@ export class ControlPlaneAdapter implements PlatformAdapter {
 
   deleteApp(ctx: RequestCtx, app: string): Promise<OperationResult> {
     return this.mutate(`/api/v1/apps/${encodeURIComponent(app)}/delete`, ctx);
+  }
+
+  async listInvites(ctx: RequestCtx): Promise<{ invites: InviteRec[]; serverTime: number }> {
+    const r = await this.call('/api/v1/invites', { token: ctx.token, requestId: ctx.requestId, signal: ctx.signal });
+    const body = this.expectOk(r) as { invites?: unknown; now?: number };
+    if (!body || !Array.isArray(body.invites) || typeof body.now !== 'number') throw new AdapterError('BACKEND_MALFORMED', 'Malformed invite list.', 502);
+    const states = new Set(['ACTIVE', 'USED', 'REVOKED', 'EXPIRED']);
+    const invites = (body.invites as Record<string, unknown>[]).map((i) => {
+      if (typeof i.nonce !== 'string' || !states.has(String(i.state))) throw new AdapterError('BACKEND_MALFORMED', 'Malformed invite.', 502);
+      return {
+        nonce: i.nonce,
+        createdAt: Number(i.created) || 0,
+        expiresAt: Number(i.expires) || null,
+        roles: Array.isArray(i.roles) ? (i.roles as string[]) : [],
+        note: typeof i.note === 'string' ? i.note : '',
+        autoApprove: !!i.auto,
+        usedBy: typeof i.usedBy === 'string' && i.usedBy ? i.usedBy : null,
+        revokedAt: Number(i.revoked) || null,
+        state: i.state as InviteRec['state']
+      };
+    });
+    return { invites, serverTime: body.now };
+  }
+
+  revokeInvite(ctx: RequestCtx, nonce: string): Promise<OperationResult> {
+    return this.mutate(`/api/v1/invites/${encodeURIComponent(nonce)}/revoke`, ctx);
   }
 }

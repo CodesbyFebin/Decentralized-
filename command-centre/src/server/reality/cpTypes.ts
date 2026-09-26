@@ -52,6 +52,7 @@ export interface CPNode {
     disks?: { name: string; sizeBytes?: number; rotational?: boolean; removable?: boolean; model?: string }[] | null;
     gpus?: { vendor: string; model?: string; vramBytes?: number; driver?: string; source: string }[] | null;
     dataFs?: { path: string; totalBytes?: number; freeBytes?: number } | null;
+    uptimeSec?: number;
     unknown?: string[] | null;
   } | null;
   mesh?: {
@@ -127,7 +128,7 @@ export interface CPApp {
   history?: { generation: number; hash: string; ts: number; actor: string; change: string }[] | null;
   manifest?: {
     spec?: {
-      resources?: { cpu?: string; mem?: string };
+      resources?: { cpuMilli?: number; memBytes?: number };
       env?: Record<string, string> | null;
       volumes?: { name: string }[] | null;
     };
@@ -214,6 +215,7 @@ export interface CPView {
   };
   chaos?: { id: string; scenario: string; verdict: string; received: number; signer: string; evidence: string }[] | null;
   diagnostics?: { subject: string; item: string; value: string; basis: string; detail?: string }[] | null;
+  rejections?: { ts: number; kind: string; node?: string; reason: string; seq?: number; lastSeq?: number; evidence?: string }[] | null;
   milestones?: { id: string; title: string; state: string; basis: string; evidence?: string[] | null; gaps?: string[] | null }[] | null;
 }
 

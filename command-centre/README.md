@@ -42,6 +42,10 @@ With TLS clusters set `NODE_EXTRA_CA_CERTS` to the cluster root CA. All options:
 value is labelled SIMULATED, every mutation is refused, and production refuses
 it unless `ALLOW_DEMO_IN_PRODUCTION=1`. There is no fallback between adapters.
 
+Optional: `DH_EVIDENCE_DIR` points the Evidence page at sealed validation
+records (the repository's `evidence/`), and `DH_CLI` at a `dh` binary so the
+console can verify a record with `dh evidence verify`.
+
 ## What is real
 
 See `docs/command-centre/reality-matrix.md`: hosts, applications, deployments,
@@ -59,6 +63,10 @@ DH_CONTROL_URL=… DH_TOKEN_ADMIN=$(dh token --ttl 2h) DH_TOKEN_READ=$(dh token 
   npm run test:integration   # against a live cluster: RBAC, CSRF, deploy lifecycle, drain, Copilot approvals, audit actor
 CC_URL=http://127.0.0.1:3000 DH_TOKEN_ADMIN=… DEV_CLUSTER_DIR=../devcluster \
   node tests/e2e/disconnect.mjs   # freezes every control-plane member; the console must lose confidence
+CC_URL=… DH_TOKEN_ADMIN=… DEV_CLUSTER_DIR=… \
+  node tests/e2e/wave1-disconnect.mjs   # the same, checked on every Wave 1 page at once
 ```
+
+Page-by-page status: `docs/command-centre/wave1.md`.
 
 Qualification record: `docs/qualification/RC1.md`.

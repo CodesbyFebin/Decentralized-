@@ -6,7 +6,9 @@ import { useResource } from '../../lib/useResource';
 import { useSession } from '../../lib/session';
 import { api, ApiError, type MutationResult } from '../../lib/client';
 import { Glass, PageTabs, PanelHeader, IconTile, StatusPill, GhostButton } from '../common/ui';
-import { Gate, FreshnessPill, fmtBytes, fmtTime, since, shortDigest, ErrorState, Empty, Note, TruthTag } from '../common/states';
+import { LogViewer } from '../common/LogViewer';
+import { Gate, FreshnessPill, fmtBytes, fmtTime, fmtAge, since, shortDigest, ErrorState, Empty, Note, TruthTag, Unavailable } from '../common/states';
+import { Digest, FreshnessBadge, viewFreshness } from '../common/truth';
 
 interface Payload {
   node: NodeRec;
@@ -14,9 +16,11 @@ interface Payload {
   events: AuditEntryRec[];
   diagnostics: { subject: string; item: string; value: string; basis: string; detail: string }[];
   volumes: VolumeRec[];
+  allocated: { cpuMilli: number; memBytes: number; replicas: number; undeclared: number };
 }
 
-type Tab = 'overview' | 'workloads' | 'facts' | 'mesh' | 'storage' | 'identity' | 'events' | 'logs';
+type Tab = 'overview' | 'workloads' | 'resources' | 'network' | 'contribution' | 'depin' | 'security' | 'logs' | 'evidence' | 'settings';
+const LEGACY: Record<string, Tab> = { facts: 'resources', storage: 'resources', mesh: 'network', identity: 'security', events: 'evidence' };
 
 const Row: React.FC<{ k: string; children: React.ReactNode }> = ({ k, children }) => (
   <div className="flex justify-between gap-4 py-1.5 text-[12.5px] border-b border-[rgba(125,190,255,0.06)] last:border-0">
@@ -29,7 +33,8 @@ export default function NodeDetailView() {
   const { id = '' } = useParams();
   const res = useResource<Payload>(`/nodes/${encodeURIComponent(id)}`);
   const [params, setParams] = useSearchParams();
-  const tab = (params.get('tab') as Tab) || 'overview';
+  const raw = params.get('tab') ?? 'overview';
+  const tab = (LEGACY[raw] ?? raw) as Tab;
   const { can, mode } = useSession();
   const [pending, setPending] = useState<NodeOperation | null>(null);
   const [confirm, setConfirm] = useState<NodeOperation | null>(null);
@@ -67,7 +72,7 @@ export default function NodeDetailView() {
           const ops: { op: NodeOperation; label: string; icon: React.ReactNode; show: boolean; allowed: boolean; why: string }[] = [
             { op: 'APPROVE', label: 'Approve', icon: <CheckCircle2 className="w-4 h-4" />, show: n.lifecycle === 'PENDING_APPROVAL', allowed: canAdmin, why: 'needs api.admin' },
             { op: 'DRAIN', label: 'Drain', icon: <Pause className="w-4 h-4" />, show: n.lifecycle === 'ACTIVE', allowed: canWrite, why: 'needs api.write' },
-            { op: 'UNDRAIN', label: 'Undrain', icon: <Play className="w-4 h-4" />, show: n.lifecycle === 'DRAINING', allowed: canWrite, why: 'needs api.write' },
+            { op: 'UNDRAIN', label: 'Resume', icon: <Play className="w-4 h-4" />, show: n.lifecycle === 'DRAINING', allowed: canWrite, why: 'needs api.write' },
             { op: 'REVOKE', label: 'Revoke identity', icon: <ShieldOff className="w-4 h-4" />, show: n.lifecycle !== 'REVOKED', allowed: canAdmin, why: 'needs api.admin' }
           ];
           return (
@@ -134,79 +139,64 @@ export default function NodeDetailView() {
                 tabs={[
                   { id: 'overview', label: 'Overview' },
                   { id: 'workloads', label: `Workloads (${d.replicas.length})` },
-                  { id: 'facts', label: 'Facts & probes' },
-                  { id: 'mesh', label: 'Mesh' },
-                  { id: 'storage', label: 'Storage' },
-                  { id: 'identity', label: 'Identity & ledger' },
-                  { id: 'events', label: 'Events' },
-                  { id: 'logs', label: 'Logs' }
+                  { id: 'resources', label: 'Resources' },
+                  { id: 'network', label: 'Network' },
+                  { id: 'contribution', label: 'Contribution' },
+                  { id: 'depin', label: 'DePIN' },
+                  { id: 'security', label: 'Security' },
+                  { id: 'logs', label: 'Logs' },
+                  { id: 'evidence', label: 'Evidence' },
+                  { id: 'settings', label: 'Settings' }
                 ]}
                 active={tab}
                 onChange={(t) => setParams((p) => (t === 'overview' ? (p.delete('tab'), p) : (p.set('tab', t), p)), { replace: true })}
               />
 
               {tab === 'overview' && (
-                <div className="grid md:grid-cols-2 gap-4">
+                <div className="grid md:grid-cols-2 gap-4 [&>*]:min-w-0">
+                  <Glass className="p-4">
+                    <PanelHeader title="Identity" subtitle="Generated on the host; only the public key is known here." />
+                    <div className="mt-2">
+                      <Row k="Node id">{n.id}</Row>
+                      <Row k="Public key">{n.keys.find((k) => !k.revoked) ? <Digest value={n.keys.find((k) => !k.revoked)!.pub} chars={20} /> : 'no valid key'}</Row>
+                      <Row k="Lifecycle"><StatusPill status={n.lifecycle} dot={false} /></Row>
+                      <Row k="Freshness"><FreshnessBadge f={viewFreshness({ pageStale: stale, observation: n.observation.freshness, lost: n.health === 'OFFLINE' && n.lifecycle !== 'REVOKED' })} observedAt={n.observation.observedAt} /></Row>
+                      <Row k="Agent version"><span className="text-slate-400">not reported by the agent</span></Row>
+                      <Row k="OS / kernel / arch">{n.os} · {n.facts?.kernel || '—'} · {n.arch}</Row>
+                      <Row k="Uptime">{n.facts?.uptimeSec != null ? fmtAge(n.facts.uptimeSec * 1000) : 'not measured'}</Row>
+                    </div>
+                  </Glass>
                   <Glass className="p-4">
                     <PanelHeader title="Placement" />
                     <div className="mt-2">
                       <Row k="Region / zone">{n.region || '—'} {n.zone && `/ ${n.zone}`}</Row>
                       <Row k="Host (failure domain)">{n.host || '—'}</Row>
+                      <Row k="Operator">this cluster (all hosts share one root)</Row>
                       <Row k="Tiers">{n.tiers.join(', ') || '—'}</Row>
                       <Row k="Roles">{n.roles.join(', ') || '—'}</Row>
                       <Row k="Map position">{n.location ? <>{n.location.lat}, {n.location.lng} <TruthTag state="CONFIGURED" /></> : 'not configured'}</Row>
                       <Row k="Joined / approved">{fmtTime(n.joinedAt)} / {fmtTime(n.approvedAt)}</Row>
-                    </div>
-                  </Glass>
-                  <Glass className="p-4">
-                    <PanelHeader title="Capacity" subtitle="Declared at enrolment vs measured by the host." />
-                    <div className="mt-2">
-                      <Row k="CPU declared">{n.declared.cpuMilli / 1000} cores <TruthTag state="CONFIGURED" /></Row>
-                      <Row k="CPU measured">{n.facts ? `${n.facts.cpus} logical` : '—'}</Row>
-                      <Row k="Memory declared">{fmtBytes(n.declared.memBytes)} <TruthTag state="CONFIGURED" /></Row>
-                      <Row k="Memory measured">{n.facts?.memBytes != null ? fmtBytes(n.facts.memBytes) : 'not measured'}</Row>
-                      <Row k="Workloads">{n.workloads ?? '—'}</Row>
                       <Row k="Mode">{n.mode || '—'} {n.modeDetail}</Row>
                     </div>
                   </Glass>
                   <Glass className="p-4 md:col-span-2">
                     <PanelHeader title="Hardware" subtitle="Measured by the host agent and signed in its observation. Nothing here is declared or inferred." />
-                    {n.facts?.unknown === null || !n.facts ? (
-                      <p className="text-[12.5px] text-slate-400 mt-2">{n.facts ? 'This host agent predates measured hardware facts; upgrade it to report CPU model, disks and GPUs.' : 'No observation yet.'}</p>
+                    {!n.facts || n.facts.unknown === null ? (
+                      <p className="text-[12.5px] text-slate-400 mt-2">{n.facts ? 'This host agent predates measured hardware facts: memory, disks and GPUs show as NOT MEASURED. Upgrade the agent.' : 'No observation yet.'}</p>
                     ) : (
                       <div className="mt-2 grid sm:grid-cols-2 gap-x-6">
-                        <Row k="CPU model">{n.facts.cpuModel ?? 'not measured'}</Row>
-                        <Row k="Physical cores">{n.facts.physicalCores ?? 'not measured'}</Row>
-                        <Row k="Swap">{n.facts.swapBytes === null ? 'not measured' : fmtBytes(n.facts.swapBytes)}</Row>
-                        <Row k="Data filesystem">{n.facts.dataFs ? `${fmtBytes(n.facts.dataFs.freeBytes)} free of ${fmtBytes(n.facts.dataFs.totalBytes)}` : 'not measured'}</Row>
-                        <Row k="Disks">
-                          {n.facts.disks === null
-                            ? 'not measured'
-                            : n.facts.disks.length === 0
-                              ? 'none visible'
-                              : n.facts.disks.map((x) => `${x.name} ${fmtBytes(x.sizeBytes)}${x.rotational ? ' HDD' : ''}${x.removable ? ' removable' : ''}`).join(', ')}
+                        <Row k="CPU">{n.facts.cpus} logical{n.facts.physicalCores ? ` · ${n.facts.physicalCores} physical` : ''}{n.facts.cpuModel ? ` · ${n.facts.cpuModel}` : ''}</Row>
+                        <Row k="Measured RAM">{n.facts.memBytes != null ? fmtBytes(n.facts.memBytes) : 'NOT MEASURED'}</Row>
+                        <Row k="Swap">{n.facts.swapBytes === null ? 'NOT MEASURED' : fmtBytes(n.facts.swapBytes)}</Row>
+                        <Row k="Filesystem (agent data)">{n.facts.dataFs ? `${fmtBytes(n.facts.dataFs.freeBytes)} free of ${fmtBytes(n.facts.dataFs.totalBytes)}` : 'NOT MEASURED'}</Row>
+                        <Row k="Storage devices">
+                          {n.facts.disks === null ? 'NOT MEASURED' : n.facts.disks.length === 0 ? 'none visible' : n.facts.disks.map((x) => `${x.name} ${fmtBytes(x.sizeBytes)}${x.rotational ? ' HDD' : ''}${x.removable ? ' removable' : ''}`).join(', ')}
                         </Row>
-                        <Row k="GPUs">
-                          {n.facts.gpus === null
-                            ? 'not measured'
-                            : n.facts.gpus.length === 0
-                              ? 'none found'
-                              : n.facts.gpus.map((g) => `${g.vendor}${g.model ? ` ${g.model}` : ''}${g.vramBytes ? ` ${fmtBytes(g.vramBytes)}` : ''} (${g.source})`).join(', ')}
+                        <Row k="GPU">
+                          {n.facts.gpus === null ? 'NOT MEASURED' : n.facts.gpus.length === 0 ? 'none found' : n.facts.gpus.map((g) => `${g.vendor}${g.model ? ` ${g.model}` : ''}${g.vramBytes ? ` ${fmtBytes(g.vramBytes)}` : ''} (${g.source})`).join(', ')}
                         </Row>
                         <Row k="Could not measure">{n.facts.unknown.length ? n.facts.unknown.join(', ') : 'nothing'}</Row>
                       </div>
-                    )}
-                  </Glass>
-                  <Glass className="p-4 md:col-span-2">
-                    <PanelHeader title="Host policy" subtitle="Reported by the host; the control plane can read it but never change it." />
-                    {n.policy ? (
-                      <div className="mt-2 grid sm:grid-cols-2 gap-x-6">
-                        {Object.entries(n.policy).map(([k, v]) => (
-                          <Row key={k} k={k}>{Array.isArray(v) ? v.join(', ') || '—' : typeof v === 'number' && /Bytes$/.test(k) ? fmtBytes(v) : String(v)}</Row>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-[12.5px] text-slate-400 mt-2">No policy reported.</p>
                     )}
                   </Glass>
                 </div>
@@ -216,11 +206,12 @@ export default function NodeDetailView() {
                 (d.replicas.length ? (
                   <Glass className="overflow-x-auto">
                     <table className="dh-table w-full min-w-[760px]">
-                      <thead><tr><th>Assignment</th><th>Desired</th><th>Admitted</th><th>Observed</th><th>Health</th><th>Freshness</th><th>Logs</th></tr></thead>
+                      <thead><tr><th>Assignment</th><th>Origin</th><th>Desired</th><th>Admitted</th><th>Observed</th><th>Health</th><th>Freshness</th><th>Logs</th></tr></thead>
                       <tbody>
                         {d.replicas.map((r) => (
                           <tr key={r.assignment}>
                             <td><Link to={`/apps/${encodeURIComponent(r.app)}`} className="text-cyan-300 hover:underline">{r.assignment}</Link> <span className="text-slate-500">gen {r.desiredGen}</span></td>
+                            <td><StatusPill status="OWNER" tone="cyan" dot={false} /></td>
                             <td><StatusPill status={r.desired} dot={false} /></td>
                             <td title={r.reason}><StatusPill status={r.admitted} dot={false} /></td>
                             <td><StatusPill status={r.observed} dot={false} /></td>
@@ -236,100 +227,168 @@ export default function NodeDetailView() {
                   <Empty title="No assignments on this host" />
                 ))}
 
-              {tab === 'facts' && (
-                <Glass className="p-4">
-                  {n.facts ? (
-                    <>
-                      <Row k="Kernel">{n.facts.kernel}</Row>
-                      <Row k="OS / arch">{n.os} / {n.arch}</Row>
-                      <Row k="Runtimes">{n.facts.runtimes.join(', ') || '—'}</Row>
-                      <Row k="Docker">{n.facts.docker || 'not available'}</Row>
-                      <Row k="UDP 443">{n.facts.udp443 ? 'listening' : 'not listening'}</Row>
-                      <Row k="Clock skew">{n.facts.clockSkewMs} ms</Row>
-                      <h4 className="mt-4 mb-1 text-[12px] font-semibold text-slate-300">Probes</h4>
-                      {n.facts.probes.map((p) => (
-                        <Row key={p.name} k={p.name}><StatusPill status={p.ok ? 'AVAILABLE' : 'NOT AVAILABLE'} tone={p.ok ? 'emerald' : 'slate'} dot={false} /> <span className="text-slate-400 text-[11.5px]">{p.detail}</span></Row>
-                      ))}
-                      {d.diagnostics.length > 0 && <h4 className="mt-4 mb-1 text-[12px] font-semibold text-slate-300">Diagnostics</h4>}
-                      {d.diagnostics.map((x) => (
-                        <Row key={x.item} k={x.item}>{x.value} <TruthTag state={x.basis === 'OBSERVED' ? 'LIVE' : 'DERIVED'} /></Row>
-                      ))}
-                    </>
-                  ) : (
-                    <Empty title="No facts reported" detail="The host has not sent a signed observation yet." />
-                  )}
-                </Glass>
-              )}
-
-              {tab === 'mesh' && (
-                <Glass className="p-4">
-                  {n.mesh ? (
-                    <>
-                      <Row k="Mesh IP">{n.mesh.meshIp}</Row>
-                      <Row k="Device">{n.mesh.device}</Row>
-                      <Row k="Peers (gossip alive)">{n.mesh.peersAlive} / {n.mesh.peers}</Row>
-                      <Row k="Handshakes in the last 3 min">{n.mesh.handshakesRecent}</Row>
-                    </>
-                  ) : (
-                    <Empty title="No mesh observation" />
-                  )}
-                </Glass>
-              )}
-
-              {tab === 'storage' && (
-                <div className="space-y-3">
+              {tab === 'resources' && (() => {
+                // Available is bounded by what was measured and by what the host's policy admits, whichever is smaller.
+                const cap = (policy: unknown, measured: number | null) => {
+                  const p = typeof policy === 'number' && policy > 0 ? policy : null;
+                  if (p === null) return measured;
+                  return measured === null ? p : Math.min(p, measured);
+                };
+                const cpuCeil = cap(n.policy?.maxCpuMilli, n.facts ? n.facts.cpus * 1000 : null);
+                const memCeil = cap(n.policy?.maxMemBytes, n.facts?.memBytes ?? null);
+                return (
+                <div className="grid md:grid-cols-2 gap-4 [&>*]:min-w-0">
+                  <Glass className="p-4 md:col-span-2 overflow-x-auto">
+                    <PanelHeader title="Resources" subtitle="Each column has its own source. Nothing is filled in to make the row add up." />
+                    <table className="dh-table w-full min-w-[680px] mt-2">
+                      <thead><tr><th /><th>Total (measured)</th><th>Owner reserved</th><th>Host admits (policy)</th><th>Allocated</th><th>Available</th></tr></thead>
+                      <tbody>
+                        <tr>
+                          <td className="text-slate-300">CPU</td>
+                          <td>{n.facts ? `${n.facts.cpus} logical` : 'not measured'}</td>
+                          <td className="text-slate-500">no record</td>
+                          <td>{typeof n.policy?.maxCpuMilli === 'number' && n.policy.maxCpuMilli > 0 ? <>{Number(n.policy.maxCpuMilli) / 1000} cores <TruthTag state="CONFIGURED" /></> : <span className="text-slate-500">no cap</span>}</td>
+                          <td>{d.allocated.cpuMilli / 1000} cores <TruthTag state="DERIVED" /></td>
+                          <td>{cpuCeil !== null ? <>{Math.max(0, cpuCeil - d.allocated.cpuMilli) / 1000} cores <TruthTag state="DERIVED" /></> : <span className="text-slate-500">unknown</span>}</td>
+                        </tr>
+                        <tr>
+                          <td className="text-slate-300">Memory</td>
+                          <td>{n.facts?.memBytes != null ? fmtBytes(n.facts.memBytes) : 'not measured'}</td>
+                          <td className="text-slate-500">no record</td>
+                          <td>{typeof n.policy?.maxMemBytes === 'number' && n.policy.maxMemBytes > 0 ? <>{fmtBytes(Number(n.policy.maxMemBytes))} <TruthTag state="CONFIGURED" /></> : <span className="text-slate-500">no cap</span>}</td>
+                          <td>{fmtBytes(d.allocated.memBytes)} <TruthTag state="DERIVED" /></td>
+                          <td>{memCeil !== null ? <>{fmtBytes(Math.max(0, memCeil - d.allocated.memBytes))} <TruthTag state="DERIVED" /></> : <span className="text-slate-500">unknown</span>}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                    <Note>
+                      Allocated is the sum of the manifest requests of the {d.allocated.replicas} replica(s) desired on this host{d.allocated.undeclared ? `; ${d.allocated.undeclared} declare no request and count as 0` : ''}. Available = the smaller of measured total and the policy limit, minus allocated. Declared capacity at enrolment: {n.declared.cpuMilli / 1000} cores, {fmtBytes(n.declared.memBytes)} (CONFIGURED). The platform has no owner-reserve record yet, so none is shown.
+                    </Note>
+                  </Glass>
                   <Glass className="p-4">
+                    <PanelHeader title="Storage" />
                     {n.storage ? (
-                      <>
+                      <div className="mt-2">
                         <Row k="Used by volumes">{fmtBytes(n.storage.usedBytes)}</Row>
-                        <Row k="Quota">{fmtBytes(n.storage.quotaBytes)}</Row>
+                        <Row k="Quota (host policy)">{fmtBytes(n.storage.quotaBytes)}</Row>
                         <Row k="Filesystem free / capacity">{fmtBytes(n.storage.freeBytes)} / {fmtBytes(n.storage.capacityBytes)}</Row>
                         <Row k="Chunks held">{n.storage.chunks}</Row>
                         <Row k="Corrupt chunks">{n.storage.corrupt}</Row>
-                      </>
+                      </div>
                     ) : (
-                      <Empty title="No storage observation" />
+                      <p className="mt-2 text-[12.5px] text-slate-400">No storage observation.</p>
+                    )}
+                    {d.volumes.map((v) => (
+                      <Row key={v.id} k={v.id}><StatusPill status={v.state} /> {v.verified}/{v.durabilityReplicas} verified</Row>
+                    ))}
+                  </Glass>
+                  <Glass className="p-4">
+                    <PanelHeader title="Runtimes & probes" />
+                    {n.facts ? (
+                      <div className="mt-2">
+                        <Row k="Runtimes">{n.facts.runtimes.join(', ') || '—'}</Row>
+                        <Row k="Docker">{n.facts.docker || 'not available'}</Row>
+                        <Row k="Clock skew">{n.facts.clockSkewMs} ms</Row>
+                        {n.facts.probes.map((p) => (
+                          <Row key={p.name} k={p.name}><StatusPill status={p.ok ? 'AVAILABLE' : 'NOT AVAILABLE'} tone={p.ok ? 'emerald' : 'slate'} dot={false} /> <span className="text-slate-400 text-[11.5px]">{p.detail}</span></Row>
+                        ))}
+                        {d.diagnostics.map((x) => (
+                          <Row key={x.item} k={x.item}>{x.value} <TruthTag state={x.basis === 'OBSERVED' ? 'LIVE' : 'DERIVED'} /></Row>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="mt-2 text-[12.5px] text-slate-400">No facts reported.</p>
                     )}
                   </Glass>
-                  {d.volumes.length > 0 && (
-                    <Glass className="p-4">
-                      <PanelHeader title="Volume replicas on this host" />
-                      {d.volumes.map((v) => (
-                        <Row key={v.id} k={v.id}><StatusPill status={v.state} /> {v.verified}/{v.durabilityReplicas} verified</Row>
-                      ))}
-                    </Glass>
-                  )}
                 </div>
-              )}
+                );
+              })()}
 
-              {tab === 'identity' && (
+              {tab === 'network' && (
                 <Glass className="p-4">
-                  <Row k="Identity">{n.identity}</Row>
-                  <Row k="Host ledger head">{n.ledger ? `#${n.ledger.seq} ${shortDigest(n.ledger.hash)}` : '—'}</Row>
-                  <Row k="Last observation evidence">{shortDigest(n.observation.evidence)}</Row>
-                  <Row k="Observation seq / source">{n.observation.seq} · {n.observation.source}</Row>
-                  <Row k="Revoked at">{fmtTime(n.revokedAt)}</Row>
-                  <h4 className="mt-4 mb-1 text-[12px] font-semibold text-slate-300 flex items-center gap-1.5"><KeyRound className="w-3.5 h-3.5" /> Public keys</h4>
-                  {n.keys.map((k) => (
-                    <Row key={k.pub} k={k.revoked ? 'revoked' : 'active'}><span className="font-mono text-[11px]">{k.pub}</span>{k.reason && <span className="text-slate-400"> — {k.reason}</span>}</Row>
-                  ))}
-                  <Note>Private keys never leave the host. Verify its ledger independently with <code className="text-cyan-200">dh audit host {n.name}</code>.</Note>
+                  <PanelHeader title="Network" subtitle="Separate layers, separately observed. A WireGuard handshake does not prove transport reachability or membership." />
+                  <div className="mt-2">
+                    <Row k="Mesh address">{n.mesh?.meshIp || '—'}</Row>
+                    <Row k="WireGuard device">{n.mesh ? n.mesh.device : 'no observation'}</Row>
+                    <Row k="WireGuard handshakes (< 3 min)">{n.mesh ? `${n.mesh.handshakesRecent} peer(s)` : '—'}</Row>
+                    <Row k="Membership (gossip alive)">{n.mesh ? `${n.mesh.peersAlive} / ${n.mesh.peers}` : '—'}</Row>
+                    <Row k="Transport reachability">UNKNOWN (not measured per peer)</Row>
+                    <Row k="Edge UDP 443">{n.facts ? (n.facts.udp443 ? 'listening' : 'not listening') : '—'}</Row>
+                  </div>
+                  <div className="mt-3"><Unavailable title="Interface and NAT discovery" detail="Hosts do not report network interfaces, public reachability or NAT type yet (facts.unknown lists natType)." /></div>
                 </Glass>
               )}
 
-              {tab === 'events' &&
-                (d.events.length ? (
+              {tab === 'contribution' && (
+                <Unavailable title="Contribution policy" state="PLANNED" detail="This host serves its owner only. There is no community or marketplace contribution, and nothing is contributed by default. Capacity can be shared with a peer cluster only through a root-signed federation grant, which the host's own policy (allowFederated) can still refuse." />
+              )}
+
+              {tab === 'depin' && <Unavailable title="External DePIN networks" detail="No DePIN adapter is implemented. Nothing is installed on this host and no rewards are reported." />}
+
+              {tab === 'security' && (
+                <div className="grid md:grid-cols-2 gap-4 [&>*]:min-w-0">
                   <Glass className="p-4">
-                    {d.events.map((e) => (
+                    <PanelHeader title="Identity & keys" />
+                    <div className="mt-2">
+                      <Row k="Identity">{n.identity}</Row>
+                      <Row k="Revoked at">{fmtTime(n.revokedAt)}</Row>
+                      <Row k="New work / existing work">{n.admission.newWork} / {n.admission.existingWork}</Row>
+                    </div>
+                    <h4 className="mt-4 mb-1 text-[12px] font-semibold text-slate-300 flex items-center gap-1.5"><KeyRound className="w-3.5 h-3.5" /> Public keys</h4>
+                    {n.keys.map((k) => (
+                      <Row key={k.pub} k={k.revoked ? 'revoked' : 'active'}><Digest value={k.pub} chars={20} />{k.reason && <span className="text-slate-400"> — {k.reason}</span>}</Row>
+                    ))}
+                    <Note>Private keys never leave the host.</Note>
+                  </Glass>
+                  <Glass className="p-4">
+                    <PanelHeader title="Host policy" subtitle="Signed by the host. The control plane can read it but never change it." />
+                    {n.policy ? (
+                      <div className="mt-2">
+                        {Object.entries(n.policy).map(([k, v]) => (
+                          <Row key={k} k={k}>{Array.isArray(v) ? v.join(', ') || '—' : typeof v === 'number' && /Bytes$/.test(k) ? fmtBytes(v) : String(v)}</Row>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-[12.5px] text-slate-400 mt-2">No policy reported.</p>
+                    )}
+                  </Glass>
+                </div>
+              )}
+
+              {tab === 'evidence' && (
+                <Glass className="p-4">
+                  <PanelHeader title="Evidence" subtitle="The host's own hash-chained ledger, its signed observations, and audit entries that name it." />
+                  <div className="mt-2">
+                    <Row k="Host ledger head">{n.ledger ? <>#{n.ledger.seq} <Digest value={n.ledger.hash} /></> : '—'}</Row>
+                    <Row k="Last observation">{n.observation.evidence ? <Digest value={n.observation.evidence} /> : '—'} · seq {n.observation.seq} · {n.observation.source}</Row>
+                  </div>
+                  <h4 className="mt-4 mb-1 text-[12px] font-semibold text-slate-300">Audit entries</h4>
+                  {d.events.length ? (
+                    d.events.map((e) => (
                       <div key={e.seq} className="py-2 border-b border-[rgba(125,190,255,0.06)] last:border-0">
                         <div className="text-[12.5px] text-slate-100"><span className="font-mono text-slate-500">#{e.seq}</span> {e.action} <span className="text-slate-400">{e.resource}</span></div>
                         <div className="text-[11.5px] text-slate-400">{e.detail} · {e.actor} · {since(e.ts)}</div>
                       </div>
-                    ))}
-                  </Glass>
-                ) : (
-                  <Empty title="No audit entries reference this host in the recent window" />
-                ))}
+                    ))
+                  ) : (
+                    <p className="text-[12.5px] text-slate-400">No audit entries reference this host in the recent window.</p>
+                  )}
+                  <Note>Verify the host ledger independently with <code className="text-cyan-200">dh audit host {n.name}</code>.</Note>
+                </Glass>
+              )}
+
+              {tab === 'settings' && (
+                <Glass className="p-4">
+                  <PanelHeader title="Settings" subtitle="Where each setting lives. The console changes only lifecycle (approve, drain, undrain, revoke)." />
+                  <div className="mt-2">
+                    <Row k="Name, region, zone, roles">set on the host when dh-noded starts (--name, --region, --zone, --roles)</Row>
+                    <Row k="Admission policy">the host's own policy.yaml; the control plane cannot change it</Row>
+                    <Row k="Declared capacity">--cpu / --mem on the host (CONFIGURED)</Row>
+                    <Row k="Key rotation">dh-noded rotate-key on the host; emergency revocation with dh node revoke-key</Row>
+                    <Row k="Cordon">not implemented; drain stops new placement and reschedules replicas</Row>
+                  </div>
+                </Glass>
+              )}
 
               {tab === 'logs' && <LogsPanel nodeId={n.id} replicas={d.replicas} />}
             </>
@@ -343,30 +402,24 @@ export default function NodeDetailView() {
 function LogsPanel({ nodeId, replicas }: { nodeId: string; replicas: ReplicaRec[] }) {
   const [params, setParams] = useSearchParams();
   const assignment = params.get('assignment') ?? replicas[0]?.assignment ?? '';
-  const res = useResource<{ lines: string[] }>(assignment ? `/nodes/${nodeId}/logs?assignment=${encodeURIComponent(assignment)}&tail=300` : null, { pollMs: 5000 });
   if (!replicas.length) return <Empty title="No workloads on this host to show logs for" />;
   return (
     <Glass className="p-4 space-y-3">
-      <div className="flex items-center gap-2 flex-wrap">
-        <Terminal className="w-4 h-4 text-cyan-300" />
+      <div className="flex items-center gap-2 flex-wrap" role="tablist" aria-label="Workload">
         {replicas.map((r) => (
           <button
             key={r.assignment}
+            role="tab"
+            aria-selected={r.assignment === assignment}
             onClick={() => setParams((p) => (p.set('assignment', r.assignment), p), { replace: true })}
-            className={`px-2.5 py-1 rounded-lg text-[12px] border ${r.assignment === assignment ? 'border-cyan-400/60 text-white bg-cyan-500/10' : 'border-[rgba(125,190,255,0.16)] text-slate-300'}`}
+            className={`px-2.5 py-1 rounded-lg text-[12px] border focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-400 ${r.assignment === assignment ? 'border-cyan-400/60 text-white bg-cyan-500/10' : 'border-[rgba(125,190,255,0.16)] text-slate-300'}`}
           >
             {r.assignment}
           </button>
         ))}
       </div>
-      <Gate res={res}>
-        {(d) => (
-          <pre className="max-h-[480px] overflow-auto rounded-xl bg-[#020814] border border-[rgba(125,190,255,0.12)] p-3 text-[11.5px] leading-relaxed text-slate-200 font-mono whitespace-pre-wrap">
-            {d.lines.length ? d.lines.join('\n') : '(no output)'}
-          </pre>
-        )}
-      </Gate>
-      <Note>Logs are relayed over the WireGuard mesh from the host; the last 300 lines are shown.</Note>
+      {assignment && <LogViewer key={assignment} path={`/nodes/${nodeId}/logs?assignment=${encodeURIComponent(assignment)}`} source={`${assignment}@${nodeId.slice(0, 10)}`} />}
+      <Note>Logs are relayed over the WireGuard mesh from the host on request.</Note>
     </Glass>
   );
 }

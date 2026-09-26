@@ -8,9 +8,12 @@ import { randomUUID } from 'node:crypto';
 import type { AppRec, Envelope, NodeOperation, Provenance, RealitySnapshot } from '../types/reality';
 import { AdapterError, type PlatformAdapter, type RequestCtx } from './adapters/types';
 import { deriveCapabilities } from './reality/capabilities';
+import { attentionItems } from './reality/attention';
+import { deriveOperations } from './reality/operations';
 import { clearSessionCookie, decodeCapability, describeSession, setSessionCookie, tokenFrom } from './session';
 import { answer, dismissPendingAction, rephraseWithModel, takePendingAction, type DocsIndex } from './copilot';
 import type { BffConfig } from './config';
+import { EvidenceStore, EvidenceStoreError } from './evidenceStore';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const NAME = /^[a-z0-9][a-z0-9-]{0,41}$/;
@@ -80,6 +83,8 @@ export interface BffDeps {
   config: BffConfig;
   docs: DocsIndex | null;
   metrics?: BffMetrics;
+  /** Signed validation records; defaults to config.evidenceDir / config.cli. */
+  evidence?: EvidenceStore;
 }
 
 /** Distinct generations an app has had, oldest first. */
@@ -136,7 +141,7 @@ export function deploymentProgress(app: AppRec, generation: number) {
   };
 }
 
-export function createBff({ adapter, config, docs, metrics = new BffMetrics() }: BffDeps) {
+export function createBff({ adapter, config, docs, metrics = new BffMetrics(), evidence = new EvidenceStore(config.evidenceDir, config.cli) }: BffDeps) {
   const r = express.Router();
   r.use(express.json({ limit: '256kb' }));
 
@@ -197,6 +202,29 @@ export function createBff({ adapter, config, docs, metrics = new BffMetrics() }:
     return { ...result, request_id: req.requestId, actor: describeSession(tokenFrom(req)).actor };
   };
 
+  /* ----------------------------------------------------------- settings */
+
+  // Non-secret server configuration, so operators can see what the console is
+  // bound to. Tokens, keys and API keys are never included.
+  r.get('/settings', wrap(async (req, res) => {
+    requireSession(req);
+    res.json({
+      data: {
+        adapter: config.adapter,
+        production: config.production,
+        controlEndpoints: config.controlEndpoints,
+        timeoutMs: config.timeoutMs,
+        regionLocations: config.regionLocations ? Object.keys(config.regionLocations) : null,
+        secureCookies: config.secureCookies,
+        copilotModel: config.copilotModel,
+        evidenceDir: config.evidenceDir,
+        cliConfigured: !!config.cli,
+        session: describeSession(tokenFrom(req))
+      },
+      request_id: req.requestId
+    });
+  }));
+
   /* ------------------------------------------------------------- health */
 
   r.get('/health', wrap(async (req, res) => {
@@ -244,7 +272,16 @@ export function createBff({ adapter, config, docs, metrics = new BffMetrics() }:
       detail = 'sign in to discover capabilities';
     }
     res.json({
-      data: deriveCapabilities({ mode: adapter.mode, now: Date.now(), snapshot: s, reachable: health.reachable, detail, hasRegionLocations: !!config.regionLocations, copilotModel: !!config.copilotModel }),
+      data: deriveCapabilities({
+        mode: adapter.mode,
+        now: Date.now(),
+        snapshot: s,
+        reachable: health.reachable,
+        detail,
+        hasRegionLocations: !!config.regionLocations,
+        copilotModel: !!config.copilotModel,
+        validationRecords: evidence.configured ? `signed validation records from the evidence directory${evidence.canVerify ? '; verified with dh evidence verify' : '; no dh CLI configured, so they cannot be verified here'}` : null
+      }),
       request_id: req.requestId
     });
   }));
@@ -262,7 +299,9 @@ export function createBff({ adapter, config, docs, metrics = new BffMetrics() }:
         certificates: s.certificates,
         security: s.security,
         verification: s.evidence.verification,
-        recentEvents: s.evidence.entries.slice(0, 8)
+        recentEvents: s.evidence.entries.slice(0, 30),
+        attention: attentionItems(s),
+        volumes: s.volumes.map((v) => ({ id: v.id, app: v.app, name: v.name, state: v.state, members: v.memberNames }))
       }, s.overview.provenance)
     );
   }));
@@ -283,7 +322,18 @@ export function createBff({ adapter, config, docs, metrics = new BffMetrics() }:
     const events = s.evidence.entries.filter((e) => e.resource.includes(node.id) || e.actor === node.id || e.resource.includes(node.name)).slice(0, 25);
     const diagnostics = s.diagnostics.filter((d) => d.subject === node.name);
     const volumes = s.volumes.filter((v) => v.members.includes(node.id));
-    res.json(env(req, { node, replicas, events, diagnostics, volumes }, { ...s.overview.provenance, observedAt: node.observation.observedAt, ageMs: node.observation.ageMs }));
+    // Resources the control plane has assigned to this host (desired RUNNING replicas), from each app's manifest.
+    const allocated = { cpuMilli: 0, memBytes: 0, replicas: 0, undeclared: 0 };
+    for (const a of s.apps) {
+      for (const r of a.replicas) {
+        if (r.node !== node.id || r.desired !== 'RUNNING') continue;
+        allocated.replicas++;
+        if (a.resources.cpuMilli === null || a.resources.memBytes === null) allocated.undeclared++;
+        allocated.cpuMilli += a.resources.cpuMilli ?? 0;
+        allocated.memBytes += a.resources.memBytes ?? 0;
+      }
+    }
+    res.json(env(req, { node, replicas, events, diagnostics, volumes, allocated }, { ...s.overview.provenance, observedAt: node.observation.observedAt, ageMs: node.observation.ageMs }));
   }));
 
   r.get('/nodes/:id/logs', wrap(async (req, res) => {
@@ -446,6 +496,22 @@ export function createBff({ adapter, config, docs, metrics = new BffMetrics() }:
     res.json({ data: { head: page.head, entries, nextBefore: from > 0 ? from + 1 : null }, request_id: req.requestId });
   }));
 
+  r.get('/operations', wrap(async (req, res) => {
+    const s = await snap(req);
+    const byName = new Map(s.apps.map((a) => [a.name, a]));
+    const ops = deriveOperations(
+      s,
+      (name, g) => (byName.has(name) ? deploymentProgress(byName.get(name)!, g) : null),
+      (name) => (byName.has(name) ? generationsOf(byName.get(name)!) : [])
+    );
+    res.json(env(req, { operations: ops }, { ...s.overview.provenance, state: 'DERIVED' }));
+  }));
+
+  r.get('/rejections', wrap(async (req, res) => {
+    const s = await snap(req);
+    res.json(env(req, { rejections: s.rejections }, s.overview.provenance));
+  }));
+
   r.post('/evidence/verify', wrap(async (req, res) => {
     requireSession(req);
     res.json({ data: await adapter.verifyAudit(ctx(req)), request_id: req.requestId });
@@ -500,6 +566,69 @@ export function createBff({ adapter, config, docs, metrics = new BffMetrics() }:
     const ok = dismissPendingAction(req.params.id, tokenFrom(req) ?? '');
     if (!ok) throw new HttpError(404, 'NOT_FOUND', 'No pending action with that id.');
     res.json({ data: { dismissed: true }, request_id: req.requestId });
+  }));
+
+  /* ------------------------------------------------ validation records */
+
+  const store = async <T>(fn: () => Promise<T>): Promise<T> => {
+    try {
+      return await fn();
+    } catch (e) {
+      if (e instanceof EvidenceStoreError) throw new HttpError(e.status, e.code, e.message);
+      throw e;
+    }
+  };
+
+  r.get('/evidence/records', wrap(async (req, res) => {
+    requireSession(req);
+    const records = await store(() => evidence.list());
+    res.json({
+      data: { records, verifications: Object.fromEntries(records.map((x) => [x.id, evidence.lastVerification(x.id)])), canVerify: evidence.canVerify },
+      provenance: { state: 'LIVE', source: 'evidence-dir', observedAt: Date.now(), ageMs: 0 },
+      request_id: req.requestId
+    });
+  }));
+
+  r.get('/evidence/records/:id', wrap(async (req, res) => {
+    requireSession(req);
+    const record = await store(() => evidence.get(req.params.id));
+    const children = (await store(() => evidence.list())).filter((x) => x.parent === record.id).map((x) => ({ id: x.id, outcome: x.outcome }));
+    res.json({ data: { record, verification: evidence.lastVerification(record.id), canVerify: evidence.canVerify, children }, request_id: req.requestId });
+  }));
+
+  r.get('/evidence/records/:id/record.json', wrap(async (req, res) => {
+    requireSession(req);
+    const raw = await store(() => evidence.raw(req.params.id));
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="${req.params.id}-record.json"`);
+    res.send(raw);
+  }));
+
+  r.get('/evidence/records/:id/steps/:step/log', wrap(async (req, res) => {
+    requireSession(req);
+    const log = await store(() => evidence.stepLog(req.params.id, req.params.step));
+    res.json({ data: log, request_id: req.requestId });
+  }));
+
+  r.post('/evidence/records/:id/verify', wrap(async (req, res) => {
+    requireSession(req);
+    const v = await store(() => evidence.verify(req.params.id));
+    res.json({ data: v, request_id: req.requestId });
+  }));
+
+  /* ------------------------------------------------------------ invites */
+
+  r.get('/invites', wrap(async (req, res) => {
+    requireSession(req);
+    const out = await adapter.listInvites(ctx(req));
+    res.json(env(req, out, { state: adapter.mode === 'demo' ? 'SIMULATED' : 'LIVE', source: adapter.source, observedAt: out.serverTime, ageMs: 0 }));
+  }));
+
+  r.post('/invites/:nonce/revoke', wrap(async (req, res) => {
+    const nonce = req.params.nonce;
+    if (!/^[0-9a-f]{16,128}$/.test(nonce)) throw new HttpError(422, 'VALIDATION_FAILED', 'Invite id is malformed.');
+    const out = await mutation(req, (c) => adapter.revokeInvite(c, nonce));
+    res.status(out.ok ? 200 : 409).json({ data: out, request_id: req.requestId });
   }));
 
   /* --------------------------------------------------------- operations */

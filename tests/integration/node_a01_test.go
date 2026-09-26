@@ -216,6 +216,28 @@ func TestNodeA01SovereignNode(t *testing.T) {
 		if r, err := c.Op.RevokeInvite(tok); err == nil && r.OK {
 			t.Fatal("revoking a consumed invite succeeded; the host it admitted must be revoked instead")
 		}
+		// The owner's invite list reports each state and carries no token material.
+		var raw json.RawMessage
+		if err := c.Op.Do("GET", "/api/v1/invites", nil, &raw); err != nil {
+			t.Fatal(err)
+		}
+		if strings.Contains(string(raw), "dhcap1.") || strings.Contains(string(raw), "dhjoin1.") {
+			t.Fatal("invite list contains token material")
+		}
+		var list struct {
+			Invites []control.InviteView `json:"invites"`
+		}
+		_ = json.Unmarshal(raw, &list)
+		states := map[string]string{}
+		for _, iv := range list.Invites {
+			states[iv.Note] = iv.State
+			if iv.Note == "node-a01" && iv.UsedBy != id {
+				t.Fatalf("used invite names %q, want %s", iv.UsedBy, id)
+			}
+		}
+		if states["node-a01"] != "USED" || states["to revoke"] != "REVOKED" || states["expires"] != "EXPIRED" {
+			t.Fatalf("invite states: %v", states)
+		}
 	})
 
 	t.Run("an enrollment signed by a key other than the enrolling identity is refused", func(t *testing.T) {

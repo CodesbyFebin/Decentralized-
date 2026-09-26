@@ -1,4 +1,4 @@
-import type { AdapterMode, AuditEntryRec, LedgerVerification, NodeOperation, RealitySnapshot } from '../../types/reality';
+import type { AdapterMode, AuditEntryRec, InviteRec, LedgerVerification, NodeOperation, RealitySnapshot } from '../../types/reality';
 
 /** Per-request context: the caller's own capability is forwarded, never a BFF-held credential. */
 export interface RequestCtx {
@@ -63,4 +63,7 @@ export interface PlatformAdapter {
   applyManifest(ctx: RequestCtx, yaml: string): Promise<OperationResult>;
   scaleApp(ctx: RequestCtx, app: string, replicas: number): Promise<OperationResult>;
   deleteApp(ctx: RequestCtx, app: string): Promise<OperationResult>;
+  /** Join invites (admin). The root-signed join token is never held by the platform. */
+  listInvites(ctx: RequestCtx): Promise<{ invites: InviteRec[]; serverTime: number }>;
+  revokeInvite(ctx: RequestCtx, nonce: string): Promise<OperationResult>;
 }

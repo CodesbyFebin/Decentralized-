@@ -31,6 +31,17 @@ export const fmtAge = (ms: number | null | undefined): string => {
   return `${Math.round(h / 24)}d ago`;
 };
 
+/** A length of time (not an age): 850ms, 14s, 3m 52s, 1h 4m. */
+export const fmtDuration = (ms: number | null | undefined): string => {
+  if (ms === null || ms === undefined) return '—';
+  if (ms < 1000) return `${Math.round(ms)}ms`;
+  const s = Math.round(ms / 1000);
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ${s % 60}s`;
+  return `${Math.floor(m / 60)}h ${m % 60}m`;
+};
+
 export const since = (ts: number | null | undefined) => (ts ? fmtAge(Date.now() - ts) : 'never');
 export const fmtTime = (ts: number | null | undefined) => (ts ? new Date(ts).toLocaleString() : '—');
 export const short = (s: string | null | undefined, n = 12) => (!s ? '—' : s.length > n + 1 ? `${s.slice(0, n)}…` : s);
@@ -72,7 +83,20 @@ export const MetricNote: React.FC<{ m: Metric | undefined }> = ({ m }) =>
 
 const FRESH_TONE: Record<Freshness, Tone> = { LIVE: 'emerald', STALE: 'amber', UNKNOWN: 'slate', UNAVAILABLE: 'rose' };
 
+/** True inside a Gate whose data could not be refreshed: nothing below it is current. */
+export const StaleContext = React.createContext(false);
+
 export const FreshnessPill: React.FC<{ f: Freshness; ageMs?: number | null }> = ({ f, ageMs }) => {
+  const pageStale = React.useContext(StaleContext);
+  if (pageStale) {
+    const r = TONE.rose;
+    return (
+      <span title={`last observed: ${f === 'LIVE' ? 'FRESH' : f}`} className="inline-flex items-center gap-1.5 px-2 py-[3px] rounded-md text-[11px] font-semibold whitespace-nowrap border" style={{ color: r, background: `${r}1A`, borderColor: `${r}40` }}>
+        <span className="w-1.5 h-1.5 rounded-full" style={{ background: r }} />
+        UNREACHABLE
+      </span>
+    );
+  }
   const c = TONE[FRESH_TONE[f]];
   return (
     <span className="inline-flex items-center gap-1.5 px-2 py-[3px] rounded-md text-[11px] font-semibold whitespace-nowrap border" style={{ color: c, background: `${c}1A`, borderColor: `${c}40` }}>
@@ -169,7 +193,7 @@ export function Gate<T>({ res, children, loadingRows }: { res: Resource<T>; chil
     <>
       {res.stale && <StaleBanner fetchedAt={res.fetchedAt} error={res.error} />}
       <div className={res.stale ? 'grayscale opacity-60 transition-all' : 'transition-all'} aria-disabled={res.stale || undefined}>
-        {children(res.data, res.stale)}
+        <StaleContext.Provider value={res.stale}>{children(res.data, res.stale)}</StaleContext.Provider>
       </div>
     </>
   );

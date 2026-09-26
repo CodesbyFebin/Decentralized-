@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, AppWindow, Check, X, Scaling, Trash2 } from 'lucide-react';
+import { ArrowLeft, AppWindow, Check, X, Scaling, Trash2, Square, RotateCcw, History } from 'lucide-react';
 import type { AppRec, AuditEntryRec, DomainRec, VolumeRec } from '../../types/reality';
 import { useResource } from '../../lib/useResource';
 import { useSession } from '../../lib/session';
 import { api, ApiError, type MutationResult } from '../../lib/client';
 import { Glass, PageTabs, PanelHeader, IconTile, StatusPill, GhostButton } from '../common/ui';
-import { Gate, FreshnessPill, shortDigest, since, fmtTime, fmtBytes, ErrorState, Empty, Note } from '../common/states';
+import { Gate, FreshnessPill, shortDigest, since, fmtTime, fmtBytes, ErrorState, Empty, Note, Unavailable, TruthTag } from '../common/states';
+import { StateComparison, Digest, FreshnessBadge, viewFreshness, type Convergence } from '../common/truth';
+import { LogViewer } from '../common/LogViewer';
 
 export interface DeploymentProgress {
   id: string;
@@ -32,7 +34,7 @@ interface Payload {
   events: AuditEntryRec[];
 }
 
-type Tab = 'overview' | 'replicas' | 'deployments' | 'domains' | 'storage' | 'environment' | 'events';
+type Tab = 'overview' | 'runtime' | 'deployments' | 'logs' | 'metrics' | 'networking' | 'domains' | 'storage' | 'environment' | 'events' | 'evidence' | 'settings';
 
 /** Decentralization dimensions for one app, never a single score. */
 export function Decentralization({ app }: { app: AppRec }) {
@@ -74,7 +76,9 @@ export default function AppDetailView() {
   const { name = '' } = useParams();
   const res = useResource<Payload>(`/apps/${encodeURIComponent(name)}`);
   const [params, setParams] = useSearchParams();
-  const tab = (params.get('tab') as Tab) || 'overview';
+  const rawTab = params.get('tab');
+  const tab = ((rawTab === 'replicas' ? 'runtime' : rawTab) as Tab) || 'overview';
+  const [logReplica, setLogReplica] = useState<string>('');
   const { can, mode } = useSession();
   const navigate = useNavigate();
   const [scaleTo, setScaleTo] = useState<string>('');
@@ -104,7 +108,7 @@ export default function AppDetailView() {
   return (
     <div className="space-y-4 pt-2">
       <Link to="/apps" className="inline-flex items-center gap-1.5 text-[12.5px] text-slate-400 hover:text-cyan-300">
-        <ArrowLeft className="w-3.5 h-3.5" /> Websites & Apps
+        <ArrowLeft className="w-3.5 h-3.5" /> Applications
       </Link>
       <Gate res={res}>
         {(d, stale) => {
@@ -122,22 +126,14 @@ export default function AppDetailView() {
                       <StatusPill status={a.phase} />
                       <span className="text-[12px] text-slate-400">{a.phaseReason}</span>
                     </div>
-                    <div className="mt-2 text-[12px] text-slate-400">
-                      generation {a.generation} · {a.runtime} · <span className="font-mono" title={a.image}>{a.image.split('@')[0]}@{shortDigest(a.imageDigest)}</span>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-4 gap-2 text-center">
-                    {[
-                      ['Desired', a.desiredReplicas],
-                      ['Admitted', a.admitted],
-                      ['Observed', a.observedRunning],
-                      ['Healthy', a.healthyReplicas]
-                    ].map(([k, v]) => (
-                      <div key={k} className="px-3 py-2 rounded-xl bg-white/[0.03] border border-[rgba(125,190,255,0.12)]">
-                        <div className="text-[20px] font-bold text-white tabular-nums">{v}</div>
-                        <div className="text-[10.5px] text-slate-400">{k}</div>
-                      </div>
-                    ))}
+                    <dl className="mt-3 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-6 gap-y-1 text-[12px] [&_dd]:min-w-0 [&_dd]:break-all">
+                      <div className="flex gap-2"><dt className="text-slate-400 w-28 shrink-0">Deployment</dt><dd className="text-slate-200">generation {a.generation} · manifest <span className="font-mono">{shortDigest(a.hash)}</span></dd></div>
+                      <div className="flex gap-2"><dt className="text-slate-400 w-28 shrink-0">Artifact</dt><dd><Digest value={a.imageDigest} /></dd></div>
+                      <div className="flex gap-2"><dt className="text-slate-400 w-28 shrink-0">Image</dt><dd className="text-slate-300 font-mono truncate" title={a.image}>{a.image.split('@')[0]}</dd></div>
+                      <div className="flex gap-2"><dt className="text-slate-400 w-28 shrink-0">Runtime</dt><dd className="text-slate-200">{a.runtime}</dd></div>
+                      <div className="flex gap-2"><dt className="text-slate-400 w-28 shrink-0">Source</dt><dd className="text-slate-300">dh/v1 manifest · source commit not recorded by the platform</dd></div>
+                      <div className="flex gap-2"><dt className="text-slate-400 w-28 shrink-0">Environment</dt><dd className="text-slate-400">not modelled (one cluster, no environments)</dd></div>
+                    </dl>
                   </div>
                 </div>
                 <div className="mt-4 flex flex-wrap items-end gap-2">
@@ -156,13 +152,23 @@ export default function AppDetailView() {
                   >
                     <Scaling className="w-4 h-4" /> Apply
                   </GhostButton>
-                  <GhostButton disabled={!canWrite || busy} onClick={() => setDeleting(true)} className="!border-rose-400/40 !text-rose-200 disabled:opacity-40 ml-auto">
+                  <span className="ml-auto" />
+                  <GhostButton disabled={!canWrite || busy || a.desiredReplicas === 0} onClick={() => { setScaleTo('0'); setConfirmText(''); }} title="Stop = scale to 0 replicas (typed confirmation)" className="!border-amber-400/40 !text-amber-100 disabled:opacity-40">
+                    <Square className="w-4 h-4" /> Stop
+                  </GhostButton>
+                  <GhostButton disabled title="The control plane has no restart operation. Hosts restart crashed processes themselves; a new generation replaces replicas." className="disabled:opacity-40">
+                    <RotateCcw className="w-4 h-4" /> Restart
+                  </GhostButton>
+                  <GhostButton disabled title="Not supported: the control plane keeps manifest hashes, not previous manifests. Re-apply the earlier manifest from Deploy." className="disabled:opacity-40">
+                    <History className="w-4 h-4" /> Rollback
+                  </GhostButton>
+                  <GhostButton disabled={!canWrite || busy} onClick={() => setDeleting(true)} className="!border-rose-400/40 !text-rose-200 disabled:opacity-40">
                     <Trash2 className="w-4 h-4" /> Delete
                   </GhostButton>
                 </div>
                 {deleting && (
                   <div className="mt-3 rounded-xl border border-rose-400/30 bg-rose-500/10 p-3" role="alertdialog">
-                    <div className="text-[13px] text-rose-100">Delete {a.name}? Every replica is stopped. Type the name to confirm.</div>
+                    <div className="text-[13px] text-rose-100">Delete {a.name}? Every replica on {new Set(a.replicas.map((r) => r.node)).size} host(s) is stopped, its routes are withdrawn, and the control plane records the deletion in the audit ledger. Volumes are not deleted by this. Type the name to confirm.</div>
                     <div className="mt-2 flex gap-2">
                       <input value={confirmText} onChange={(e) => setConfirmText(e.target.value)} className="rounded-lg bg-black/40 border border-rose-400/40 px-2 py-1.5 text-[12.5px]" />
                       <GhostButton
@@ -190,19 +196,54 @@ export default function AppDetailView() {
               <PageTabs<Tab>
                 tabs={[
                   { id: 'overview', label: 'Overview' },
-                  { id: 'replicas', label: `Replicas (${a.replicas.length})` },
+                  { id: 'runtime', label: `Runtime (${a.replicas.length})` },
                   { id: 'deployments', label: `Deployments (${d.deployments.length})` },
+                  { id: 'logs', label: 'Logs' },
+                  { id: 'metrics', label: 'Metrics' },
+                  { id: 'networking', label: 'Networking' },
                   { id: 'domains', label: 'Domains' },
                   { id: 'storage', label: 'Storage' },
                   { id: 'environment', label: 'Environment' },
-                  { id: 'events', label: 'Events' }
+                  { id: 'events', label: 'Events' },
+                  { id: 'evidence', label: 'Evidence' },
+                  { id: 'settings', label: 'Settings' }
                 ]}
                 active={tab}
                 onChange={(t) => setParams((p) => (t === 'overview' ? (p.delete('tab'), p) : (p.set('tab', t), p)), { replace: true })}
               />
 
               {tab === 'overview' && (
-                <div className="grid lg:grid-cols-2 gap-4">
+                <div className="grid lg:grid-cols-2 gap-4 [&>*]:min-w-0">
+                  <div className="lg:col-span-2 grid lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] gap-4 [&>*]:min-w-0">
+                    <StateComparison
+                      desired={a.desiredReplicas}
+                      observed={a.observedRunning}
+                      verified={a.healthyReplicas}
+                      labels={['Desired replicas', 'Observed running', 'Verified']}
+                      notes={['from the manifest', `fresh host observations · ${a.admitted} admitted`, 'running, fresh and passing the declared health check']}
+                      result={convergence(a, stale)}
+                      resultReason={stale ? 'last observation; the control plane is unreachable' : a.phaseReason}
+                    />
+                    <Glass className="p-4 overflow-x-auto">
+                      <PanelHeader title="Placement" subtitle="Where each desired replica runs, from signed host observations." />
+                      <table className="dh-table w-full min-w-[560px] mt-2">
+                        <thead><tr><th>Replica</th><th>Node</th><th>Operator</th><th>Observed</th><th>Health</th><th>Started</th><th>Freshness</th></tr></thead>
+                        <tbody>
+                          {a.replicas.filter((r) => r.desired === 'RUNNING').map((r) => (
+                            <tr key={r.assignment + r.node}>
+                              <td className="font-mono text-[11.5px]">r{r.replica}</td>
+                              <td><Link to={`/nodes/${r.node}`} className="text-cyan-300 hover:underline">{r.nodeName}</Link></td>
+                              <td className="text-slate-400">{a.federated ? 'federated peer' : 'this cluster'}</td>
+                              <td><StatusPill status={r.observed} dot={false} /></td>
+                              <td className="text-[12px]">{r.health ? (r.health.ok ? <span className="text-emerald-300">passing</span> : <span className="text-rose-300">failing</span>) : <span className="text-slate-500">no check</span>}</td>
+                              <td className="text-slate-400">{r.startedAt ? since(r.startedAt) : '—'}</td>
+                              <td><FreshnessBadge f={viewFreshness({ pageStale: stale, observation: r.freshness })} observedAt={r.observedAt} /></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </Glass>
+                  </div>
                   <Glass className="p-4">
                     <PanelHeader title="Latest deployment" subtitle={d.deployments[0] ? `generation ${d.deployments[0].generation} · ${d.deployments[0].state}` : undefined} />
                     <div className="mt-3">{d.deployments[0] ? <StageList stages={d.deployments[0].stages} /> : <p className="text-slate-400 text-[12.5px]">No history.</p>}</div>
@@ -211,7 +252,7 @@ export default function AppDetailView() {
                 </div>
               )}
 
-              {tab === 'replicas' && (
+              {tab === 'runtime' && (
                 <div className="space-y-3">
                   {a.replicas.map((r) => (
                     <Glass key={r.assignment + r.node} className="p-4">
@@ -270,6 +311,75 @@ export default function AppDetailView() {
                 </Glass>
               )}
 
+              {tab === 'logs' &&
+                (a.replicas.length ? (
+                  <Glass className="p-4 space-y-3">
+                    <div className="flex flex-wrap gap-2" role="tablist" aria-label="Replica">
+                      {a.replicas.map((r) => {
+                        const key = `${r.assignment}@${r.node}`;
+                        const active = (logReplica || `${a.replicas[0].assignment}@${a.replicas[0].node}`) === key;
+                        return (
+                          <button key={key} role="tab" aria-selected={active} onClick={() => setLogReplica(key)} className={`px-2.5 py-1 rounded-lg text-[12px] border focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-400 ${active ? 'border-cyan-400/60 text-white bg-cyan-500/10' : 'border-[rgba(125,190,255,0.16)] text-slate-300'}`}>
+                            {r.assignment} on {r.nodeName}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {(() => {
+                      const r = a.replicas.find((x) => `${x.assignment}@${x.node}` === logReplica) ?? a.replicas[0];
+                      return <LogViewer key={r.assignment + r.node} path={`/nodes/${r.node}/logs?assignment=${encodeURIComponent(r.assignment)}`} source={`${r.assignment}@${r.nodeName}`} />;
+                    })()}
+                  </Glass>
+                ) : (
+                  <Empty title="No replicas to show logs for" />
+                ))}
+
+              {tab === 'metrics' && (
+                <Unavailable title="No application metrics" detail="Host agents report point-in-time facts and edge counters, not time series, so there is nothing to chart. Per-replica health-check latency is shown under Runtime." />
+              )}
+
+              {tab === 'networking' && (
+                <Glass className="p-4">
+                  <PanelHeader title="Networking" subtitle="Ports from the manifest; replicas are reached over the private WireGuard mesh." />
+                  <ul className="mt-3 text-[12.5px] space-y-1">
+                    {a.ingress.length ? a.ingress.map((i) => <li key={i.host}><span className="text-sky-300">{i.host}</span> → port <span className="font-mono">{i.port || 'default'}</span> · TLS {i.tls || 'none'}</li>) : <li className="text-slate-400">No public ingress declared.</li>}
+                  </ul>
+                  <Note>Mesh reachability between hosts is observed per host (Nodes → Mesh). Per-application network policy does not exist yet.</Note>
+                </Glass>
+              )}
+
+              {tab === 'evidence' && (
+                <Glass className="p-4 overflow-x-auto">
+                  <PanelHeader title="Evidence" subtitle="Signed records behind this application's state: host observations and audit entries." />
+                  <table className="dh-table w-full min-w-[640px] mt-2">
+                    <thead><tr><th>Record</th><th>Subject</th><th>Digest</th><th>When</th></tr></thead>
+                    <tbody>
+                      {a.replicas.filter((r) => r.evidence).map((r) => (
+                        <tr key={`obs-${r.assignment}-${r.node}`}><td>host observation</td><td>{r.assignment} on {r.nodeName}</td><td><Digest value={r.evidence} /></td><td className="text-slate-400">{r.observedAt ? since(r.observedAt) : '—'}</td></tr>
+                      ))}
+                      {d.events.filter((e) => e.evidence).map((e) => (
+                        <tr key={`audit-${e.seq}`}><td>audit #{e.seq} {e.action}</td><td>{e.resource}</td><td><Digest value={e.evidence} /></td><td className="text-slate-400">{since(e.ts)}</td></tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <Note>A running replica is not the same as verified: verification here is the host's signed observation plus the health check it ran.</Note>
+                </Glass>
+              )}
+
+              {tab === 'settings' && (
+                <Glass className="p-4">
+                  <PanelHeader title="Settings" subtitle="From the applied manifest. Change them by applying a new manifest." />
+                  <dl className="mt-3 grid sm:grid-cols-2 gap-x-6 gap-y-1 text-[12.5px]">
+                    <div className="flex gap-2"><dt className="text-slate-400 w-32">Replicas</dt><dd>{a.desiredReplicas}</dd></div>
+                    <div className="flex gap-2"><dt className="text-slate-400 w-32">Resources</dt><dd>{fmtRequest(a.resources)}</dd></div>
+                    <div className="flex gap-2"><dt className="text-slate-400 w-32">Runtime</dt><dd>{a.runtime}</dd></div>
+                    <div className="flex gap-2"><dt className="text-slate-400 w-32">Volumes</dt><dd>{a.volumes.join(', ') || 'none'}</dd></div>
+                    <div className="flex gap-2"><dt className="text-slate-400 w-32">Federated</dt><dd>{a.federated ? 'yes' : 'no'}</dd></div>
+                  </dl>
+                  {can('api.write') && <div className="mt-3"><Link to="/deploy/new" className="text-[12.5px] text-cyan-300 hover:underline">Apply a new manifest →</Link></div>}
+                </Glass>
+              )}
+
               {tab === 'domains' &&
                 (d.domains.length ? (
                   <Glass className="p-4 space-y-2">
@@ -307,7 +417,7 @@ export default function AppDetailView() {
                   <div className="mt-2 flex flex-wrap gap-2">
                     {a.envNames.length ? a.envNames.map((k) => <code key={k} className="px-2 py-1 rounded-md bg-white/[0.04] border border-[rgba(125,190,255,0.14)] text-[12px] text-cyan-200">{k}</code>) : <span className="text-slate-400 text-[12.5px]">none</span>}
                   </div>
-                  <div className="mt-4 text-[12.5px] text-slate-300">Resources: cpu {a.resources.cpu || '—'} · mem {a.resources.mem || '—'}</div>
+                  <div className="mt-4 text-[12.5px] text-slate-300">Requested per replica: {fmtRequest(a.resources)}</div>
                   <Note>The platform has no separate secrets store yet; manifest env values are stored in the control plane state. Do not put secrets in them.</Note>
                 </Glass>
               )}
@@ -331,4 +441,27 @@ export default function AppDetailView() {
       </Gate>
     </div>
   );
+}
+
+function convergence(a: AppRec, stale: boolean): Convergence {
+  if (stale) return 'UNKNOWN';
+  switch (a.phase) {
+    case 'STOPPED':
+    case 'DELETED':
+      return 'STOPPED';
+    case 'READY':
+      return 'CONVERGED';
+    case 'CONVERGING':
+      return 'CONVERGING';
+    case 'REFUSED':
+      return 'DIVERGED';
+    case 'DEGRADED':
+      return 'DEGRADED';
+    default:
+      return 'UNKNOWN';
+  }
+}
+
+function fmtRequest(r: AppRec['resources']): string {
+  return `cpu ${r.cpuMilli !== null ? `${r.cpuMilli / 1000} cores` : 'not declared'} · memory ${r.memBytes !== null ? fmtBytes(r.memBytes) : 'not declared'}`;
 }

@@ -17,7 +17,7 @@ import (
 
 func init() {
 	reg("node invite", "create a single-use join token: [--roles edge] [--auto] [--ttl 15m] [--out FILE]", true, cmdInvite)
-	reg("node invite-revoke", "withdraw an unused join token: TOKEN|NONCE", true, cmdInviteRevoke)
+	reg("node invite-revoke", "withdraw an unused join token: TOKEN|TOKEN-FILE|NONCE", true, cmdInviteRevoke)
 	reg("node join", "print how to join a host with a token (runs on the host): TOKEN", false, cmdJoinHelp)
 	reg("node approve", "approve a pending host: HOST", true, nodeAction("approve"))
 	reg("node revoke", "revoke a host (blocks new work; admitted work may continue): HOST [--reason R]", true, cmdRevoke)
@@ -92,10 +92,19 @@ func cmdInviteRevoke(op *Operator, args []string) error {
 	return nil
 }
 
-// inviteNonce accepts a join token (dhjoin1.…) or the bare nonce.
+// inviteNonce accepts a join token (dhjoin1.…), a file holding one (as
+// written by dh node invite --out), or the bare nonce.
 func inviteNonce(s string) (string, error) {
 	s = strings.TrimSpace(s)
 	if !strings.HasPrefix(s, "dhjoin1.") {
+		if b, err := os.ReadFile(s); err == nil {
+			s = strings.TrimSpace(string(b))
+		}
+	}
+	if !strings.HasPrefix(s, "dhjoin1.") {
+		if len(s) < 16 || strings.Trim(s, "0123456789abcdef") != "" {
+			return "", errors.New("not a join token, token file or invite nonce")
+		}
 		return s, nil
 	}
 	t, err := node.DecodeJoinToken(s)

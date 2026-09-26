@@ -12,6 +12,8 @@ export async function startBff(adapter: PlatformAdapter, overrides: Partial<BffC
     secureCookies: false,
     copilotModel: null,
     production: false,
+    evidenceDir: null,
+    cli: null,
     ...overrides
   };
   const app = express();

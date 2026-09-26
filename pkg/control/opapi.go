@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -29,6 +30,7 @@ func (s *Server) opRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/audit/verify", s.op(read, s.handleAuditVerify))
 	mux.HandleFunc("GET /api/v1/plans", s.op(read, func(w http.ResponseWriter, _ *http.Request, _ *authz) { writeJSON(w, 200, s.plans.all()) }))
 	mux.HandleFunc("GET /api/v1/state", s.op(admin, s.handleStateDump))
+	mux.HandleFunc("GET /api/v1/invites", s.op(admin, s.handleInvites))
 	mux.HandleFunc("GET /api/v1/export", s.op(admin, s.handleExport))
 	mux.HandleFunc("GET /api/v1/nodes/{id}/ledger", s.op(read, s.handleHostLedger))
 	mux.HandleFunc("GET /api/v1/nodes/{id}/logs", s.op(read, s.handleHostLogs))
@@ -287,6 +289,46 @@ func (s *Server) handleStateDump(w http.ResponseWriter, _ *http.Request, _ *auth
 	_ = json.Unmarshal(b, &st)
 	st.LocalCAKey = "[secret withheld]"
 	writeJSON(w, 200, &st)
+}
+
+// InviteView is one join invite as the owner sees it. The join token itself
+// (root-signed) never reaches the control plane; the nonce identifies it.
+type InviteView struct {
+	Nonce   string   `json:"nonce"`
+	Created int64    `json:"created"`
+	Expires int64    `json:"expires"`
+	Roles   []string `json:"roles"`
+	Note    string   `json:"note"`
+	Auto    bool     `json:"auto"`
+	UsedBy  string   `json:"usedBy"`
+	Revoked int64    `json:"revoked"`
+	State   string   `json:"state"` // ACTIVE | USED | REVOKED | EXPIRED
+}
+
+func (s *Server) handleInvites(w http.ResponseWriter, _ *http.Request, _ *authz) {
+	now := nowMs()
+	out := []InviteView{}
+	s.fsm.Read(func(st *State) {
+		for _, inv := range st.Invites {
+			v := InviteView{Nonce: inv.Nonce, Created: inv.Created, Expires: inv.Expires, Roles: inv.Roles, Note: inv.Note, Auto: inv.Auto, UsedBy: inv.Used, Revoked: inv.Revoked}
+			switch {
+			case inv.Used != "":
+				v.State = "USED"
+			case inv.Revoked != 0:
+				v.State = "REVOKED"
+			case inv.Expires > 0 && now > inv.Expires:
+				v.State = "EXPIRED"
+			default:
+				v.State = "ACTIVE"
+			}
+			if v.Roles == nil {
+				v.Roles = []string{}
+			}
+			out = append(out, v)
+		}
+	})
+	sort.Slice(out, func(i, j int) bool { return out[i].Created > out[j].Created })
+	writeJSON(w, 200, map[string]any{"invites": out, "now": now})
 }
 
 // nodeMeshIP resolves a host id to its mesh address.

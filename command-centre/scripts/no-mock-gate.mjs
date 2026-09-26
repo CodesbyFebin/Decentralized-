@@ -23,7 +23,7 @@ const RULES = [
   [/\bfake\b|\bmock(ed|s)?\b|\bdummy\b|lorem ipsum/i, (l) => (/\/\/|\*|never|not |no /i.test(l) ? 'comment/negation' : 'forbidden')],
   [/\bseed(ed)?\b/i, (l) => (/\/\/|\*/.test(l) ? 'comment' : 'forbidden')],
   [/setTimeout\(/, (l) => (/poll|timer|abort|focus|copied|setCopied|deadline|timeout/i.test(l) ? 'timer (polling, abort, UI feedback)' : 'forbidden')],
-  [/['"]VERIFIED['"]/, (l, f) => (/reality\.ts$|mapView\.ts$|client|states|ui\.tsx$|EvidenceView|DashboardView|SecurityView/.test(f) || /state ===|state:|\?/.test(l) ? 'state comparison / label' : 'forbidden')],
+  [/['"]VERIFIED['"]/, (l, f) => (/reality\.ts$|mapView\.ts$|client|states|ui\.tsx$|EvidenceView|DashboardView|SecurityView/.test(f) || /state [!=]==|state:|\?/.test(l) ? 'state comparison / label' : 'forbidden')],
   [/\bdemo\b/i, (l, f) => (/mode === 'demo'|mode !== 'demo'|=== 'demo'/.test(l) ? 'explicit demo-mode check' : /config\.ts$|server\.ts$|session\.tsx$|capabilities\.ts$|AppShell|TopBar|Sidebar|TeamView|SettingsView|NodeDetailView|AppDetailView|DeployNewView|ui\.tsx$|mapView\.ts$|reality\.ts$|bff\.ts$/.test(f) ? 'explicit demo-mode handling / label' : 'forbidden')],
   [/placeholder/i, (l) => (/placeholder=|placeholder:|placeholder[,}]|\{placeholder\}/.test(l) ? 'input placeholder text / prop' : 'forbidden')]
 ];
