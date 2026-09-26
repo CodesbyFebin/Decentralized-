@@ -30,24 +30,28 @@ type NegativeControlResult struct {
 }
 
 type Evidence struct {
-	EvidenceID            string                     `json:"evidenceId"`
-	QualificationID       string                     `json:"qualificationId"`
-	SourceSHA             string                     `json:"sourceSha"`
-	Branch                string                     `json:"branch"`
-	Environment           string                     `json:"environment"`
-	Algorithm             string                     `json:"algorithm"`
-	KeyVersion            string                     `json:"keyVersion"`
-	KeyCustodyMode        string                     `json:"keyCustodyMode"`
-	CryptoTestResults     []TestResult               `json:"cryptoTestResults"`
-	PersistenceTestResults []TestResult              `json:"persistenceTestResults"`
-	NegativeControlResults []NegativeControlResult   `json:"negativeControlResults"`
-	FailClosedTestResult  TestResult                 `json:"failClosedTestResult"`
-	RestartTestResult     TestResult                 `json:"restartTestResult"`
-	StartedAt             string                     `json:"startedAt"`
-	CompletedAt           string                     `json:"completedAt"`
-	EvidenceDigest        string                     `json:"evidenceDigest"`
-	Signer                string                     `json:"signer"`
-	Signature             string                     `json:"signature,omitempty"`
+	EvidenceID              string                     `json:"evidenceId"`
+	QualificationID         string                     `json:"qualificationId"`
+	SourceSHA               string                     `json:"sourceSha"`
+	Branch                  string                     `json:"branch"`
+	Environment             string                     `json:"environment"`
+	Algorithm               string                     `json:"algorithm"`
+	KeyVersion              string                     `json:"keyVersion"`
+	KeyCustodyMode          string                     `json:"keyCustodyMode"`
+	BootstrapRequirement    string                     `json:"bootstrapRequirement"`
+	NonceUsageBound         string                     `json:"nonceUsageBound"`
+	AADEncoding             string                     `json:"aadEncoding"`
+	CryptoTestResults       []TestResult               `json:"cryptoTestResults"`
+	PersistenceTestResults  []TestResult               `json:"persistenceTestResults"`
+	NegativeControlResults  []NegativeControlResult    `json:"negativeControlResults"`
+	FailClosedTestResult    TestResult                 `json:"failClosedTestResult"`
+	RestartTestResult       TestResult                 `json:"restartTestResult"`
+	StartedAt               string                     `json:"startedAt"`
+	CompletedAt             string                     `json:"completedAt"`
+	EvidenceDigest          string                     `json:"evidenceDigest"`
+	Signer                  string                     `json:"signer"`
+	Signature               string                     `json:"signature,omitempty"`
+	ReconciliationPhase     string                     `json:"reconciliationPhase"`
 }
 
 func main() {
@@ -86,6 +90,9 @@ func main() {
 		Algorithm:              "aes-256-gcm",
 		KeyVersion:             "v1",
 		KeyCustodyMode:         "operator-local-bootstrap + cluster-held-wrapped",
+		BootstrapRequirement:   "32 bytes cryptographically random; MUST NOT be human passphrase; never persisted; from env var",
+		NonceUsageBound:        "~2^62 encryptions per secret version DEK; collision risk negligible with per-version unique DEK",
+		AADEncoding:            "length-prefixed canonical: len(f):f:|len(f):f:|...; binds algorithm, keyId, clusterId, secretId, deploymentId, workloadId, environment, version",
 		CryptoTestResults:      cryptoTests,
 		PersistenceTestResults: persistenceTests,
 		NegativeControlResults: negativeControls,
@@ -94,6 +101,7 @@ func main() {
 		StartedAt:              startedAtStr,
 		CompletedAt:            completedAtStr,
 		Signer:                 "codesbyfebin@gmail.com",
+		ReconciliationPhase:    "SEAL-R1: AAD strengthened, bootstrap/nonce documented, evidence re-bound to correct sourceSHA",
 	}
 
 	// Compute digest and sign
@@ -275,8 +283,8 @@ func runRestartTest() TestResult {
 
 func computeDigest(ev *Evidence) string {
 	// Compute SHA256 hash of evidence (excluding signature)
+	// Hash in canonical order: metadata, then test results
 	h := sha256.New()
-	// Hash fields in canonical order
 	fields := []string{
 		ev.EvidenceID,
 		ev.QualificationID,
@@ -286,13 +294,18 @@ func computeDigest(ev *Evidence) string {
 		ev.Algorithm,
 		ev.KeyVersion,
 		ev.KeyCustodyMode,
+		ev.BootstrapRequirement,
+		ev.NonceUsageBound,
+		ev.AADEncoding,
 		ev.StartedAt,
 		ev.CompletedAt,
+		ev.Signer,
+		ev.ReconciliationPhase,
 	}
 	for _, f := range fields {
 		io.WriteString(h, f)
 	}
-	// Hash test results
+	// Hash test results in order
 	for _, tr := range ev.CryptoTestResults {
 		io.WriteString(h, tr.Name+":"+tr.Outcome)
 	}
@@ -302,6 +315,8 @@ func computeDigest(ev *Evidence) string {
 	for _, nc := range ev.NegativeControlResults {
 		io.WriteString(h, nc.Control+":"+nc.Outcome)
 	}
+	io.WriteString(h, ev.FailClosedTestResult.Name+":"+ev.FailClosedTestResult.Outcome)
+	io.WriteString(h, ev.RestartTestResult.Name+":"+ev.RestartTestResult.Outcome)
 
 	return base64.RawURLEncoding.EncodeToString(h.Sum(nil))
 }
