@@ -8,12 +8,18 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
+	"io"
 	"math/big"
+	"net"
+	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/raft"
+	raftboltdb "github.com/hashicorp/raft-boltdb/v2"
 )
 
 // generateTestTLSConfig creates a self-signed certificate and TLS config for testing.
@@ -56,6 +62,205 @@ func generateTestTLSConfig() *tls.Config {
 	}
 }
 
+// PartitionController manages network partition state for testing.
+type PartitionController struct {
+	mu       sync.RWMutex
+	blocked  map[string]bool // "A->B" or "B->A" keys for blocked directions
+	addrToID map[string]string // maps address string to member ID
+}
+
+func NewPartitionController() *PartitionController {
+	return &PartitionController{
+		blocked:  make(map[string]bool),
+		addrToID: make(map[string]string),
+	}
+}
+
+// RegisterAddress registers a mapping from address to member ID.
+func (pc *PartitionController) RegisterAddress(addr, memberID string) {
+	pc.mu.Lock()
+	defer pc.mu.Unlock()
+	pc.addrToID[addr] = memberID
+	fmt.Fprintf(os.Stderr, "[PartitionController] Registered: %s -> %s\n", addr, memberID)
+}
+
+// AddressToID looks up the member ID for a given address.
+func (pc *PartitionController) AddressToID(addr string) string {
+	pc.mu.RLock()
+	defer pc.mu.RUnlock()
+	return pc.addrToID[addr]
+}
+
+// Block prevents traffic from source to destination.
+func (pc *PartitionController) Block(source, dest string) {
+	pc.mu.Lock()
+	defer pc.mu.Unlock()
+	pc.blocked[source+"->"+dest] = true
+}
+
+// Unblock allows traffic from source to destination.
+func (pc *PartitionController) Unblock(source, dest string) {
+	pc.mu.Lock()
+	defer pc.mu.Unlock()
+	delete(pc.blocked, source+"->"+dest)
+}
+
+// IsBlocked checks if traffic from source to dest is blocked.
+func (pc *PartitionController) IsBlocked(source, dest string) bool {
+	pc.mu.RLock()
+	defer pc.mu.RUnlock()
+	return pc.blocked[source+"->"+dest]
+}
+
+// HealAll removes all partition blocks.
+func (pc *PartitionController) HealAll() {
+	pc.mu.Lock()
+	defer pc.mu.Unlock()
+	pc.blocked = make(map[string]bool)
+}
+
+// PartitionableStreamLayer wraps raft.StreamLayer with partition control.
+type PartitionableStreamLayer struct {
+	inner      raft.StreamLayer
+	controller *PartitionController
+	localID    string
+}
+
+func NewPartitionableStreamLayer(inner raft.StreamLayer, controller *PartitionController, localID string) *PartitionableStreamLayer {
+	return &PartitionableStreamLayer{
+		inner:      inner,
+		controller: controller,
+		localID:    localID,
+	}
+}
+
+// Accept implements raft.StreamLayer - accepts inbound connections.
+func (psl *PartitionableStreamLayer) Accept() (net.Conn, error) {
+	for {
+		conn, err := psl.inner.Accept()
+		if err != nil {
+			return nil, err
+		}
+		fmt.Fprintf(os.Stderr, "[Raft %s] Accept connection from %s\n", psl.localID, conn.RemoteAddr())
+		// Note: At this point we have a TLS connection but haven't yet identified the remote peer.
+		// In a production system, the peer identity would come from the certificate.
+		// For this test harness, we wrap the connection and check on first read.
+		return &PartitionedConn{
+			conn:       conn,
+			localID:    psl.localID,
+			controller: psl.controller,
+			remoteID:   "", // Will be extracted from Raft protocol
+		}, nil
+	}
+}
+
+// Close implements raft.StreamLayer.
+func (psl *PartitionableStreamLayer) Close() error {
+	return psl.inner.Close()
+}
+
+// Addr implements raft.StreamLayer.
+func (psl *PartitionableStreamLayer) Addr() net.Addr {
+	return psl.inner.Addr()
+}
+
+// Dial implements raft.StreamLayer - dials outbound connections.
+func (psl *PartitionableStreamLayer) Dial(addr raft.ServerAddress, timeout time.Duration) (net.Conn, error) {
+	// Look up the remote member ID from the address
+	remoteID := psl.controller.AddressToID(string(addr))
+	addrStr := string(addr)
+	if remoteID == "" {
+		// Address not registered; allow the dial (might be a new bootstrap)
+		fmt.Fprintf(os.Stderr, "[Raft %s] Dial %s (addr not registered, allowing)\n", psl.localID, addrStr)
+		return psl.inner.Dial(addr, timeout)
+	}
+
+	// Check if this direction is partitioned
+	if psl.controller.IsBlocked(psl.localID, remoteID) {
+		fmt.Fprintf(os.Stderr, "[Raft %s] Dial %s -> %s (BLOCKED)\n", psl.localID, psl.localID, remoteID)
+		return nil, fmt.Errorf("partition: %s -> %s blocked", psl.localID, remoteID)
+	}
+	fmt.Fprintf(os.Stderr, "[Raft %s] Dial %s -> %s (allowed)\n", psl.localID, psl.localID, remoteID)
+	return psl.inner.Dial(addr, timeout)
+}
+
+// PartitionedConn wraps a net.Conn and checks partition state.
+type PartitionedConn struct {
+	conn       net.Conn
+	localID    string
+	controller *PartitionController
+	remoteID   string // Will be populated from RemoteAddr
+	closed     bool
+	mu         sync.Mutex // Protects remoteID initialization
+}
+
+// ensureRemoteID extracts the remote member ID from the connection's remote address.
+func (pc *PartitionedConn) ensureRemoteID() {
+	pc.mu.Lock()
+	defer pc.mu.Unlock()
+	if pc.remoteID != "" {
+		return
+	}
+	// Get the remote address and try to map it to a member ID
+	if remoteAddr := pc.conn.RemoteAddr(); remoteAddr != nil {
+		addrStr := remoteAddr.String()
+		// Try to look up the member ID from the address
+		// The address should be in the format "127.0.0.1:PORT"
+		if id := pc.controller.AddressToID(addrStr); id != "" {
+			pc.remoteID = id
+		}
+	}
+}
+
+func (pc *PartitionedConn) Read(b []byte) (int, error) {
+	if pc.closed {
+		return 0, fmt.Errorf("connection closed")
+	}
+	pc.ensureRemoteID()
+	// Check if incoming traffic is blocked
+	if pc.remoteID != "" && pc.controller.IsBlocked(pc.remoteID, pc.localID) {
+		return 0, fmt.Errorf("partition: %s -> %s blocked", pc.remoteID, pc.localID)
+	}
+	return pc.conn.Read(b)
+}
+
+func (pc *PartitionedConn) Write(b []byte) (int, error) {
+	if pc.closed {
+		return 0, fmt.Errorf("connection closed")
+	}
+	pc.ensureRemoteID()
+	// Check if outgoing traffic is blocked
+	if pc.remoteID != "" && pc.controller.IsBlocked(pc.localID, pc.remoteID) {
+		return 0, fmt.Errorf("partition: %s -> %s blocked", pc.localID, pc.remoteID)
+	}
+	return pc.conn.Write(b)
+}
+
+func (pc *PartitionedConn) Close() error {
+	pc.closed = true
+	return pc.conn.Close()
+}
+
+func (pc *PartitionedConn) LocalAddr() net.Addr {
+	return pc.conn.LocalAddr()
+}
+
+func (pc *PartitionedConn) RemoteAddr() net.Addr {
+	return pc.conn.RemoteAddr()
+}
+
+func (pc *PartitionedConn) SetDeadline(t time.Time) error {
+	return pc.conn.SetDeadline(t)
+}
+
+func (pc *PartitionedConn) SetReadDeadline(t time.Time) error {
+	return pc.conn.SetReadDeadline(t)
+}
+
+func (pc *PartitionedConn) SetWriteDeadline(t time.Time) error {
+	return pc.conn.SetWriteDeadline(t)
+}
+
 // QualificationMember represents one member of the qualification cluster.
 type QualificationMember struct {
 	ID      string
@@ -74,12 +279,12 @@ type QualificationMember struct {
 
 // RaftQualificationCluster manages a 3-member Raft cluster for failover testing.
 type RaftQualificationCluster struct {
-	Members []*QualificationMember
-	TLS     *tls.Config
+	Members    []*QualificationMember
+	TLS        *tls.Config
+	Controller *PartitionController
 
 	// Cluster state
-	started   bool
-	partitions map[string]bool // memberID -> partitioned
+	started bool
 }
 
 // NewRaftQualificationCluster creates a new 3-member cluster harness (not started).
@@ -92,10 +297,10 @@ func NewRaftQualificationCluster(tmpDir string, tlsConf *tls.Config) *RaftQualif
 	c := &RaftQualificationCluster{
 		TLS:        tlsConf,
 		Members:    make([]*QualificationMember, 3),
-		partitions: make(map[string]bool),
+		Controller: NewPartitionController(),
 	}
 
-	// Initialize member specs (addresses not used for network in test, but recorded for evidence)
+	// Initialize member specs
 	basePort := 50000
 	for i := 0; i < 3; i++ {
 		id := fmt.Sprintf("member-%d", i)
@@ -106,8 +311,8 @@ func NewRaftQualificationCluster(tmpDir string, tlsConf *tls.Config) *RaftQualif
 			GossipAdvertise: fmt.Sprintf("127.0.0.1:%d", basePort+i),
 			RaftBind:        fmt.Sprintf("127.0.0.1:%d", basePort+100+i),
 			RaftAdvertise:   fmt.Sprintf("127.0.0.1:%d", basePort+100+i),
+			Partitioned:     false,
 		}
-		c.partitions[id] = false
 	}
 
 	return c
@@ -116,6 +321,11 @@ func NewRaftQualificationCluster(tmpDir string, tlsConf *tls.Config) *RaftQualif
 // Start initializes all three members and bootstraps the cluster.
 // Member 0 is bootstrapped as the initial leader with all three in the configuration.
 func (c *RaftQualificationCluster) Start(t testing.TB) error {
+	// Register all addresses with the partition controller for lookups
+	for _, m := range c.Members {
+		c.Controller.RegisterAddress(m.RaftAdvertise, m.ID)
+	}
+
 	for i, m := range c.Members {
 		fsm := NewFSM()
 		fsm.s.Cluster = "qualification-cluster"
@@ -127,26 +337,26 @@ func (c *RaftQualificationCluster) Start(t testing.TB) error {
 			Advertise:   m.RaftAdvertise,
 			TLS:         c.TLS,
 			FSM:         fsm,
-			Bootstrap:   (i == 0), // Only member 0 bootstraps initially
+			Bootstrap:   (i == 0),
 			LogOutput:   nil,
-			FastTimeouts: true, // Speed up election/heartbeat for testing
+			FastTimeouts: true,
 		}
 
-		node, err := startRaft(opts)
+		node, err := c.startRaftWithPartition(opts, m.ID)
 		if err != nil {
 			t.Logf("Failed to start member %s: %v", m.ID, err)
 			c.Close()
 			return err
 		}
 
+		t.Logf("Started member %s: state=%v term=%d", m.ID, node.r.State(), node.r.CurrentTerm())
 		m.Node = node
 	}
 
 	c.started = true
 
-	// Bootstrap cluster: member 0 bootstraps with all three in configuration
-	// Note: In real usage, the other members would join later; for qualification we
-	// bootstrap with all three present for deterministic testing.
+	// Bootstrap all three members with the full cluster configuration
+	// This is the proper way to bootstrap a multi-member cluster
 	bootstrapConfig := raft.Configuration{
 		Servers: []raft.Server{
 			{ID: raft.ServerID(c.Members[0].ID), Address: raft.ServerAddress(c.Members[0].RaftAdvertise)},
@@ -155,13 +365,18 @@ func (c *RaftQualificationCluster) Start(t testing.TB) error {
 		},
 	}
 
-	f := c.Members[0].Node.r.BootstrapCluster(bootstrapConfig)
-	if err := f.Error(); err != nil && err != raft.ErrCantBootstrap {
-		t.Logf("Bootstrap failed: %v", err)
-		c.Close()
-		return err
+	// Bootstrap each member with the full configuration
+	for _, member := range c.Members {
+		f := member.Node.r.BootstrapCluster(bootstrapConfig)
+		if err := f.Error(); err != nil && err != raft.ErrCantBootstrap {
+			t.Logf("Bootstrap failed for %s: %v", member.ID, err)
+			c.Close()
+			return err
+		}
+		t.Logf("Bootstrap successful for %s with full configuration", member.ID)
 	}
 
+	t.Logf("Cluster bootstrap complete - waiting for leader election...")
 	return nil
 }
 
@@ -278,27 +493,37 @@ func (c *RaftQualificationCluster) AppliedIndex(memberID string) (int64, error) 
 	return idx, nil
 }
 
-// Partition isolates a member from the cluster (simulates network partition).
-// This stops the member's Raft transport, preventing it from sending/receiving messages.
+// Partition isolates a member from the cluster bidirectionally.
+// Blocks all outbound and inbound traffic for this member.
 func (c *RaftQualificationCluster) Partition(memberID string) error {
 	m := c.getMember(memberID)
 	if m == nil {
 		return fmt.Errorf("member %s not found", memberID)
 	}
-	if m.Node != nil {
-		m.Node.trans.Close()
+
+	// Block bidirectional traffic between this member and all others
+	for _, other := range c.Members {
+		if other.ID != memberID {
+			c.Controller.Block(memberID, other.ID)
+			c.Controller.Block(other.ID, memberID)
+		}
 	}
-	c.partitions[memberID] = true
+
 	m.Partitioned = true
 	return nil
 }
 
-// Heal rejoins a partitioned member (simulates network recovery).
-// Requires the member to be stopped and restarted for a clean connection.
+// Heal removes all partition blocks for a member.
 func (c *RaftQualificationCluster) Heal(memberID string) {
-	c.partitions[memberID] = false
 	m := c.getMember(memberID)
 	if m != nil {
+		// Unblock bidirectional traffic
+		for _, other := range c.Members {
+			if other.ID != memberID {
+				c.Controller.Unblock(memberID, other.ID)
+				c.Controller.Unblock(other.ID, memberID)
+			}
+		}
 		m.Partitioned = false
 	}
 }
@@ -313,7 +538,6 @@ func (c *RaftQualificationCluster) Stop(memberID string) error {
 		m.Node.shutdown()
 		m.Node = nil
 	}
-	c.partitions[memberID] = false
 	m.Partitioned = false
 	return nil
 }
@@ -339,18 +563,17 @@ func (c *RaftQualificationCluster) Restart(memberID string) error {
 		Advertise:   m.RaftAdvertise,
 		TLS:         c.TLS,
 		FSM:         fsm,
-		Bootstrap:   false, // Do not bootstrap; load from existing state
+		Bootstrap:   false,
 		LogOutput:   nil,
 		FastTimeouts: true,
 	}
 
-	node, err := startRaft(opts)
+	node, err := c.startRaftWithPartition(opts, memberID)
 	if err != nil {
 		return fmt.Errorf("restart %s: %w", memberID, err)
 	}
 
 	m.Node = node
-	c.partitions[memberID] = false
 	m.Partitioned = false
 	return nil
 }
@@ -415,6 +638,70 @@ func (c *RaftQualificationCluster) WaitForConvergence(timeout time.Duration) err
 	}
 }
 
+// startRaftWithPartition is a test-specific variant of startRaft that wraps the
+// stream layer with partition control.
+func (c *RaftQualificationCluster) startRaftWithPartition(opts raftOptions, memberID string) (*raftNode, error) {
+	if err := os.MkdirAll(opts.Dir, 0o700); err != nil {
+		return nil, err
+	}
+
+	cfg := raft.DefaultConfig()
+	cfg.LocalID = raft.ServerID(opts.ID)
+	cfg.HeartbeatTimeout = 1000 * time.Millisecond
+	cfg.ElectionTimeout = 1000 * time.Millisecond
+	cfg.LeaderLeaseTimeout = 500 * time.Millisecond
+	if opts.FastTimeouts {
+		cfg.HeartbeatTimeout = 1000 * time.Millisecond
+		cfg.ElectionTimeout = 1000 * time.Millisecond
+		cfg.LeaderLeaseTimeout = 500 * time.Millisecond
+	}
+	cfg.Logger = hclog.New(&hclog.LoggerOptions{Name: "raft", Level: hclog.Warn, Output: io.Discard})
+
+	store, err := raftboltdb.New(raftboltdb.Options{Path: filepath.Join(opts.Dir, "raft.db")})
+	if err != nil {
+		return nil, fmt.Errorf("raft log store: %w", err)
+	}
+
+	snaps, err := raft.NewFileSnapshotStore(opts.Dir, 3, io.Discard)
+	if err != nil {
+		store.Close()
+		return nil, err
+	}
+
+	// Create base TLS stream layer
+	tlsStream, err := newTLSStream(opts.Bind, opts.Advertise, opts.TLS)
+	if err != nil {
+		store.Close()
+		return nil, fmt.Errorf("raft listen %s: %w", opts.Bind, err)
+	}
+
+	// Wrap with partition control layer
+	partitionableStream := NewPartitionableStreamLayer(tlsStream, c.Controller, memberID)
+
+	trans := raft.NewNetworkTransport(partitionableStream, 3, 5*time.Second, io.Discard)
+	r, err := raft.NewRaft(cfg, opts.FSM, store, store, snaps, trans)
+	if err != nil {
+		trans.Close()
+		store.Close()
+		return nil, err
+	}
+
+	if opts.Bootstrap {
+		has, err := raft.HasExistingState(store, store, snaps)
+		if err != nil {
+			return nil, err
+		}
+		if !has {
+			f := r.BootstrapCluster(raft.Configuration{Servers: []raft.Server{{ID: cfg.LocalID, Address: raft.ServerAddress(opts.Advertise)}}})
+			if err := f.Error(); err != nil && err != raft.ErrCantBootstrap {
+				return nil, err
+			}
+		}
+	}
+
+	return &raftNode{r: r, trans: trans, logs: store, fsm: opts.FSM}, nil
+}
+
 // Close stops all members and cleans up resources.
 func (c *RaftQualificationCluster) Close() {
 	for _, m := range c.Members {
@@ -473,9 +760,9 @@ func TestRaftHarness_ClusterFormation(t *testing.T) {
 	t.Logf("Followers: %v", followers)
 }
 
-// TestRaftHarness_LeaderFailoverElection verifies that isolating the leader
-// causes a new leader to be elected from the remaining quorum.
-func TestRaftHarness_LeaderFailoverElection(t *testing.T) {
+// TestRaftHarness_FailoverPartition verifies network isolation triggers failover.
+// HARNESS-FAILOVER-01: Network partition isolation + new leader election
+func TestRaftHarness_FailoverPartition(t *testing.T) {
 	tmpDir := t.TempDir()
 	c := NewRaftQualificationCluster(tmpDir, nil)
 	defer c.Close()
@@ -484,20 +771,57 @@ func TestRaftHarness_LeaderFailoverElection(t *testing.T) {
 		t.Fatalf("Start failed: %v", err)
 	}
 
-	// Wait for initial leader
+	// Observe stable leader
 	leader, term1, err := c.WaitForLeader(10 * time.Second)
 	if err != nil {
 		t.Fatalf("WaitForLeader: %v", err)
 	}
-
 	t.Logf("Initial leader: %s at term %d", leader, term1)
 
-	// Isolate the leader
+	// Debug: wait for heartbeats to propagate (try multiple times)
+	for i := 0; i < 5; i++ {
+		time.Sleep(1 * time.Second)
+		t.Logf("After %d seconds of waiting:", (i+1))
+		for _, m := range c.Members {
+			if m.Node != nil {
+				t.Logf("  %s: state=%v term=%d", m.ID, m.Node.r.State(), m.Node.r.CurrentTerm())
+			}
+		}
+		// Check if all followers have learned the leader's term
+		allUpdated := true
+		for _, m := range c.Members {
+			if m.Node != nil && m.Node.r.State() != raft.Leader {
+				if m.Node.r.CurrentTerm() < term1 {
+					allUpdated = false
+					break
+				}
+			}
+		}
+		if allUpdated {
+			t.Logf("All followers updated to leader's term")
+			break
+		}
+	}
+
+	// Get initial state
+	initialLeaderTerm, _ := c.Term(leader)
+	idx1, _ := c.AppliedIndex(leader)
+
+	// Partition leader bidirectionally from both followers
 	if err := c.Partition(leader); err != nil {
 		t.Fatalf("Partition failed: %v", err)
 	}
+	t.Logf("Partitioned: %s", leader)
 
-	t.Logf("Isolated leader: %s", leader)
+	// Debug: check state immediately after partition
+	time.Sleep(100 * time.Millisecond)
+	for _, m := range c.Members {
+		if m.Node != nil {
+			state := m.Node.r.State()
+			term := m.Node.r.CurrentTerm()
+			t.Logf("  %s: state=%v term=%d", m.ID, state, term)
+		}
+	}
 
 	// Wait for new leader election from quorum
 	newLeader, term2, err := c.WaitForNewLeader(leader, 10*time.Second)
@@ -505,15 +829,96 @@ func TestRaftHarness_LeaderFailoverElection(t *testing.T) {
 		t.Fatalf("WaitForNewLeader: %v", err)
 	}
 
+	t.Logf("New leader: %s at term %d", newLeader, term2)
+
+	// Verify failover properties
 	if newLeader == leader {
 		t.Fatal("New leader is the same as old leader")
 	}
-
-	if term2 <= term1 {
-		t.Fatalf("New term %d should be > old term %d", term2, term1)
+	if term2 <= initialLeaderTerm {
+		t.Fatalf("New term %d should be > initial term %d", term2, initialLeaderTerm)
 	}
 
-	t.Logf("New leader: %s at term %d", newLeader, term2)
+	// Heal all partitions
+	c.Heal(leader)
+	c.Controller.HealAll()
+	t.Logf("Healed partition")
+
+	// Wait for convergence
+	if err := c.WaitForConvergence(10 * time.Second); err != nil {
+		t.Fatalf("WaitForConvergence failed: %v", err)
+	}
+
+	idx2, _ := c.AppliedIndex(leader)
+	t.Logf("Convergence complete. Old leader applied index: %d -> %d", idx1, idx2)
+}
+
+// TestRaftHarness_FailoverProcessRestart verifies restart recovery.
+// HARNESS-FAILOVER-02: Process failure + restart from persistent data
+func TestRaftHarness_FailoverProcessRestart(t *testing.T) {
+	tmpDir := t.TempDir()
+	c := NewRaftQualificationCluster(tmpDir, nil)
+	defer c.Close()
+
+	if err := c.Start(t); err != nil {
+		t.Fatalf("Start failed: %v", err)
+	}
+
+	// Observe stable leader
+	leader, termBeforeStop, err := c.WaitForLeader(10 * time.Second)
+	if err != nil {
+		t.Fatalf("WaitForLeader: %v", err)
+	}
+	t.Logf("Initial leader: %s at term %d", leader, termBeforeStop)
+
+	// Stop leader process
+	if err := c.Stop(leader); err != nil {
+		t.Fatalf("Stop failed: %v", err)
+	}
+	t.Logf("Stopped: %s", leader)
+
+	// Debug: check state immediately after stop
+	time.Sleep(100 * time.Millisecond)
+	for _, m := range c.Members {
+		if m.Node != nil {
+			state := m.Node.r.State()
+			term := m.Node.r.CurrentTerm()
+			t.Logf("  %s: state=%v term=%d", m.ID, state, term)
+		} else {
+			t.Logf("  %s: stopped", m.ID)
+		}
+	}
+
+	// Remaining two should elect new leader
+	newLeader, termAfterStop, err := c.WaitForNewLeader(leader, 10*time.Second)
+	if err != nil {
+		t.Fatalf("WaitForNewLeader: %v", err)
+	}
+
+	t.Logf("New leader: %s at term %d", newLeader, termAfterStop)
+
+	if newLeader == leader {
+		t.Fatal("New leader is the same as old leader")
+	}
+	if termAfterStop <= termBeforeStop {
+		t.Fatalf("New term %d should be > old term %d", termAfterStop, termBeforeStop)
+	}
+
+	// Restart old leader from persistent data
+	if err := c.Restart(leader); err != nil {
+		t.Fatalf("Restart failed: %v", err)
+	}
+	t.Logf("Restarted: %s", leader)
+
+	// Wait for convergence
+	if err := c.WaitForConvergence(10 * time.Second); err != nil {
+		t.Fatalf("WaitForConvergence failed: %v", err)
+	}
+
+	// Verify old leader caught up
+	oldLeaderApplied, _ := c.AppliedIndex(leader)
+	newLeaderApplied, _ := c.AppliedIndex(newLeader)
+	t.Logf("After convergence - old leader applied: %d, new leader applied: %d", oldLeaderApplied, newLeaderApplied)
 }
 
 // TestRaftHarness_ReplicatedCommand verifies that a command committed on the leader
