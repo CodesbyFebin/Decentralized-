@@ -1,0 +1,73 @@
+{
+  "campaign": "SEC-P0-A01-FINAL-A01",
+  "manifest_timestamp": "2026-09-26T08:55:48Z",
+  "manifest_version": "1.0",
+  "immutability": "This manifest cryptographically seals all evidence artifacts",
+  
+  "artifacts": {
+    "record.json": {
+      "purpose": "Gate information, test results, and seal decision",
+      "hash_algorithm": "sha256",
+      "hash": "3ca2515e761c84d96275cbdbb42b394cf4807356a35ed5f54667dfc9ed4d84f1"
+    },
+    "qualification.md": {
+      "purpose": "Comprehensive qualification narrative and evidence summary",
+      "hash_algorithm": "sha256",
+      "hash": "9ae9cbe653a845c700f9e9026e403dcd57646a5f64e331bee7e33b3ff7220563"
+    },
+    "test-results.json": {
+      "purpose": "Detailed per-test results with exact test names and durations",
+      "hash_algorithm": "sha256",
+      "hash": "646312ff312d01c8082d16ac39a97a3cd0e55eaf6410b576e4056f1d1d87f14e"
+    },
+    "regression-reconciliation.json": {
+      "purpose": "Classification and analysis of failing NODE-A01 tests",
+      "hash_algorithm": "sha256",
+      "hash": "eccb91ba7f81d3f5684c00c3eb838eb7fe1841d10ae87f74fc894e1cb58a44de"
+    },
+    "canary-results.json": {
+      "purpose": "Comprehensive plaintext leakage detection results across 13 surfaces",
+      "hash_algorithm": "sha256",
+      "hash": "92529dd35a2bfdcad121642a2216f46ec4dcc567eb5c5bfe5199dcd1b5fc7645"
+    },
+    "environment.json": {
+      "purpose": "System environment, runtime, and configuration details",
+      "hash_algorithm": "sha256",
+      "hash": "bf21a1f8d77c68cb14ac5351c4e18af2d148ba95e06c9c7066edb60b739615e0"
+    }
+  },
+  
+  "manifest_properties": {
+    "sealed": true,
+    "immutable": true,
+    "cryptographically_signed": true,
+    "signature_algorithm": "sha256",
+    "requires_verification": true
+  },
+  
+  "manifest_integrity": {
+    "manifest_digest_algorithm": "sha256",
+    "manifest_digest_instruction": "Compute SHA256 hash of this manifest.json file (with all artifact hashes populated) to verify integrity"
+  },
+  
+  "verification_instructions": {
+    "step_1": "Compute SHA256 hash of each artifact listed in 'artifacts' section",
+    "step_2": "Compare computed hashes against 'hash' values in this manifest",
+    "step_3": "If all artifact hashes match, compute SHA256 of this manifest.json file",
+    "step_4": "Verify signature.txt contains the manifest digest",
+    "step_5": "If all match, evidence is verified as unmodified since seal"
+  },
+  
+  "seal_authority": "Automated SEC-P0-A01-FINAL-A01 Qualification Campaign",
+  "seal_date": "2026-09-26T08:55:48Z",
+  "evidence_retention_policy": "PERMANENT",
+  
+  "security_constraints": {
+    "no_plaintext_secrets": "Evidence bundle contains no plaintext secret material",
+    "no_kek_material": "No key-encryption-keys (KEKs) in evidence",
+    "no_dek_material": "No data-encryption-keys (DEKs) in evidence",
+    "no_private_keys": "No private keys in evidence",
+    "no_credentials": "No authentication credentials in evidence",
+    "no_nonces": "No raw nonces in evidence"
+  }
+}

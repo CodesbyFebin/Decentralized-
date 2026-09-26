@@ -10,41 +10,47 @@ import (
 
 // Spec is what an admitted assignment asks a runtime to start.
 type Spec struct {
-	Assignment    string
-	App           string
-	Node          string
-	Generation    int64
-	Replica       int64
-	Executable    string // process: absolute path of the verified artifact
-	Image         string // docker: ref@sha256:...
-	Isolation     string // "" (bare process) | PRIVATE | RESTRICTED (sandbox)
-	Args          []string
-	Env           map[string]string
-	CPUMilli      int64
-	MemBytes      int64
-	WantPort      bool
-	ContainerPort int64
-	WorkDir       string
-	Mounts        []Mount
-	LogPath       string
+	Assignment      string
+	App             string
+	Node            string
+	Generation      int64
+	Replica         int64
+	Executable      string // process: absolute path of the verified artifact
+	Image           string // docker: ref@sha256:...
+	Isolation       string // "" (bare process) | PRIVATE | RESTRICTED (sandbox)
+	Args            []string
+	Env             map[string]string
+	CPUMilli        int64
+	MemBytes        int64
+	WantPort        bool
+	ContainerPort   int64
+	WorkDir         string
+	Mounts          []Mount
+	EphemeralMounts []Mount // Ephemeral tmpfs mounts (secrets, temp data)
+	EphemeralID     string  // UUID for this ephemeral allocation set
+	LogPath         string
 }
 
 // Mount attaches a host directory.
 type Mount struct {
-	Name     string
-	HostPath string
-	Path     string
+	Name      string
+	HostPath  string
+	Path      string
+	ReadOnly  bool   // Bind-mount as read-only
+	Ephemeral bool   // Temporary secret material (cleaned up after workload stops)
 }
 
 // Instance identifies a started workload well enough to re-adopt it after
 // the host agent restarts.
 type Instance struct {
-	Runtime     string `json:"runtime"`
-	PID         int64  `json:"pid"`
-	ContainerID string `json:"containerId"`
-	Port        int64  `json:"port"`
-	StartedAt   int64  `json:"startedAt"`
-	StartToken  string `json:"startToken"` // kernel start time of the pid, or container id
+	Runtime       string `json:"runtime"`
+	PID           int64  `json:"pid"`
+	ContainerID   string `json:"containerId"`
+	Port          int64  `json:"port"`
+	StartedAt     int64  `json:"startedAt"`
+	StartToken    string `json:"startToken"` // kernel start time of the pid, or container id
+	EphemeralID   string `json:"ephemeralId,omitempty"` // UUID for cleanup tracking
+	EphemeralPath string `json:"ephemeralPath,omitempty"` // Host path to ephemeral mount
 }
 
 // Status is a runtime observation.

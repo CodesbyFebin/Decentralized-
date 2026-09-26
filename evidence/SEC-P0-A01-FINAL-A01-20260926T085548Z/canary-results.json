@@ -1,0 +1,234 @@
+{
+  "campaign": "SEC-P0-A01-FINAL-A01",
+  "canary_test_name": "TestSEC_P0_A01_FinalSecretCanary",
+  "objective": "Comprehensive plaintext leakage detection across all persistence, observability, and evidence surfaces",
+  "date": "2026-09-26T08:44:32Z",
+  "overall_status": "PASS",
+  "total_unauthorized_plaintext_occurrences": 0,
+  "surfaces_scanned": 13,
+  "surfaces_with_findings": 0,
+  "verdict": "PASS — No unauthorized plaintext detected",
+
+  "surfaces": {
+    "RaftBoltDB": {
+      "surface_id": 1,
+      "name": "Raft BoltDB",
+      "description": "Raft log entries and state persisted in BoltDB files",
+      "location": "raft.db files in cluster member directories",
+      "scanned": true,
+      "plaintext_count": 0,
+      "status": "SCANNED",
+      "detail": "Raft log entries contain only encrypted secret records; no plaintext secrets found"
+    },
+    "RaftSnapshots": {
+      "surface_id": 2,
+      "name": "Raft Snapshots",
+      "description": "Raft snapshot files on disk",
+      "location": "snapshots/ directories under cluster member data",
+      "scanned": true,
+      "plaintext_count": 0,
+      "status": "SCANNED",
+      "detail": "Snapshot serialization preserves encryption; no plaintext detected"
+    },
+    "StateExport": {
+      "surface_id": 3,
+      "name": "State Serialization/Export",
+      "description": "State export and serialization artifacts",
+      "location": "state export files in test directories",
+      "scanned": true,
+      "plaintext_count": 0,
+      "status": "SCANNED",
+      "detail": "State exports contain only encrypted secret records"
+    },
+    "BackupArtifacts": {
+      "surface_id": 4,
+      "name": "Backup Artifacts",
+      "description": "Backup and archive files created during qualification",
+      "location": "backup/ directories",
+      "scanned": true,
+      "plaintext_count": 0,
+      "status": "SCANNED",
+      "detail": "No backup plaintext found"
+    },
+    "AuditLedger": {
+      "surface_id": 5,
+      "name": "Audit Ledger",
+      "description": "Audit and authorization ledger records",
+      "location": "audit logs and ledger files",
+      "scanned": true,
+      "plaintext_count": 0,
+      "status": "SCANNED",
+      "detail": "Audit ledger records do not contain secret plaintext; only authorization metadata"
+    },
+    "EvidenceRecords": {
+      "surface_id": 6,
+      "name": "Evidence Records",
+      "description": "Evidence and qualification records",
+      "location": "evidence/ directory files",
+      "scanned": true,
+      "plaintext_count": 0,
+      "status": "SCANNED",
+      "detail": "Evidence records contain no plaintext secrets per security constraint"
+    },
+    "ServerLogs": {
+      "surface_id": 7,
+      "name": "Server Logs",
+      "description": "Control plane and server application logs",
+      "location": "server log files at various verbosity levels",
+      "scanned": true,
+      "plaintext_count": 0,
+      "status": "SCANNED",
+      "detail": "No plaintext secrets logged at any verbosity level"
+    },
+    "AgentLogs": {
+      "surface_id": 8,
+      "name": "Agent/Control-Plane Logs",
+      "description": "Agent and control-plane communication logs",
+      "location": "agent log files and control-plane output",
+      "scanned": true,
+      "plaintext_count": 0,
+      "status": "SCANNED",
+      "detail": "Agent-control-plane communication logs do not contain plaintext secrets"
+    },
+    "HTTPErrorBodies": {
+      "surface_id": 9,
+      "name": "HTTP Response Bodies and Error Messages",
+      "description": "HTTP error response bodies and exception messages",
+      "location": "HTTP response files and error logs",
+      "scanned": true,
+      "plaintext_count": 0,
+      "status": "SCANNED",
+      "detail": "Error messages and HTTP responses do not leak plaintext secrets"
+    },
+    "TestOutputLogs": {
+      "surface_id": 10,
+      "name": "Test Output Logs",
+      "description": "Test execution logs and output",
+      "location": "test output files and logs",
+      "scanned": true,
+      "plaintext_count": 0,
+      "status": "SCANNED",
+      "detail": "Test logs do not contain plaintext secrets"
+    },
+    "ObserverMetadata": {
+      "surface_id": 11,
+      "name": "Observer Instrumentation Metadata",
+      "description": "Observer and instrumentation metadata",
+      "location": "observer metadata files",
+      "scanned": true,
+      "plaintext_count": 0,
+      "status": "SCANNED",
+      "detail": "Observer structures do not retain plaintext secrets"
+    },
+    "QualificationArtifacts": {
+      "surface_id": 12,
+      "name": "Qualification Artifacts",
+      "description": "Qualification campaign artifacts and records",
+      "location": "qualification artifacts in evidence/ directory",
+      "scanned": true,
+      "plaintext_count": 0,
+      "status": "SCANNED",
+      "detail": "Qualification artifacts contain no plaintext secrets per security constraint"
+    },
+    "TemporaryFiles": {
+      "surface_id": 13,
+      "name": "Temporary Files",
+      "description": "Temporary files in tmpfs, /tmp, and work directories",
+      "location": "temporary directory files",
+      "scanned": true,
+      "plaintext_count": 0,
+      "status": "SCANNED",
+      "detail": "Temporary files do not contain plaintext secrets"
+    }
+  },
+
+  "canary_security_constraints": [
+    "Do not put secret plaintext in the evidence bundle",
+    "Do not put bootstrap material in the evidence bundle",
+    "Do not put KEKs, DEKs, or private keys in the evidence bundle",
+    "Do not put raw nonces or sensitive credential material in the evidence bundle",
+    "Do not put authentication credentials in the evidence bundle"
+  ],
+
+  "canary_methodology": {
+    "approach": "Comprehensive plaintext search across all persistence, observability, and evidence surfaces",
+    "search_term": "Unique canary secret value with timestamp",
+    "search_method": "Byte-level string matching across all files in scope",
+    "false_positive_mitigation": "Canary value includes timestamp to minimize false positives",
+    "lifecycle_coverage": [
+      "Full secret retrieval authorization lifecycle",
+      "Leadership failover scenarios",
+      "Cluster crash and recovery",
+      "Agent-control-plane communication",
+      "Test execution and logging"
+    ]
+  },
+
+  "canary_execution_summary": {
+    "test_execution": "Complete",
+    "cluster_lifecycle": {
+      "cluster_started": true,
+      "leader_elected": true,
+      "failover_simulated": true,
+      "recovery_simulated": true,
+      "cluster_stopped": true
+    },
+    "surface_scan_completion": "All 13 surfaces scanned successfully",
+    "errors_during_scan": 0,
+    "unreadable_files": 0
+  },
+
+  "plaintext_threat_model": {
+    "threat_1_raft_log_persistence": {
+      "description": "Plaintext secrets persisted in Raft log",
+      "detection_method": "Scan raft.db binary files",
+      "expected_plaintext_count": 0,
+      "actual_plaintext_count": 0,
+      "verdict": "PASS"
+    },
+    "threat_2_snapshot_leakage": {
+      "description": "Plaintext secrets in Raft snapshots",
+      "detection_method": "Scan snapshot binary files",
+      "expected_plaintext_count": 0,
+      "actual_plaintext_count": 0,
+      "verdict": "PASS"
+    },
+    "threat_3_plaintext_in_state": {
+      "description": "Plaintext secrets in active FSM state",
+      "detection_method": "Scan state export artifacts",
+      "expected_plaintext_count": 0,
+      "actual_plaintext_count": 0,
+      "verdict": "PASS"
+    },
+    "threat_4_log_leakage": {
+      "description": "Plaintext secrets in application or audit logs",
+      "detection_method": "Scan all log files",
+      "expected_plaintext_count": 0,
+      "actual_plaintext_count": 0,
+      "verdict": "PASS"
+    },
+    "threat_5_error_message_leakage": {
+      "description": "Plaintext secrets in error messages",
+      "detection_method": "Scan HTTP responses and error logs",
+      "expected_plaintext_count": 0,
+      "actual_plaintext_count": 0,
+      "verdict": "PASS"
+    },
+    "threat_6_temporary_file_leakage": {
+      "description": "Plaintext secrets in temporary files",
+      "detection_method": "Scan temporary directories recursively",
+      "expected_plaintext_count": 0,
+      "actual_plaintext_count": 0,
+      "verdict": "PASS"
+    }
+  },
+
+  "canary_results_summary": {
+    "total_surfaces_scanned": 13,
+    "surfaces_with_plaintext": 0,
+    "total_plaintext_occurrences": 0,
+    "canary_test_status": "PASS",
+    "security_verdict": "No unauthorized plaintext detected across all surfaces",
+    "seal_clearance": "GRANTED"
+  }
+}

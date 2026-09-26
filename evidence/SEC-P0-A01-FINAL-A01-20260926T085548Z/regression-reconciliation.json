@@ -1,0 +1,201 @@
+{
+  "gate": "SEC-P0-A01-FINAL-R1",
+  "objective": "Reconciliation and classification of failing repository tests",
+  "date": "2026-09-26T08:44:32Z",
+  "full_suite_command": "go test ./...",
+  "status": "RECONCILIATION_COMPLETE",
+
+  "summary": {
+    "total_failing_tests": 2,
+    "test_suite": "tests/integration::TestNodeA01SovereignNode",
+    "failures_reconciled": true,
+    "regressions_detected": false,
+    "blocking_regressions": false,
+    "impact_on_sec_p0": "NONE"
+  },
+
+  "failing_tests": [
+    {
+      "test_id": 1,
+      "package": "tests/integration",
+      "test_suite": "TestNodeA01SovereignNode",
+      "test_name": "an_expired_join_token_is_refused",
+      "error_message": "expected refusal containing \"expired\", got 200 {\"ok\":true,\"message\":\"late enrolled; waiting for operator approval\"}",
+      "duration_seconds": 1.01,
+      "status": "FAIL",
+
+      "classification": {
+        "category": "UNRELATED_EXISTING_FAILURE",
+        "subsystem": "NODE-A01",
+        "feature_area": "Node enrollment, identity bootstrap, operator approval",
+        "unrelated_to_sec_p0": true
+      },
+
+      "root_cause_analysis": {
+        "issue": "Node enrollment token TTL validation",
+        "description": "Token expiration check not properly refusing expired join tokens; instead returning 200 with enrollment state message",
+        "subsystem_description": "NODE-A01 handles node sovereign enrollment (join tokens, revocation, operator approval)",
+        "sec_p0_interaction": "NONE - SEC-P0 handles secret retrieval authorization via Raft consensus, not node enrollment"
+      },
+
+      "reproducibility": {
+        "on_source_sha_14f3982_main": {
+          "status": "FAILS",
+          "run_date": "2026-09-26",
+          "duration_seconds": 1.01
+        },
+        "on_pre_r1_base_e885604": {
+          "status": "FAILS",
+          "run_date": "2026-09-26",
+          "duration_seconds": 1.01
+        },
+        "conclusion": "Failure predates R1 implementation"
+      },
+
+      "r1_dependency_check": {
+        "r1_01_dependent": false,
+        "r1_02_dependent": false,
+        "r1_02b_dependent": false,
+        "r1_03_dependent": false,
+        "r1_04_dependent": false,
+        "r1_05_dependent": false,
+        "conclusion": "No dependency on R1 tests"
+      },
+
+      "sec_p0_dependency_check": {
+        "a03_encryption_dependent": false,
+        "a04_authorization_dependent": false,
+        "g1_mtls_dependent": false,
+        "g2_partition_dependent": false,
+        "g3_failover_dependent": false,
+        "g4_persistence_dependent": false,
+        "conclusion": "No dependency on SEC-P0 subsystem"
+      },
+
+      "impact_assessment": {
+        "blocks_sec_p0_seal": false,
+        "blocks_r1_gates": false,
+        "requires_fix_for_sec_p0": false,
+        "requires_fix_for_a05": false,
+        "recommendation": "Address in parallel NODE-A01 work; does not block SEC-P0-A01 seal"
+      }
+    },
+
+    {
+      "test_id": 2,
+      "package": "tests/integration",
+      "test_suite": "TestNodeA01SovereignNode",
+      "test_name": "a_join_token_the_owner_revoked_is_refused",
+      "error_message": "expected refusal containing \"revoked\", got 200 {\"ok\":true,\"message\":\"withdrawn enrolled; waiting for operator approval\"}",
+      "duration_seconds": 0.01,
+      "status": "FAIL",
+
+      "classification": {
+        "category": "UNRELATED_EXISTING_FAILURE",
+        "subsystem": "NODE-A01",
+        "feature_area": "Node enrollment revocation, identity bootstrap",
+        "unrelated_to_sec_p0": true
+      },
+
+      "root_cause_analysis": {
+        "issue": "Node enrollment revocation state handling",
+        "description": "Revoked node join token not properly refusing request; instead returning 200 with enrollment state message",
+        "subsystem_description": "NODE-A01 handles node enrollment lifecycle (join, revoke, operator approval)",
+        "sec_p0_interaction": "NONE - SEC-P0 handles secret retrieval authorization via Raft consensus, not node revocation"
+      },
+
+      "reproducibility": {
+        "on_source_sha_14f3982_main": {
+          "status": "FAILS",
+          "run_date": "2026-09-26",
+          "duration_seconds": 0.01
+        },
+        "on_pre_r1_base_e885604": {
+          "status": "FAILS",
+          "run_date": "2026-09-26",
+          "duration_seconds": 0.01
+        },
+        "conclusion": "Failure predates R1 implementation"
+      },
+
+      "r1_dependency_check": {
+        "r1_01_dependent": false,
+        "r1_02_dependent": false,
+        "r1_02b_dependent": false,
+        "r1_03_dependent": false,
+        "r1_04_dependent": false,
+        "r1_05_dependent": false,
+        "conclusion": "No dependency on R1 tests"
+      },
+
+      "sec_p0_dependency_check": {
+        "a03_encryption_dependent": false,
+        "a04_authorization_dependent": false,
+        "g1_mtls_dependent": false,
+        "g2_partition_dependent": false,
+        "g3_failover_dependent": false,
+        "g4_persistence_dependent": false,
+        "conclusion": "No dependency on SEC-P0 subsystem"
+      },
+
+      "impact_assessment": {
+        "blocks_sec_p0_seal": false,
+        "blocks_r1_gates": false,
+        "requires_fix_for_sec_p0": false,
+        "requires_fix_for_a05": false,
+        "recommendation": "Address in parallel NODE-A01 work; does not block SEC-P0-A01 seal"
+      }
+    }
+  ],
+
+  "dependency_matrix": {
+    "sec_p0_subsystems": {
+      "G1_production_mtls": {
+        "status": "PASS",
+        "affected_by_failing_tests": false
+      },
+      "G2_partition_resilience": {
+        "status": "PASS",
+        "affected_by_failing_tests": false
+      },
+      "G3_leadership_failover": {
+        "status": "PASS",
+        "affected_by_failing_tests": false
+      },
+      "G4_persistent_restart": {
+        "status": "PASS",
+        "affected_by_failing_tests": false
+      },
+      "A03_encryption_at_rest": {
+        "status": "SEALED",
+        "affected_by_failing_tests": false
+      },
+      "A04_authorization_scope": {
+        "status": "VERIFIED",
+        "affected_by_failing_tests": false
+      },
+      "R1_01_through_R1_05": {
+        "status": "VERIFIED",
+        "affected_by_failing_tests": false
+      }
+    },
+    "node_a01_subsystem": {
+      "status": "HAS_PRE_EXISTING_FAILURES",
+      "failures_unrelated_to_sec_p0": true
+    }
+  },
+
+  "verdict": {
+    "overall_regression_status": "NO_REGRESSIONS",
+    "sec_p0_blocked": false,
+    "sec_p0_clear_to_seal": true,
+    "reason": "All failing tests are pre-existing NODE-A01 enrollment issues, unrelated to Raft-based secret authorization. NODE-A01 subsystem and SEC-P0-A01 subsystem have no dependencies. R1 implementation does not modify node enrollment logic."
+  },
+
+  "final_classification": {
+    "test_1_classification": "UNRELATED_EXISTING_FAILURE",
+    "test_2_classification": "UNRELATED_EXISTING_FAILURE",
+    "classification_rationale": "Both failures present identically on pre-R1 base commit (e885604) and current main (14f3982); failures do not block SEC-P0 seal",
+    "evidence_summary": "Reconciliation report documented in SEC_P0_A01_FINAL_R1_RECONCILIATION.md"
+  }
+}

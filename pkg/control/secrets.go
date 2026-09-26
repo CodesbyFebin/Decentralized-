@@ -171,6 +171,7 @@ func Now() int64 {
 // SecretRetrievalRequest is a signed authorization request from a node for secret decryption.
 // Version 1: Ed25519-signed request with nonce-based replay protection.
 // Replay identity combines request digest and nonce: caller cannot change requestId/other fields while reusing same request.
+// EphemeralID (A05): optional ephemeral tmpfs delivery mode (phase 1: returned as path instead of plaintext)
 type SecretRetrievalRequest struct {
 	Version        int    `json:"version"`        // always 1
 	RequestID      string `json:"requestId"`      // unique request identifier
@@ -184,6 +185,7 @@ type SecretRetrievalRequest struct {
 	Nonce          []byte `json:"nonce"`          // unique per-request nonce (for replay ledger)
 	NodePublicKey  string `json:"nodePublicKey"`  // wire-encoded Ed25519 public key
 	Signature      []byte `json:"signature"`      // Ed25519 signature over canonical request (excluding signature field)
+	EphemeralID    string `json:"ephemeralId,omitempty"`  // [A05] UUID for ephemeral tmpfs delivery (optional, phase 1)
 }
 
 // CanonicalRequest returns the canonical form of the request for signing/verification.
