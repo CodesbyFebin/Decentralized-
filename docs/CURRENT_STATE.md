@@ -20,7 +20,7 @@ exists · **MISSING** · **SIMULATED** · **SECURITY-SENSITIVE**.
 | Signed observations with freshness (FRESH / STALE / lost) | LIVE | `pkg/control/views.go` | M1, chaos |
 | Hardware facts (measured, signed) | PARTIAL | `api.Facts`, `pkg/node/hw.go` | memory, CPU model/cores, swap, disks, GPUs, data filesystem, uptime, runtimes, probes; `facts.unknown` names what was not measured. **No NICs, no NAT type.** |
 | Deployment spec | LIVE (as `dh/v1` manifest) | `pkg/manifest` | digest pinning required (`b3:` / `sha256:`) |
-| Runtimes | LIMITED | `pkg/runtime` | `process` (no CPU/mem enforcement) and `docker`; gVisor / Firecracker detected, not wired |
+| Runtimes | LIMITED | `pkg/runtime` | `process` (no enforcement) and `docker`; **`sandbox`** (RUNTIME-P0-A01): namespaces, seccomp, no capabilities, read-only root, cgroup limits, for PRIVATE/RESTRICTED. UNTRUSTED refused (no microVM/gVisor). |
 | Scheduler / placement with failure-domain spread | LIVE | `pkg/scheduler` | plans with reasons in `view.apps[].plan` |
 | Content-addressed artifacts + root attestation | LIVE | `pkg/storage`, `dh artifact push/sign` | M2 |
 | Replicated volumes, snapshots at quorum 2, repair | LIVE | `pkg/storage` | M2 (erasure coding MISSING) |
@@ -51,6 +51,16 @@ policy per workload origin (beyond federation grants), secrets subsystem, Git
 build service, SBOM / signed releases (P0-9), notifications, mobile,
 visitor analytics, time-series metrics (P1-6), DID identities (P1-5),
 ZK / TEE (research).
+
+## Workload isolation (RUNTIME-P0-A01)
+
+`pkg/runtime/sandbox` runs verified artifacts under PRIVATE and RESTRICTED
+profiles (ADR 0010): user/mount/pid/ipc/uts (+network for RESTRICTED)
+namespaces, in-house seccomp (amd64/arm64), empty capability set with
+no_new_privs, pivoted read-only root, cgroup memory/PID/CPU limits, and a
+setns port relay for RESTRICTED. UNTRUSTED is refused. Admission fails
+closed: isolation on a host that cannot sandbox is denied. Evidence:
+CC/P0 gate `RUNTIME-P0-A01`.
 
 ## Broken / known defects
 

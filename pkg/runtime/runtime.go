@@ -17,6 +17,7 @@ type Spec struct {
 	Replica       int64
 	Executable    string // process: absolute path of the verified artifact
 	Image         string // docker: ref@sha256:...
+	Isolation     string // "" (bare process) | PRIVATE | RESTRICTED (sandbox)
 	Args          []string
 	Env           map[string]string
 	CPUMilli      int64

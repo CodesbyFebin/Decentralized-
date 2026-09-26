@@ -154,6 +154,7 @@ type Agent struct {
 	cp        *cpClient
 	proc      *runtime.Process
 	docker    *runtime.Docker
+	sandbox   *runtime.Sandboxed
 	dockerOK  atomic.Bool
 	dockerVer atomic.Value
 
@@ -223,6 +224,7 @@ func New(cfg Config) (*Agent, error) {
 		return nil, err
 	}
 	a := &Agent{cfg: cfg, log: cfg.Logger, proc: runtime.NewProcess(), docker: runtime.NewDocker(),
+		sandbox:   runtime.NewSandboxed(filepath.Join(cfg.DataDir, "sandbox"), []string{filepath.Join(cfg.DataDir, "work"), filepath.Join(cfg.DataDir, "volumes")}),
 		decisions: map[string]*decision{}, health: map[string]*api.HealthObs{}, healthAt: map[string]time.Time{},
 		peerIPs: map[string]string{}, peerInfo: map[string]api.Peer{}, bindOK: map[string]bool{}, rtt: map[string][2]int64{},
 		forwards: map[string]*forwarder{}, cutover: map[string]bool{}, badHolder: map[string]time.Time{}, stopc: make(chan struct{})}
@@ -432,8 +434,11 @@ func (a *Agent) readopt() {
 }
 
 func (a *Agent) runtimeFor(name string) runtime.Runtime {
-	if name == "docker" {
+	switch name {
+	case "docker":
 		return a.docker
+	case "sandbox":
+		return a.sandbox
 	}
 	return a.proc
 }

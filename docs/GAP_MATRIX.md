@@ -17,7 +17,7 @@ COMPLETE when its backend acceptance test passes; UI presence never counts.
 | 10–11 | Contribution policy, owner kill switch | P0–P2 | **PARTIAL** | Kill-switch equivalents: `freeze`, `drain`, host `policy.yaml` (refuse tiers / federated work). Missing: schedules, per-origin limits, one-switch "stop external". |
 | 12 | Node lifecycle state machine | P0 | **PARTIAL** | pending / ready / draining / revoked / lost exist and are validated server-side; CORDONED, IDLE, DEGRADED are not distinct states. |
 | 13 | Workload origin | P1–P2 | **PARTIAL** | Owner vs federated is recorded; community / marketplace / external do not exist. |
-| 14 | Workload security profiles | P0 | **GAP** | Docker runtime only; no seccomp/AppArmor profile management, no rootless/gVisor/Firecracker (P1-1). Process runtime unenforced (P0-6). **Security-critical before any untrusted workload.** |
+| 14 | Workload security profiles | P0 | **PARTIAL** | RUNTIME-P0-A01: `sandbox` runtime with PRIVATE/RESTRICTED profiles — user/mount/pid/ipc/uts (+net) namespaces, in-house seccomp, no capabilities, read-only root, cgroup limits, admission fails closed (ADR 0010). Missing: UNTRUSTED boundary (microVM/gVisor) before any marketplace/untrusted code; AppArmor/SELinux profiles. |
 | 15 | Portable deployment spec | P0 | **MET (dh/v1)** | Spec's `decentralized.host.yaml` shape differs; dh/v1 is the implemented contract. |
 | 16 | Universal deploy (Git, Dockerfile, upload) | P0 | **GAP** | Only prebuilt artifacts (CAS) and digest-pinned OCI images. No build service. |
 | 17 | Immutable artifacts + provenance | P0 | **PARTIAL** | Digests + root attestation. Missing: SBOM, builder identity, source commit binding. |

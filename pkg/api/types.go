@@ -30,9 +30,10 @@ type Metadata struct {
 
 type AppSpec struct {
 	Replicas  int64             `json:"replicas"`
-	Runtime   string            `json:"runtime"` // process | docker
-	Image     string            `json:"image"`   // name@b3:<hex> (process) or ref@sha256:<hex> (docker)
-	Command   []string          `json:"command"` // arguments; never interpreted by a shell
+	Runtime   string            `json:"runtime"`             // process | docker
+	Isolation string            `json:"isolation,omitempty"` // "" | PRIVATE | RESTRICTED
+	Image     string            `json:"image"`               // name@b3:<hex> (process) or ref@sha256:<hex> (docker)
+	Command   []string          `json:"command"`             // arguments; never interpreted by a shell
 	Env       map[string]string `json:"env"`
 	Resources Resources         `json:"resources"`
 	Placement Placement         `json:"placement"`
@@ -109,6 +110,7 @@ type Assignment struct {
 	Generation   int64             `json:"generation"`
 	Desired      string            `json:"desired"` // running | stopped
 	Runtime      string            `json:"runtime"`
+	Isolation    string            `json:"isolation,omitempty"`
 	Image        string            `json:"image"`
 	Digest       string            `json:"digest"`
 	Command      []string          `json:"command"`

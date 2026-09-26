@@ -33,6 +33,7 @@ type Policy struct {
 	RequireImageSignature   bool
 	TrustedPublishers       []string // wire keys; "cluster-root" = the pinned root key
 	AllowRuntimes           []string
+	AllowIsolation          []string
 	AllowFederated          bool
 	AllowExec               bool
 	OfflineAdmission        string // deny (hold existing, refuse new) | stop (stop everything when offline)
@@ -51,6 +52,7 @@ type rawPolicy struct {
 	RequireImageSignature   bool     `yaml:"requireImageSignature"`
 	TrustedPublishers       []string `yaml:"trustedPublishers"`
 	AllowRuntimes           []string `yaml:"allowRuntimes"`
+	AllowIsolation          []string `yaml:"allowIsolation"`
 	AllowFederated          bool     `yaml:"allowFederated"`
 	AllowExec               bool     `yaml:"allowExec"`
 	OfflineAdmission        string   `yaml:"offlineAdmission"`
@@ -64,7 +66,7 @@ func Default() Policy {
 	return Policy{
 		Sovereign: true, MaxWorkloads: 40, MaxCPUMilli: 32000, MaxMemBytes: 128 << 30,
 		AcceptTiers: []string{"local", "trusted"}, DenyImagesWithoutDigest: true,
-		AllowRuntimes: []string{"process", "docker"}, OfflineAdmission: "deny",
+		AllowRuntimes: []string{"process", "docker"}, AllowIsolation: []string{"PRIVATE", "RESTRICTED"}, OfflineAdmission: "deny",
 		MaxClockSkewMs: 30_000, FreshWindowMs: 10_000, StorageQuotaBytes: 10 << 30,
 	}
 }
@@ -133,6 +135,9 @@ func Parse(src []byte) (Policy, error) {
 	if r.AllowRuntimes != nil {
 		p.AllowRuntimes = r.AllowRuntimes
 	}
+	if r.AllowIsolation != nil {
+		p.AllowIsolation = r.AllowIsolation
+	}
 	p.AllowFederated = r.AllowFederated
 	p.AllowExec = r.AllowExec
 	if r.OfflineAdmission != "" {
@@ -160,6 +165,7 @@ func Parse(src []byte) (Policy, error) {
 	}
 	sort.Strings(p.AcceptTiers)
 	sort.Strings(p.AllowRuntimes)
+	sort.Strings(p.AllowIsolation)
 	return p, nil
 }
 
@@ -210,6 +216,7 @@ const (
 	CodeLedger         = "LEDGER_CORRUPT"
 	CodeTier           = "POLICY_TIER"
 	CodeRuntime        = "POLICY_RUNTIME"
+	CodeIsolation      = "POLICY_ISOLATION"
 	CodeDigest         = "POLICY_DIGEST"
 	CodeUnsigned       = "POLICY_ARTIFACT_SIGNATURE"
 	CodeWorkloads      = "POLICY_WORKLOAD_CAP"
@@ -240,6 +247,8 @@ type Input struct {
 	PriorRunning    bool  // an admitted instance of PriorGeneration is running
 	Attested        bool  // artifact attested by a trusted publisher
 	AttestDetail    string
+	SandboxOK       bool   // the host can create sandboxes
+	SandboxDetail   string // why not
 	// Resources already committed to other admitted workloads.
 	UsedWorkloads int64
 	UsedCPUMilli  int64
@@ -347,6 +356,16 @@ func Admit(in Input) Decision {
 	}
 	if !check("runtime", contains(pol.AllowRuntimes, a.Runtime), "runtime "+a.Runtime) {
 		return deny(CodeRuntime, "runtime "+a.Runtime+" not allowed by host policy")
+	}
+	if a.Isolation != "" {
+		// Fail closed: an isolation request on a host that cannot sandbox is
+		// refused, never run without the boundary.
+		if !check("sandbox", in.SandboxOK, in.SandboxDetail) {
+			return deny(CodeIsolation, "isolation "+a.Isolation+" requested but the host cannot sandbox: "+in.SandboxDetail)
+		}
+		if !check("isolation", contains(pol.AllowIsolation, a.Isolation), "isolation "+a.Isolation) {
+			return deny(CodeIsolation, "isolation profile "+a.Isolation+" not allowed by host policy")
+		}
 	}
 	digestOK := strings.HasPrefix(a.Digest, "b3:") || strings.HasPrefix(a.Digest, "sha256:")
 	digestOK = digestOK && strings.HasSuffix(a.Image, "@"+a.Digest)
