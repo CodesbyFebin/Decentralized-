@@ -334,3 +334,30 @@ func lastLine(b []byte, contains string) string {
 	}
 	return last
 }
+
+// NEGATIVE CONTROL: How to verify tests detect missing enforcement
+//
+// These are NOT run by default. They document how to validate that the
+// test suite catches enforcement failures. To verify:
+//
+// 1. PID namespace: Comment out unix.CLONE_NEWPID in sandbox_linux.go:264.
+//    Run TestRestrictedProfileEscape. It MUST FAIL (workload sees host pids).
+//
+// 2. Memory limit: Comment out the cgroup memory setup in cgroup_linux.go.
+//    Run TestMemoryLimitEnforced. It MUST FAIL (process not OOM-killed).
+//
+// 3. Seccomp: Comment out applySeccomp() in init_linux.go:76.
+//    Run TestRestrictedProfileEscape. It MUST FAIL (mount/mknod succeed).
+//
+// 4. Capability dropping: Comment out Capset in init_linux.go:328.
+//    Run TestRestrictedProfileEscape. It MUST FAIL (CapEff not empty).
+//
+// 5. Read-only root: Comment out unix.MS_RDONLY in init_linux.go:277.
+//    Run TestRestrictedProfileEscape. It MUST FAIL (root is writable).
+//
+// 6. Network isolation: Remove unix.CLONE_NEWNET from sandbox_linux.go:266.
+//    Run TestRestrictedNetworkIsolationAndRelay. It MUST FAIL or the
+//    workload must reach external networks.
+//
+// If any of these changes cause a test to PASS instead of FAIL, the test
+// suite is not testing the enforcement mechanism.
