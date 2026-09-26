@@ -187,6 +187,7 @@ type Invite struct {
 	Auto    bool     `json:"auto"`
 	Used    string   `json:"used"` // node id that consumed it
 	Created int64    `json:"created"`
+	Revoked int64    `json:"revoked,omitempty"` // when the owner withdrew it; a revoked invite admits nobody
 }
 
 type RepairRec struct {

@@ -14,11 +14,11 @@ exists · **MISSING** · **SIMULATED** · **SECURITY-SENSITIVE**.
 | Area | State | Where | Evidence |
 |---|---|---|---|
 | Node identity (Ed25519, generated on the host) | LIVE | `pkg/identity`, `dh-noded` | `m1_test.go`, `m3_test.go` |
-| Enrolment: single-use invite → join → approval | LIVE | `dh node invite/approve`, `pkg/control/hostapi.go` | M1/M3 tests |
+| Enrolment: single-use invite → join → approval | LIVE | `dh node invite/invite-revoke/approve`, `pkg/control/hostapi.go` | M1/M3 tests, NODE-A01 gate |
 | Signed assignments, per-assignment capabilities | LIVE | `pkg/control/reconcile.go`, `pkg/capability` | 29 conformance vectors |
 | Host sovereignty: local `policy.yaml`, 18 ordered admission checks, hold semantics | LIVE | `pkg/policy`, `pkg/node` | `sovereignty_test.go` |
 | Signed observations with freshness (FRESH / STALE / lost) | LIVE | `pkg/control/views.go` | M1, chaos |
-| Hardware facts | PARTIAL | `api.Facts` | OS, kernel, arch, CPUs, memory, runtimes, probes; **no GPU, disks, NAT type** |
+| Hardware facts (measured, signed) | PARTIAL | `api.Facts`, `pkg/node/hw.go` | memory, CPU model/cores, swap, disks, GPUs, data filesystem, uptime, runtimes, probes; `facts.unknown` names what was not measured. **No NICs, no NAT type.** |
 | Deployment spec | LIVE (as `dh/v1` manifest) | `pkg/manifest` | digest pinning required (`b3:` / `sha256:`) |
 | Runtimes | LIMITED | `pkg/runtime` | `process` (no CPU/mem enforcement) and `docker`; gVisor / Firecracker detected, not wired |
 | Scheduler / placement with failure-domain spread | LIVE | `pkg/scheduler` | plans with reasons in `view.apps[].plan` |
@@ -53,6 +53,9 @@ visitor analytics, time-series metrics (P1-6), DID identities (P1-5),
 ZK / TEE (research).
 
 ## Broken / known defects
+
+- Fixed in NODE-A01: `facts.memBytes` reported the declared `--mem` capacity as if measured, and the Command Centre labelled it "Memory (measured)". Hosts now measure it; the console treats memory from agents that do not send `facts.unknown` as not measured.
+- Fixed in NODE-A01: a validly signed older `enroll` envelope replayed for a known host overwrote its newer enrolment (facts summary and policy).
 
 - `dh-src-digest/2` does not include `.ts`/`.tsx`, so validation records cannot bind the Command Centre source on their own (the RC1 record adds a hash manifest as a workaround).
 - ADR 0007 (no-build console) conflicts with the Command Centre; decision pending in ADR 0009.

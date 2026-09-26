@@ -283,6 +283,31 @@ envelope (self-certifying) that carries a summary of its own sovereign
 policy. An operator approves the host. The control plane cannot change host
 policy; it can only read the summary the host signed.
 
+The control plane refuses an `enroll` envelope when: its self-signature does
+not verify; its payload `id`/`pub` differ from the envelope signer; the join
+capability is not anchored in the cluster root, is expired, or names an
+invite nonce that is unknown, already used, or revoked by the operator; or,
+for a host it already knows, the envelope's `ts` is not newer than the
+enrollment it has accepted (replay). Every refusal is recorded in the
+replicated rejection log.
+
+The possession proof is the host's self-signature over a payload that
+contains the single-use, root-signed join nonce; there is no separate
+server-issued challenge. The nonce is the challenge, issued by the operator
+out of band, and it can be answered once.
+
+### 9.1.1 Host facts
+
+Every observation carries `facts`: values the host measured when it built
+the observation (`memBytes` from the OS, CPU model and physical cores, swap,
+block devices, GPUs found through sysfs or `nvidia-smi`, the filesystem that
+holds the agent's data, uptime). A value the host could not measure is left
+zero or empty and named in `facts.unknown`. Declared capacity (`--cpu`,
+`--mem`) is carried by the `enroll` payload and is never reported as a fact.
+Agents built before `facts.unknown` existed put the declared memory into
+`facts.memBytes`; consumers must treat `memBytes` as measured only when
+`unknown` is present.
+
 ### 9.2 Roster and bundles
 
 The **roster** (kind `roster`, signed by the root) lists control-plane

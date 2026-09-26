@@ -483,17 +483,56 @@ type CertObs struct {
 
 // Facts are negative-by-default measurements: a field is true only when the
 // host measured it.
+//
+// Every field is measured on the host when the observation is built. A value
+// the host could not measure is zero or empty AND named in Unknown; declared
+// capacity (what the operator offers) is in Enroll, never here.
 type Facts struct {
 	OS          string   `json:"os"`
 	Arch        string   `json:"arch"`
 	Kernel      string   `json:"kernel"`
-	CPUs        int64    `json:"cpus"`
-	MemBytes    int64    `json:"memBytes"`
-	Docker      string   `json:"docker"` // version, or "" if unavailable
+	CPUs        int64    `json:"cpus"`     // logical CPUs visible to the agent
+	MemBytes    int64    `json:"memBytes"` // physical memory measured by the OS; 0 when unmeasured
+	Docker      string   `json:"docker"`   // version, or "" if unavailable
 	UDP443      bool     `json:"udp443"`
 	Runtimes    []string `json:"runtimes"`
 	Probes      []Check  `json:"probes"`
 	ClockSkewMs int64    `json:"clockSkewMs"` // host clock minus bundle issue time at receipt
+
+	CPUModel      string   `json:"cpuModel,omitempty"`
+	PhysicalCores int64    `json:"physicalCores,omitempty"`
+	SwapBytes     int64    `json:"swapBytes,omitempty"`
+	UptimeSec     int64    `json:"uptimeSec,omitempty"`
+	Disks         []Disk   `json:"disks,omitempty"`
+	DataFS        *FSInfo  `json:"dataFs,omitempty"` // filesystem holding the agent's data directory
+	GPUs          []GPU    `json:"gpus,omitempty"`
+	Unknown       []string `json:"unknown,omitempty"` // facts that could not be measured on this host
+}
+
+// Disk is a block device the kernel exposes (loop and RAM devices excluded).
+type Disk struct {
+	Name       string `json:"name"`
+	SizeBytes  int64  `json:"sizeBytes"`
+	Rotational bool   `json:"rotational"`
+	Removable  bool   `json:"removable"`
+	Model      string `json:"model,omitempty"`
+}
+
+// FSInfo describes one mounted filesystem.
+type FSInfo struct {
+	Path       string `json:"path"`
+	TotalBytes int64  `json:"totalBytes"`
+	FreeBytes  int64  `json:"freeBytes"`
+}
+
+// GPU is a display/compute device found by a named source. Fields the source
+// cannot report stay empty; nothing is inferred from the vendor.
+type GPU struct {
+	Vendor    string `json:"vendor"`
+	Model     string `json:"model,omitempty"`
+	VRAMBytes int64  `json:"vramBytes,omitempty"`
+	Driver    string `json:"driver,omitempty"`
+	Source    string `json:"source"` // sysfs | nvidia-smi
 }
 
 type LedgerHead struct {

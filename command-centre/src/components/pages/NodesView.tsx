@@ -73,6 +73,7 @@ export default function NodesView() {
   }, [nodes, chip, search, sortDesc]);
 
   const observed = nodes.filter((n) => n.facts);
+  const memMeasured = observed.filter((n) => n.facts!.memBytes !== null);
   const sum = (f: (n: NodeRec) => number) => observed.reduce((a, n) => a + f(n), 0);
   const stale = res.stale;
 
@@ -190,7 +191,7 @@ export default function NodesView() {
                     <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3">
                       <KpiTile tone="cyan" icon={<Server className="w-6 h-6" />} label="Hosts" value={d.nodes.length} sub={<><span className="text-emerald-400">{counts.healthy} fresh</span>{counts.degraded + counts.offline + counts.unknown > 0 && <> · <span className="text-rose-300">{counts.degraded + counts.offline + counts.unknown} not fresh</span></>}</>} />
                       <KpiTile tone="blue" icon={<Cpu className="w-6 h-6" />} label="CPUs (measured)" value={observed.length ? sum((n) => n.facts!.cpus) : '—'} sub={`${(d.metrics.cpuDeclaredMilli.value ?? 0) / 1000} cores declared`} />
-                      <KpiTile tone="violet" icon={<MemoryStick className="w-6 h-6" />} label="Memory (measured)" value={observed.length ? fmtBytes(sum((n) => n.facts!.memBytes)) : '—'} sub={`${fmtBytes(d.metrics.memDeclaredBytes.value)} declared`} />
+                      <KpiTile tone="violet" icon={<MemoryStick className="w-6 h-6" />} label="Memory (measured)" value={memMeasured.length ? fmtBytes(memMeasured.reduce((a, n) => a + (n.facts!.memBytes ?? 0), 0)) : '—'} sub={`${memMeasured.length}/${nodes.length} hosts measured · ${fmtBytes(d.metrics.memDeclaredBytes.value)} declared`} />
                       <KpiTile tone="amber" icon={<HardDrive className="w-6 h-6" />} label="Storage used / quota" value={fmtBytes(d.metrics.storageUsedBytes.value)} sub={`of ${fmtBytes(d.metrics.storageCapacityBytes.value)} quota`} />
                       <KpiTile tone="emerald" icon={<Layers className="w-6 h-6" />} label="Workloads observed" value={nodes.some((n) => n.workloads !== null) ? nodes.reduce((a, n) => a + (n.workloads ?? 0), 0) : '—'} sub="from fresh + stale observations" />
                     </div>
@@ -275,7 +276,7 @@ export default function NodesView() {
                               <td title={n.healthReason}><StatusPill status={n.health} /></td>
                               <td><StatusPill status={n.lifecycle} dot={false} /></td>
                               <td><FreshnessPill f={n.observation.freshness} ageMs={n.observation.ageMs} /></td>
-                              <td className="tabular-nums text-slate-300">{n.facts ? `${n.facts.cpus} CPU · ${fmtBytes(n.facts.memBytes)} · ${n.arch}` : '—'}</td>
+                              <td className="tabular-nums text-slate-300">{n.facts ? `${n.facts.cpus} CPU · ${n.facts.memBytes === null ? 'memory not measured' : fmtBytes(n.facts.memBytes)} · ${n.arch}` : '—'}</td>
                               <td>
                                 <div className="text-slate-200">{n.region || '—'}</div>
                                 <div className="text-[11px] text-slate-500">{n.host}</div>

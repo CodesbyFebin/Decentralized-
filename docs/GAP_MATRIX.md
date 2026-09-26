@@ -11,8 +11,8 @@ COMPLETE when its backend acceptance test passes; UI presence never counts.
 | 3 | Truth states | P0 | **MET** | Control plane has `basis`; console adds LIVE/DERIVED/CONFIGURED/UNAVAILABLE/PLANNED/SIMULATED/UNKNOWN. Spec freshness `EXPIRED`/`UNREACHABLE` map to `lost`/backend-unreachable. |
 | 4–5 | Service split, monorepo layout | — | **DIVERGES** | Single Go module by design (ADR 0001). Not recommended to restructure without a reason beyond the spec. |
 | 6 | First-party protocol family (DHP-*) | P0–P2 | **PARTIAL** | `dh/v1` covers identity, runtime, storage, evidence (`docs/protocol/dh-v1.md`). Discovery, market and settlement protocols do not exist. |
-| 7 | Identity + enrolment | P0 | **MET** | Enrolment states map to invite → join → pending → approved. Challenge step is the pinned-root join. |
-| 8 | Hardware discovery | P0 | **PARTIAL** | Add GPU, disks, swap, NICs, NAT/reachability to `api.Facts`, signed as today. |
+| 7 | Identity + enrolment | P0 | **MET** | NODE-A01 gate (`tests/integration/node_a01_test.go`): key generated on the host (0600) and absent from every control-plane file, API document and log; single-use, 15-minute default, owner-revocable invites; forged, expired, reused and revoked tokens refused; replayed enrolment refused. The challenge is the root-signed single-use join nonce the host signs over (no separate server nonce; `docs/protocol/dh-v1.md` §9.1). Spec states CHALLENGE_SENT / CAPABILITY_PROBED are not distinct records. |
+| 8 | Hardware discovery | P0 | **PARTIAL** | Measured and signed: memory, CPU model/cores, swap, disks, GPUs (sysfs, `nvidia-smi`), data filesystem, uptime; unmeasurable values listed in `facts.unknown`. Fixed a defect: `facts.memBytes` used to be the declared `--mem`. Missing: NICs, NAT type / public reachability (needs an outside observer), container runtimes other than Docker, virtualization beyond the `/dev/kvm` probe. |
 | 9 | Resource model (capacity/reservation/allocation) | P0–P1 | **PARTIAL** | Declared capacity and policy caps exist; reservations/allocations as first-class records do not. |
 | 10–11 | Contribution policy, owner kill switch | P0–P2 | **PARTIAL** | Kill-switch equivalents: `freeze`, `drain`, host `policy.yaml` (refuse tiers / federated work). Missing: schedules, per-origin limits, one-switch "stop external". |
 | 12 | Node lifecycle state machine | P0 | **PARTIAL** | pending / ready / draining / revoked / lost exist and are validated server-side; CORDONED, IDLE, DEGRADED are not distinct states. |
@@ -55,6 +55,22 @@ COMPLETE when its backend acceptance test passes; UI presence never counts.
 | 96 | **P0 acceptance** (one Linux machine end to end) | P0 | **PARTIAL** | install→enroll→approve→deploy→serve→observe→logs→restart→cordon/drain→resume pass on the dev cluster. Missing: hardware discovery breadth, resource reservation, rollback command, Git deploy, secrets. |
 | 97 | P1 acceptance (3 independent nodes) | P1 | **LIMITED** | 3+ hosts with failover verified on one machine; needs P0-1 multi-machine run. |
 | 98–102 | P2–P6 | — | **NOT STARTED** | In order; do not start P3 before P2 acceptance. |
+
+## Checkpoint NODE-A01 (sovereign node foundation)
+
+Gate: `go test ./tests/integration -run TestNodeA01` plus
+`go test ./pkg/node -run 'TestCompromised|Hardware'`. It covers local key
+generation and custody, enrolment refusals (reused, forged, expired, revoked
+token; signer mismatch; replay), measured facts vs declared capacity, owner
+approval, authenticated heartbeats (replay, foreign key), control-plane
+disconnect (host stops claiming freshness, then reconciles), host disconnect
+(STALE then lost, never FRESH), audit and host-ledger tamper detection, and a
+revoked key refused on the heartbeat and bundle channels. On the host side,
+replayed/rolled-back bundles, wrong signer, wrong target, expired capability,
+stale generation and revocation are refused. Out of scope, as proposed:
+marketplace, leases, settlement, tokens, external DePIN, ZK, federation of
+coordinators. Not covered by NODE-A01: a distinct CORDONED state and
+owner-reserved capacity as a first-class record (§9–12).
 
 ## Recommended next steps (in order)
 

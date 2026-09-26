@@ -164,10 +164,38 @@ export default function NodeDetailView() {
                       <Row k="CPU declared">{n.declared.cpuMilli / 1000} cores <TruthTag state="CONFIGURED" /></Row>
                       <Row k="CPU measured">{n.facts ? `${n.facts.cpus} logical` : '—'}</Row>
                       <Row k="Memory declared">{fmtBytes(n.declared.memBytes)} <TruthTag state="CONFIGURED" /></Row>
-                      <Row k="Memory measured">{n.facts ? fmtBytes(n.facts.memBytes) : '—'}</Row>
+                      <Row k="Memory measured">{n.facts?.memBytes != null ? fmtBytes(n.facts.memBytes) : 'not measured'}</Row>
                       <Row k="Workloads">{n.workloads ?? '—'}</Row>
                       <Row k="Mode">{n.mode || '—'} {n.modeDetail}</Row>
                     </div>
+                  </Glass>
+                  <Glass className="p-4 md:col-span-2">
+                    <PanelHeader title="Hardware" subtitle="Measured by the host agent and signed in its observation. Nothing here is declared or inferred." />
+                    {n.facts?.unknown === null || !n.facts ? (
+                      <p className="text-[12.5px] text-slate-400 mt-2">{n.facts ? 'This host agent predates measured hardware facts; upgrade it to report CPU model, disks and GPUs.' : 'No observation yet.'}</p>
+                    ) : (
+                      <div className="mt-2 grid sm:grid-cols-2 gap-x-6">
+                        <Row k="CPU model">{n.facts.cpuModel ?? 'not measured'}</Row>
+                        <Row k="Physical cores">{n.facts.physicalCores ?? 'not measured'}</Row>
+                        <Row k="Swap">{n.facts.swapBytes === null ? 'not measured' : fmtBytes(n.facts.swapBytes)}</Row>
+                        <Row k="Data filesystem">{n.facts.dataFs ? `${fmtBytes(n.facts.dataFs.freeBytes)} free of ${fmtBytes(n.facts.dataFs.totalBytes)}` : 'not measured'}</Row>
+                        <Row k="Disks">
+                          {n.facts.disks === null
+                            ? 'not measured'
+                            : n.facts.disks.length === 0
+                              ? 'none visible'
+                              : n.facts.disks.map((x) => `${x.name} ${fmtBytes(x.sizeBytes)}${x.rotational ? ' HDD' : ''}${x.removable ? ' removable' : ''}`).join(', ')}
+                        </Row>
+                        <Row k="GPUs">
+                          {n.facts.gpus === null
+                            ? 'not measured'
+                            : n.facts.gpus.length === 0
+                              ? 'none found'
+                              : n.facts.gpus.map((g) => `${g.vendor}${g.model ? ` ${g.model}` : ''}${g.vramBytes ? ` ${fmtBytes(g.vramBytes)}` : ''} (${g.source})`).join(', ')}
+                        </Row>
+                        <Row k="Could not measure">{n.facts.unknown.length ? n.facts.unknown.join(', ') : 'nothing'}</Row>
+                      </div>
+                    )}
                   </Glass>
                   <Glass className="p-4 md:col-span-2">
                     <PanelHeader title="Host policy" subtitle="Reported by the host; the control plane can read it but never change it." />

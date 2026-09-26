@@ -45,6 +45,7 @@ func (s *Server) opRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/nodes/{id}/undrain", s.opWrite(write, s.simple("drain", func(r *http.Request) any { return map[string]any{"node": r.PathValue("id"), "drain": false} })))
 	mux.HandleFunc("POST /api/v1/nodes/{id}/revoke-key", s.opWrite(admin, s.handleRevokeKey))
 	mux.HandleFunc("POST /api/v1/invites", s.opWrite(admin, s.handleInvite))
+	mux.HandleFunc("POST /api/v1/invites/{nonce}/revoke", s.opWrite(admin, s.simple("invite-revoke", func(r *http.Request) any { return map[string]string{"nonce": r.PathValue("nonce")} })))
 	mux.HandleFunc("POST /api/v1/freeze", s.opWrite(admin, s.handleFreeze))
 	mux.HandleFunc("POST /api/v1/roster", s.opWrite(admin, s.passEnvelope("roster")))
 	mux.HandleFunc("POST /api/v1/root-rotate", s.opWrite(admin, s.passJSON("root-rotate")))

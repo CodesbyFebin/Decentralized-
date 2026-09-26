@@ -146,7 +146,7 @@ function mapNode(n: CPNode, opts: MapOptions): NodeRec {
       ? {
           kernel: n.facts.kernel ?? '',
           cpus: n.facts.cpus ?? 0,
-          memBytes: n.facts.memBytes ?? 0,
+          ...measuredHardware(n.facts),
           runtimes: n.facts.runtimes ?? [],
           docker: n.facts.docker ?? '',
           udp443: !!n.facts.udp443,
@@ -522,4 +522,30 @@ export function deriveSecurity(
     { id: 'ddos', title: 'DDoS telemetry', result: 'UNAVAILABLE', detail: 'no DDoS telemetry feed exists', basis: 'UNAVAILABLE' }
   ];
   return controls;
+}
+
+/**
+ * Hardware facts. Agents that report `unknown` measure every value they send;
+ * older agents put the declared --mem capacity in facts.memBytes, so without
+ * that list memory is treated as not measured rather than shown as measured.
+ */
+export function measuredHardware(f: NonNullable<CPNode['facts']>) {
+  const unknown = Array.isArray(f.unknown) ? f.unknown : null;
+  const measured = (field: string, v: number | undefined) => (unknown && !unknown.includes(field) && typeof v === 'number' && v > 0 ? v : null);
+  return {
+    memBytes: measured('memBytes', f.memBytes),
+    cpuModel: unknown && f.cpuModel ? f.cpuModel : null,
+    physicalCores: measured('physicalCores', f.physicalCores),
+    swapBytes: unknown && !unknown.includes('swapBytes') ? (f.swapBytes ?? 0) : null,
+    disks:
+      unknown && !unknown.includes('disks')
+        ? (f.disks ?? []).map((d) => ({ name: d.name, sizeBytes: d.sizeBytes ?? 0, rotational: !!d.rotational, removable: !!d.removable, model: d.model ?? '' }))
+        : null,
+    gpus:
+      unknown && !unknown.includes('gpus')
+        ? (f.gpus ?? []).map((g) => ({ vendor: g.vendor, model: g.model ?? '', vramBytes: g.vramBytes ?? null, driver: g.driver ?? '', source: g.source }))
+        : null,
+    dataFs: f.dataFs ? { path: f.dataFs.path, totalBytes: f.dataFs.totalBytes ?? 0, freeBytes: f.dataFs.freeBytes ?? 0 } : null,
+    unknown
+  };
 }

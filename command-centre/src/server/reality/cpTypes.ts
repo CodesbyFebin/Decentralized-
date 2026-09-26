@@ -46,6 +46,13 @@ export interface CPNode {
     runtimes?: string[] | null;
     probes?: { name: string; ok?: boolean; detail?: string }[] | null;
     clockSkewMs?: number;
+    cpuModel?: string;
+    physicalCores?: number;
+    swapBytes?: number;
+    disks?: { name: string; sizeBytes?: number; rotational?: boolean; removable?: boolean; model?: string }[] | null;
+    gpus?: { vendor: string; model?: string; vramBytes?: number; driver?: string; source: string }[] | null;
+    dataFs?: { path: string; totalBytes?: number; freeBytes?: number } | null;
+    unknown?: string[] | null;
   } | null;
   mesh?: {
     device?: string;

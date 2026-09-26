@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { mapView, deriveNodeHealth, mapCertState, deriveAppPhase } from '../../src/server/reality/mapView';
+import { mapView, deriveNodeHealth, mapCertState, deriveAppPhase, measuredHardware } from '../../src/server/reality/mapView';
 import { deriveCapabilities } from '../../src/server/reality/capabilities';
 import { isCPView, type CPView } from '../../src/server/reality/cpTypes';
 
@@ -155,4 +155,18 @@ test('region positions are CONFIGURED, never inferred', () => {
   const a = s.nodes.find((n) => n.region === 'cell-a');
   assert.deepEqual(a?.location, { lat: 10, lng: 20, state: 'CONFIGURED' });
   assert.equal(s.nodes.find((n) => n.region !== 'cell-a')!.location, null);
+});
+
+test('hardware: an agent without the unknown list is not trusted for measured memory', () => {
+  const old = measuredHardware({ cpus: 4, memBytes: 2 << 30 });
+  assert.equal(old.memBytes, null);
+  assert.equal(old.unknown, null);
+  assert.equal(old.disks, null);
+  const now = measuredHardware({ cpus: 4, memBytes: 16 * 2 ** 30, cpuModel: 'X', physicalCores: 4, swapBytes: 0, disks: [], gpus: [], unknown: ['gpus', 'natType'] });
+  assert.equal(now.memBytes, 16 * 2 ** 30);
+  assert.equal(now.swapBytes, 0);
+  assert.deepEqual(now.disks, []);
+  assert.equal(now.gpus, null, 'gpus listed as unknown must not render as "none"');
+  const unmeasured = measuredHardware({ cpus: 4, memBytes: 0, unknown: ['memBytes'] });
+  assert.equal(unmeasured.memBytes, null);
 });

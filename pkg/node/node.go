@@ -465,7 +465,10 @@ func (a *Agent) tick() {
 }
 
 func (a *Agent) probeFacts() {
-	f := api.Facts{OS: goruntime.GOOS, Arch: arch(), CPUs: int64(goruntime.NumCPU()), MemBytes: a.cfg.MemBytes}
+	// Measured only: the capacity the operator offers (--cpu, --mem) is in the
+	// enrollment, not in facts.
+	f := api.Facts{OS: goruntime.GOOS, Arch: arch(), CPUs: int64(goruntime.NumCPU())}
+	systemProbe().measure(&f, a.cfg.DataDir)
 	f.Kernel = kernelVersion()
 	f.UDP443 = udpListening(443)
 	f.Runtimes = []string{"process"}

@@ -16,7 +16,8 @@ import (
 )
 
 func init() {
-	reg("node invite", "create a single-use join token: [--roles edge] [--auto] [--ttl 24h] [--out FILE]", true, cmdInvite)
+	reg("node invite", "create a single-use join token: [--roles edge] [--auto] [--ttl 15m] [--out FILE]", true, cmdInvite)
+	reg("node invite-revoke", "withdraw an unused join token: TOKEN|NONCE", true, cmdInviteRevoke)
 	reg("node join", "print how to join a host with a token (runs on the host): TOKEN", false, cmdJoinHelp)
 	reg("node approve", "approve a pending host: HOST", true, nodeAction("approve"))
 	reg("node revoke", "revoke a host (blocks new work; admitted work may continue): HOST [--reason R]", true, cmdRevoke)
@@ -37,7 +38,7 @@ func cmdInvite(op *Operator, args []string) error {
 	fs := flags("node invite")
 	roles := fs.String("roles", "", "roles granted to the host (edge)")
 	auto := fs.Bool("auto", false, "approve automatically when the host enrolls")
-	ttl := fs.Duration("ttl", 24*time.Hour, "token lifetime")
+	ttl := fs.Duration("ttl", 15*time.Minute, "token lifetime (keep it short: the token admits whoever presents it first)")
 	note := fs.String("note", "", "note recorded with the invite")
 	out := fs.String("out", "", "write the token to a file instead of stdout")
 	if err := fs.Parse(args); err != nil {
@@ -73,6 +74,43 @@ func cmdInvite(op *Operator, args []string) error {
 	fmt.Println(join)
 	fmt.Fprintf(os.Stderr, "single-use join token; expires %s. On the host: dh-noded --data DIR --name NAME --join-file TOKENFILE\n", time.UnixMilli(exp).Format(time.RFC3339))
 	return nil
+}
+
+func cmdInviteRevoke(op *Operator, args []string) error {
+	if len(args) != 1 {
+		return errors.New("usage: dh node invite-revoke TOKEN|NONCE")
+	}
+	nonce, err := inviteNonce(args[0])
+	if err != nil {
+		return err
+	}
+	var r Result
+	if err := op.Do("POST", "/api/v1/invites/"+nonce+"/revoke", nil, &r); err != nil {
+		return err
+	}
+	fmt.Println(r.Message)
+	return nil
+}
+
+// inviteNonce accepts a join token (dhjoin1.…) or the bare nonce.
+func inviteNonce(s string) (string, error) {
+	s = strings.TrimSpace(s)
+	if !strings.HasPrefix(s, "dhjoin1.") {
+		return s, nil
+	}
+	t, err := node.DecodeJoinToken(s)
+	if err != nil {
+		return "", err
+	}
+	c, err := capability.Decode(t.Capability)
+	if err != nil {
+		return "", err
+	}
+	var last capability.Block
+	if len(c.Blocks) == 0 || c.Blocks[len(c.Blocks)-1].Decode(&last) != nil || last.Caveats.Nonce == "" {
+		return "", errors.New("join token carries no invite nonce")
+	}
+	return last.Caveats.Nonce, nil
 }
 
 func cmdJoinHelp(_ *Operator, args []string) error {

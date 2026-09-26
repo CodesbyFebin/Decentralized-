@@ -64,7 +64,7 @@ type InviteOpts struct {
 // Invite registers an invite and returns the join token.
 func (op *Operator) Invite(o InviteOpts) (string, error) {
 	if o.TTL == 0 {
-		o.TTL = 24 * time.Hour
+		o.TTL = 15 * time.Minute
 	}
 	if o.Roles == nil {
 		o.Roles = []string{}
@@ -80,6 +80,17 @@ func (op *Operator) Invite(o InviteOpts) (string, error) {
 		return "", err
 	}
 	return node.EncodeJoinToken(node.JoinToken{Cluster: op.Cfg.Cluster, Root: op.Root.PubString(), RootCACert: string(op.CAPEM), Endpoints: op.Cfg.Endpoints, TLS: op.Cfg.TLS, Capability: tok.Encode()}), nil
+}
+
+// RevokeInvite withdraws an unused join token (the token or its nonce).
+func (op *Operator) RevokeInvite(tokenOrNonce string) (Result, error) {
+	var r Result
+	nonce, err := inviteNonce(tokenOrNonce)
+	if err != nil {
+		return r, err
+	}
+	err = op.Do("POST", "/api/v1/invites/"+nonce+"/revoke", nil, &r)
+	return r, err
 }
 
 // View fetches the console projection.

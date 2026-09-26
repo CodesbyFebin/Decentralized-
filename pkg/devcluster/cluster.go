@@ -633,3 +633,26 @@ func (c *Cluster) EdgeGet(host, path string) (*http.Response, []byte, error) {
 	b, _ := io.ReadAll(resp.Body)
 	return resp, b, nil
 }
+
+// StartHostWithToken starts one more host that joins with the given token
+// (for example an invite without auto-approval) instead of a fresh
+// auto-approved invite. Slot picks the port block and region, as in StartHost.
+func (c *Cluster) StartHostWithToken(slot int, name, token string, extra ...string) (*Proc, error) {
+	data := filepath.Join(c.Opt.Dir, name)
+	if err := os.MkdirAll(data, 0o700); err != nil {
+		return nil, err
+	}
+	tokFile := filepath.Join(c.Opt.Dir, name+".join")
+	if err := os.WriteFile(tokFile, []byte(token+"\n"), 0o600); err != nil {
+		return nil, err
+	}
+	regions := []string{"cell-a", "cell-b", "cell-c", "cell-d", "cell-e", "cell-f"}
+	mesh := fmt.Sprintf("127.0.0.1:%d", c.Opt.Base+300+slot)
+	args := append([]string{"--data", data, "--join-file", tokFile, "--name", name, "--region", regions[slot%len(regions)], "--host", name,
+		"--mesh", mesh, "--mesh-advertise", mesh, "--status", "127.0.0.1:0"}, extra...)
+	if c.Opt.Chaos {
+		args = append(args, "--chaos")
+	}
+	p := &Proc{Name: name, Kind: "host", Bin: filepath.Join(c.Opt.Bin, "dh-noded"), Args: args, Data: data, Mesh: mesh}
+	return p, c.launch(p)
+}

@@ -101,7 +101,16 @@ export interface NodeRec {
   facts: {
     kernel: string;
     cpus: number;
-    memBytes: number;
+    /** Measured physical memory; null when the host did not measure it (or its agent predates measured facts). */
+    memBytes: number | null;
+    cpuModel: string | null;
+    physicalCores: number | null;
+    swapBytes: number | null;
+    disks: { name: string; sizeBytes: number; rotational: boolean; removable: boolean; model: string }[] | null;
+    gpus: { vendor: string; model: string; vramBytes: number | null; driver: string; source: string }[] | null;
+    dataFs: { path: string; totalBytes: number; freeBytes: number } | null;
+    /** Facts the host says it could not measure; null when the agent does not report this list. */
+    unknown: string[] | null;
     runtimes: string[];
     docker: string;
     udp443: boolean;
