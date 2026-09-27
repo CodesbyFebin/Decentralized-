@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"decentralized.host/pkg/control"
+	"decentralized.host/pkg/api"
 	"decentralized.host/pkg/identity"
 )
 
@@ -25,7 +25,7 @@ func TestSecretDeliveryLifecycle_NormalStop_Cleanup(t *testing.T) {
 	ctx := context.Background()
 
 	// Create and materialize envelope
-	envelope := &control.SecretDeliveryEnvelope{
+	envelope := &api.SecretDeliveryEnvelope{
 		ProtocolVersion:     1,
 		DeliveryID:          "delivery-lifecycle-1",
 		AuthorizationDigest: "digest",
@@ -79,7 +79,7 @@ func TestSecretDeliveryLifecycle_StartFailure_Cleanup(t *testing.T) {
 	ctx := context.Background()
 
 	// Create and materialize envelope
-	envelope := &control.SecretDeliveryEnvelope{
+	envelope := &api.SecretDeliveryEnvelope{
 		ProtocolVersion:     1,
 		DeliveryID:          "delivery-lifecycle-2",
 		AuthorizationDigest: "digest",
@@ -136,7 +136,7 @@ func TestSecretDeliveryLifecycle_StaleCleanup_RemovesExpiredFiles(t *testing.T) 
 	// Create and materialize multiple envelopes
 	hostPaths := []string{}
 	for i := 1; i <= 3; i++ {
-		envelope := &control.SecretDeliveryEnvelope{
+		envelope := &api.SecretDeliveryEnvelope{
 			ProtocolVersion:     1,
 			DeliveryID:          "delivery-stale-" + string(rune('0'+i)),
 			AuthorizationDigest: "digest",
@@ -201,7 +201,7 @@ func TestSecretDeliveryLifecycle_MultipleSecrets_IndependentCleanup(t *testing.T
 	// Create multiple secrets for different workloads
 	secrets := make([]string, 2)
 	for i := 0; i < 2; i++ {
-		envelope := &control.SecretDeliveryEnvelope{
+		envelope := &api.SecretDeliveryEnvelope{
 			ProtocolVersion:     1,
 			DeliveryID:          "delivery-multi-" + string(rune('0'+i)),
 			AuthorizationDigest: "digest",
@@ -279,7 +279,7 @@ func TestSecretDeliveryLifecycle_AssignmentDirectoryIsolation(t *testing.T) {
 	secrets := make(map[string]string)
 	for i := 0; i < 2; i++ {
 		assignmentID := "assign-iso-" + string(rune('0'+i))
-		envelope := &control.SecretDeliveryEnvelope{
+		envelope := &api.SecretDeliveryEnvelope{
 			ProtocolVersion:     1,
 			DeliveryID:          "delivery-iso-" + string(rune('0'+i)),
 			AuthorizationDigest: "digest",

@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"decentralized.host/pkg/control"
+	"decentralized.host/pkg/api"
 	"decentralized.host/pkg/identity"
 )
 
@@ -31,7 +31,7 @@ func TestPlaintextCanary_TmpfsMaterializationOnly(t *testing.T) {
 	canaryMarker := "PLAINTEXT_CANARY_MARKER_12345_ABCDE_XYZAB"
 
 	// Materialize secret with canary marker
-	envelope := &control.SecretDeliveryEnvelope{
+	envelope := &api.SecretDeliveryEnvelope{
 		ProtocolVersion:     1,
 		DeliveryID:          "delivery-canary-tmpfs",
 		AuthorizationDigest: "digest",
@@ -121,7 +121,7 @@ func TestPlaintextCanary_NoMaterializationOnValidationFailure(t *testing.T) {
 	canaryMarker := "PLAINTEXT_CANARY_FAIL_12345_ABCDE_XYZAB"
 
 	// Create envelope with invalid signature
-	envelope := &control.SecretDeliveryEnvelope{
+	envelope := &api.SecretDeliveryEnvelope{
 		ProtocolVersion:     1,
 		DeliveryID:          "delivery-canary-fail",
 		AuthorizationDigest: "digest",
@@ -256,7 +256,7 @@ func TestPlaintextCanary_MultipleSecrets_NoMixing(t *testing.T) {
 	paths := make([]string, len(markers))
 
 	for i, marker := range markers {
-		envelope := &control.SecretDeliveryEnvelope{
+		envelope := &api.SecretDeliveryEnvelope{
 			ProtocolVersion:     1,
 			DeliveryID:          fmt.Sprintf("delivery-canary-mix-%d", i),
 			AuthorizationDigest: "digest",
@@ -317,7 +317,7 @@ func TestPlaintextCanary_FilePermissionsPreventAccess(t *testing.T) {
 
 	ctx := context.Background()
 
-	envelope := &control.SecretDeliveryEnvelope{
+	envelope := &api.SecretDeliveryEnvelope{
 		ProtocolVersion:     1,
 		DeliveryID:          "delivery-canary-perm",
 		AuthorizationDigest: "digest",
@@ -371,7 +371,7 @@ func TestPlaintextCanary_ReleaseDeletesContent(t *testing.T) {
 
 	canaryMarker := "CANARY_DELETE_MARKER_12345_ABCDE_XYZAB"
 
-	envelope := &control.SecretDeliveryEnvelope{
+	envelope := &api.SecretDeliveryEnvelope{
 		ProtocolVersion:     1,
 		DeliveryID:          "delivery-canary-del",
 		AuthorizationDigest: "digest",
@@ -433,7 +433,7 @@ func TestPlaintextCanary_MultipleRelease_NoDoubleDelete(t *testing.T) {
 
 	ctx := context.Background()
 
-	envelope := &control.SecretDeliveryEnvelope{
+	envelope := &api.SecretDeliveryEnvelope{
 		ProtocolVersion:     1,
 		DeliveryID:          "delivery-canary-multi-del",
 		AuthorizationDigest: "digest",

@@ -6,16 +6,16 @@ import (
 	"fmt"
 	"time"
 
-	"decentralized.host/pkg/control"
+	"decentralized.host/pkg/api"
 )
 
-// SecretDeliveryValidator validates SecretDeliveryEnvelope against context and agent identity.
+// SecretDeliveryValidator validates api.SecretDeliveryEnvelope against context and agent identity.
 // A05-P1-R1: Comprehensive validation before materialization ensures context binding is enforced.
 type SecretDeliveryValidator struct {
-	nodeID               string // authenticated agent identity (dh1...)
-	clusterID            string // cluster scope
+	nodeID                string // authenticated agent identity (dh1...)
+	clusterID             string // cluster scope
 	controlPlanePublicKey string // wire-encoded public key of signing control plane
-	now                  func() time.Time // for testing time-based checks
+	now                   func() time.Time // for testing time-based checks
 }
 
 // NewSecretDeliveryValidator creates a validator for received envelopes.
@@ -33,7 +33,7 @@ func NewSecretDeliveryValidator(nodeID, clusterID, controlPlanePublicKey string)
 // ValidateEnvelope performs comprehensive validation of a SecretDeliveryEnvelope.
 // Returns error if any check fails; plaintext only if all checks pass.
 // Validation order: protocol, signature, expiry, node binding, cluster binding, context match.
-func (v *SecretDeliveryValidator) ValidateEnvelope(ctx context.Context, envelope *control.SecretDeliveryEnvelope,
+func (v *SecretDeliveryValidator) ValidateEnvelope(ctx context.Context, envelope *api.SecretDeliveryEnvelope,
 	expectedDeploymentID, expectedWorkloadID, expectedEnvironment string) ([]byte, error) {
 
 	// 1. Verify protocol version
@@ -106,7 +106,7 @@ func NewSecretDeliveryReceiver(validator *SecretDeliveryValidator, materializer 
 // 4. Returns host path for mounting in workload namespace
 // Returns error if validation fails; plaintext never written to disk if validation rejects.
 func (r *SecretDeliveryReceiver) ReceiveAndMaterialize(ctx context.Context,
-	envelope *control.SecretDeliveryEnvelope,
+	envelope *api.SecretDeliveryEnvelope,
 	expectedDeploymentID, expectedWorkloadID, expectedEnvironment string,
 	assignmentID string) (hostPath string, err error) {
 
@@ -145,7 +145,7 @@ type ConsumptionRecord struct {
 // DeliveryConsumedObserver allows tracking of secret deliveries (for audit and testing).
 type DeliveryConsumedObserver interface {
 	// Called after envelope validation succeeds (before materialization)
-	ValidatedEnvelope(env *control.SecretDeliveryEnvelope)
+	ValidatedEnvelope(env *api.SecretDeliveryEnvelope)
 	// Called after successful materialization
 	MaterializedToPath(hostPath string, rec *ConsumptionRecord)
 	// Called on any error
@@ -157,7 +157,7 @@ type DeliveryConsumedObserver interface {
 // NoOpDeliveryObserver provides a default observer that does nothing.
 type NoOpDeliveryObserver struct{}
 
-func (o *NoOpDeliveryObserver) ValidatedEnvelope(*control.SecretDeliveryEnvelope) {}
+func (o *NoOpDeliveryObserver) ValidatedEnvelope(*api.SecretDeliveryEnvelope) {}
 func (o *NoOpDeliveryObserver) MaterializedToPath(string, *ConsumptionRecord)      {}
 func (o *NoOpDeliveryObserver) DeliveryFailed(*ConsumptionRecord, error)           {}
 func (o *NoOpDeliveryObserver) CleanedUp(string)                                   {}

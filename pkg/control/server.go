@@ -28,6 +28,7 @@ import (
 	"decentralized.host/pkg/capability"
 	"decentralized.host/pkg/envelope"
 	"decentralized.host/pkg/identity"
+	"decentralized.host/pkg/runtime"
 	"decentralized.host/pkg/pki"
 	"decentralized.host/pkg/storage"
 )
@@ -118,10 +119,6 @@ func New(cfg Config) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
-<<<<<<< HEAD
-	s := &Server{cfg: cfg, id: id, fsm: NewFSM(), log: cfg.Logger, cas: cas, kick: make(chan struct{}, 1),
-		stop: make(chan struct{}), stopped: make(chan struct{}), obs: newObsCache(), plans: newPlanCache(), local: &localRejections{}, started: time.Now()}
-=======
 	// Initialize ephemeral secrets materializer for A05 delivery
 	ephemeralDir := filepath.Join(cfg.DataDir, "ephemeral-secrets")
 	if err := os.MkdirAll(ephemeralDir, 0o700); err != nil {
@@ -142,7 +139,6 @@ func New(cfg Config) (*Server, error) {
 		stop: make(chan struct{}), stopped: make(chan struct{}), obs: newObsCache(), plans: newPlanCache(), local: &localRejections{}, started: time.Now(),
 		materializer: runtime.NewMaterializer(ephemeralDir), nlm: nlm}
 	s.fsm.SetNodeLifecycleManager(nlm)
->>>>>>> claude/friendly-gauss-kfxoc2
 	s.fsm.onApply = func(*Command, *Result) { s.wake() }
 	if b, err := os.ReadFile(s.credsPath()); err == nil {
 		var c Credentials

@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"decentralized.host/pkg/control"
+	"decentralized.host/pkg/api"
 	"decentralized.host/pkg/identity"
 )
 
@@ -30,7 +30,7 @@ func TestSecretDeliveryIsolation_SameUIDSiblingAccess_Denied(t *testing.T) {
 	ctx := context.Background()
 
 	// Create first envelope for workload A (secret A)
-	envelopeA := &control.SecretDeliveryEnvelope{
+	envelopeA := &api.SecretDeliveryEnvelope{
 		ProtocolVersion:     1,
 		DeliveryID:          "delivery-secret-a",
 		AuthorizationDigest: "digest-a",
@@ -49,7 +49,7 @@ func TestSecretDeliveryIsolation_SameUIDSiblingAccess_Denied(t *testing.T) {
 	envelopeA.Signature = cpID.Sign(envelopeA.CanonicalEnvelope())
 
 	// Create second envelope for workload B (secret B)
-	envelopeB := &control.SecretDeliveryEnvelope{
+	envelopeB := &api.SecretDeliveryEnvelope{
 		ProtocolVersion:     1,
 		DeliveryID:          "delivery-secret-b",
 		AuthorizationDigest: "digest-b",
@@ -168,7 +168,7 @@ func TestSecretDeliveryIsolation_FilePermissions_Restricted(t *testing.T) {
 
 	ctx := context.Background()
 
-	envelope := &control.SecretDeliveryEnvelope{
+	envelope := &api.SecretDeliveryEnvelope{
 		ProtocolVersion:     1,
 		DeliveryID:          "delivery-perm-test",
 		AuthorizationDigest: "digest",

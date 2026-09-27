@@ -540,7 +540,7 @@ func (s *Server) handleRetrieveSecret(w http.ResponseWriter, r *http.Request) {
 	if secretRecord != nil {
 		clusterID = secretRecord.ClusterID
 	}
-	envelope := &SecretDeliveryEnvelope{
+	envelope := &api.SecretDeliveryEnvelope{
 		ProtocolVersion:     1,
 		DeliveryID:          req.EphemeralID,
 		AuthorizationDigest: requestDigest,

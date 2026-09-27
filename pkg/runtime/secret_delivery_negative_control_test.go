@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"decentralized.host/pkg/control"
+	"decentralized.host/pkg/api"
 	"decentralized.host/pkg/identity"
 )
 
@@ -21,7 +21,7 @@ func TestNegativeControl_DisableNodeBinding_WrongNodeAccepted(t *testing.T) {
 	validator := NewSecretDeliveryValidator(nodeID.ID, "cluster-1", cpID.PubString())
 
 	// Envelope is for wrongNodeID
-	envelope := &control.SecretDeliveryEnvelope{
+	envelope := &api.SecretDeliveryEnvelope{
 		ProtocolVersion:     1,
 		DeliveryID:          "delivery-negctrl-node",
 		AuthorizationDigest: "digest",
@@ -67,7 +67,7 @@ func TestNegativeControl_DisableSignatureVerification_UntrustedAccepted(t *testi
 	validator := NewSecretDeliveryValidator(nodeID.ID, "cluster-1", cpID.PubString())
 
 	// Envelope signed by evilID (not trusted)
-	envelope := &control.SecretDeliveryEnvelope{
+	envelope := &api.SecretDeliveryEnvelope{
 		ProtocolVersion:     1,
 		DeliveryID:          "delivery-negctrl-sig",
 		AuthorizationDigest: "digest",
@@ -111,7 +111,7 @@ func TestNegativeControl_SkipExpiryCheck_ExpiredAccepted(t *testing.T) {
 	validator := NewSecretDeliveryValidator(nodeID.ID, "cluster-1", cpID.PubString())
 
 	now := time.Now().UnixNano()
-	envelope := &control.SecretDeliveryEnvelope{
+	envelope := &api.SecretDeliveryEnvelope{
 		ProtocolVersion:     1,
 		DeliveryID:          "delivery-negctrl-exp",
 		AuthorizationDigest: "digest",
@@ -154,7 +154,7 @@ func TestNegativeControl_SkipDeploymentBinding_WrongDeploymentAccepted(t *testin
 	validator := NewSecretDeliveryValidator(nodeID.ID, "cluster-1", cpID.PubString())
 
 	// Envelope for deploy-1
-	envelope := &control.SecretDeliveryEnvelope{
+	envelope := &api.SecretDeliveryEnvelope{
 		ProtocolVersion:     1,
 		DeliveryID:          "delivery-negctrl-dep",
 		AuthorizationDigest: "digest",
@@ -195,7 +195,7 @@ func TestNegativeControl_SkipWorkloadBinding_WrongWorkloadAccepted(t *testing.T)
 	validator := NewSecretDeliveryValidator(nodeID.ID, "cluster-1", cpID.PubString())
 
 	// Envelope for workload-1
-	envelope := &control.SecretDeliveryEnvelope{
+	envelope := &api.SecretDeliveryEnvelope{
 		ProtocolVersion:     1,
 		DeliveryID:          "delivery-negctrl-wl",
 		AuthorizationDigest: "digest",
@@ -236,7 +236,7 @@ func TestNegativeControl_SkipEnvironmentBinding_WrongEnvironmentAccepted(t *test
 	validator := NewSecretDeliveryValidator(nodeID.ID, "cluster-1", cpID.PubString())
 
 	// Envelope for prod
-	envelope := &control.SecretDeliveryEnvelope{
+	envelope := &api.SecretDeliveryEnvelope{
 		ProtocolVersion:     1,
 		DeliveryID:          "delivery-negctrl-env",
 		AuthorizationDigest: "digest",
@@ -277,7 +277,7 @@ func TestNegativeControl_EnvelopeTampering_DetectedAndRejected(t *testing.T) {
 	validator := NewSecretDeliveryValidator(nodeID.ID, "cluster-1", cpID.PubString())
 
 	// Create and sign envelope
-	envelope := &control.SecretDeliveryEnvelope{
+	envelope := &api.SecretDeliveryEnvelope{
 		ProtocolVersion:     1,
 		DeliveryID:          "delivery-negctrl-tamp",
 		AuthorizationDigest: "digest",
@@ -324,7 +324,7 @@ func TestNegativeControl_FutureIssuedEnvelope_RejectedAsClockSkew(t *testing.T) 
 	// Issued 10 seconds in the future (beyond 5-second tolerance)
 	futureTime := now + int64(10*time.Second)
 
-	envelope := &control.SecretDeliveryEnvelope{
+	envelope := &api.SecretDeliveryEnvelope{
 		ProtocolVersion:     1,
 		DeliveryID:          "delivery-negctrl-future",
 		AuthorizationDigest: "digest",

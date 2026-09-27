@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"decentralized.host/pkg/control"
+	"decentralized.host/pkg/api"
 	"decentralized.host/pkg/identity"
 )
 
@@ -27,7 +27,7 @@ func TestSecretDeliveryValidator_ValidSignature_Accepted(t *testing.T) {
 	validator := NewSecretDeliveryValidator(nodeID.ID, "cluster-1", cpID.PubString())
 
 	// Create valid envelope
-	envelope := &control.SecretDeliveryEnvelope{
+	envelope := &api.SecretDeliveryEnvelope{
 		ProtocolVersion:     1,
 		DeliveryID:          "delivery-123",
 		AuthorizationDigest: "digest",
@@ -64,7 +64,7 @@ func TestSecretDeliveryValidator_InvalidSignature_Rejected(t *testing.T) {
 
 	validator := NewSecretDeliveryValidator(nodeID.ID, "cluster-1", cpID.PubString())
 
-	envelope := &control.SecretDeliveryEnvelope{
+	envelope := &api.SecretDeliveryEnvelope{
 		ProtocolVersion:     1,
 		DeliveryID:          "delivery-123",
 		AuthorizationDigest: "digest",
@@ -98,7 +98,7 @@ func TestSecretDeliveryValidator_ExpiredEnvelope_Rejected(t *testing.T) {
 	validator := NewSecretDeliveryValidator(nodeID.ID, "cluster-1", cpID.PubString())
 
 	now := time.Now().UnixNano()
-	envelope := &control.SecretDeliveryEnvelope{
+	envelope := &api.SecretDeliveryEnvelope{
 		ProtocolVersion:     1,
 		DeliveryID:          "delivery-123",
 		AuthorizationDigest: "digest",
@@ -130,7 +130,7 @@ func TestSecretDeliveryValidator_WrongNode_Rejected(t *testing.T) {
 
 	validator := NewSecretDeliveryValidator(nodeID.ID, "cluster-1", cpID.PubString())
 
-	envelope := &control.SecretDeliveryEnvelope{
+	envelope := &api.SecretDeliveryEnvelope{
 		ProtocolVersion:     1,
 		DeliveryID:          "delivery-123",
 		AuthorizationDigest: "digest",
@@ -161,7 +161,7 @@ func TestSecretDeliveryValidator_WrongDeployment_Rejected(t *testing.T) {
 
 	validator := NewSecretDeliveryValidator(nodeID.ID, "cluster-1", cpID.PubString())
 
-	envelope := &control.SecretDeliveryEnvelope{
+	envelope := &api.SecretDeliveryEnvelope{
 		ProtocolVersion:     1,
 		DeliveryID:          "delivery-123",
 		AuthorizationDigest: "digest",
@@ -193,7 +193,7 @@ func TestSecretDeliveryValidator_WrongWorkload_Rejected(t *testing.T) {
 
 	validator := NewSecretDeliveryValidator(nodeID.ID, "cluster-1", cpID.PubString())
 
-	envelope := &control.SecretDeliveryEnvelope{
+	envelope := &api.SecretDeliveryEnvelope{
 		ProtocolVersion:     1,
 		DeliveryID:          "delivery-123",
 		AuthorizationDigest: "digest",
@@ -225,7 +225,7 @@ func TestSecretDeliveryValidator_WrongEnvironment_Rejected(t *testing.T) {
 
 	validator := NewSecretDeliveryValidator(nodeID.ID, "cluster-1", cpID.PubString())
 
-	envelope := &control.SecretDeliveryEnvelope{
+	envelope := &api.SecretDeliveryEnvelope{
 		ProtocolVersion:     1,
 		DeliveryID:          "delivery-123",
 		AuthorizationDigest: "digest",
@@ -259,7 +259,7 @@ func TestSecretDeliveryValidator_WrongCluster_Rejected(t *testing.T) {
 	validator := NewSecretDeliveryValidator(nodeID.ID, "cluster-1", cpID.PubString())
 
 	// But envelope is for cluster-2
-	envelope := &control.SecretDeliveryEnvelope{
+	envelope := &api.SecretDeliveryEnvelope{
 		ProtocolVersion:     1,
 		DeliveryID:          "delivery-123",
 		AuthorizationDigest: "digest",
@@ -293,7 +293,7 @@ func TestSecretDeliveryReceiver_ValidEnvelope_Materializes(t *testing.T) {
 	materializer := NewMaterializer(tmpdir)
 	receiver := NewSecretDeliveryReceiver(validator, materializer)
 
-	envelope := &control.SecretDeliveryEnvelope{
+	envelope := &api.SecretDeliveryEnvelope{
 		ProtocolVersion:     1,
 		DeliveryID:          "delivery-123",
 		AuthorizationDigest: "digest",
@@ -338,7 +338,7 @@ func TestSecretDeliveryReceiver_InvalidSignature_NoMaterialization(t *testing.T)
 	materializer := NewMaterializer(tmpdir)
 	receiver := NewSecretDeliveryReceiver(validator, materializer)
 
-	envelope := &control.SecretDeliveryEnvelope{
+	envelope := &api.SecretDeliveryEnvelope{
 		ProtocolVersion:     1,
 		DeliveryID:          "delivery-123",
 		AuthorizationDigest: "digest",
