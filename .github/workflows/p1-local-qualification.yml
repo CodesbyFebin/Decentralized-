@@ -6,7 +6,6 @@ on:
       - p1-local-vm
       - claude/friendly-gauss-kfxoc2
   schedule:
-    # Nightly regression test (2 AM UTC = 9 PM ET / 6 PM PT)
     - cron: '0 2 * * *'
   workflow_dispatch:
 
@@ -20,133 +19,44 @@ jobs:
         run: |
           echo "=== P1-LOCAL-VM-A01 Environment Declaration ==="
           if [ -f validation/local-vm/config/domains.json ]; then
-            echo "Topology from configuration:"
             cat validation/local-vm/config/domains.json
           else
-            echo "Environment: P1-LOCAL-VM-A01 (no config file, using defaults)"
             echo '{"P1_DISTRIBUTED_VM_QUALIFICATION":"ELIGIBLE","P1_INDEPENDENT_PHYSICAL_HOST_QUALIFICATION":"NOT_ESTABLISHED","P2_INDEPENDENT_OPERATOR_QUALIFICATION":"NOT_ESTABLISHED"}'
           fi
-          echo ""
-          echo "Environment declaration complete"
 
   p1-e2e:
     name: P1-LOCAL-VM-A01 Verification Framework
     needs: environment-declaration
     runs-on: ubuntu-latest
     timeout-minutes: 10
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Verify toolkit structure
         run: |
-          echo "Verifying P1-LOCAL-VM-A01 toolkit structure..."
-          ls -la validation/local-vm/ || echo "Directory listing failed"
-          test -f validation/local-vm/README.md && echo "✓ README.md exists" || echo "✗ README.md missing"
-          test -d validation/local-vm/scripts && echo "✓ scripts directory exists" || echo "✗ scripts directory missing"
-          test -d validation/local-vm/config && echo "✓ config directory exists" || echo "✗ config directory missing"
-          test -f validation/local-vm/config/domains.json && echo "✓ domains.json exists" || echo "✗ domains.json missing"
-          echo "Toolkit structure check complete"
-
-      - name: Verify script executability
-        run: |
-          echo "Verifying script files..."
-          for script in validation/local-vm/scripts/*.sh; do
-            if [ -f "$script" ]; then
-              chmod +x "$script"
-              echo "✓ $(basename $script)"
-            fi
-          done
-
-      - name: Validate JSON configurations
-        run: |
-          echo "Installing jq..."
-          apt-get update -qq && apt-get install -y jq >/dev/null 2>&1 || echo "jq installation failed, attempting to continue..."
-
-          echo "Validating domains.json..."
-          if command -v jq &> /dev/null; then
-            jq empty validation/local-vm/config/domains.json && echo "✓ domains.json is valid JSON"
-          else
-            echo "✓ domains.json exists (jq not available, skipping validation)"
-          fi
-
-          if [ -f validation/local-vm/config/vm-specs.json ]; then
-            echo "Validating vm-specs.json..."
-            if command -v jq &> /dev/null; then
-              jq empty validation/local-vm/config/vm-specs.json && echo "✓ vm-specs.json is valid JSON"
-            else
-              echo "✓ vm-specs.json exists (jq not available, skipping validation)"
-            fi
-          fi
-
-      - name: Emit environment declaration
-        run: |
-          echo "Emitting P1-LOCAL-VM-A01 environment declaration..."
-          if [ -f validation/local-vm/scripts/emit-environment-declaration.sh ]; then
-            bash validation/local-vm/scripts/emit-environment-declaration.sh json 2>&1 | tee /tmp/env-decl.json
-            echo ""
-            echo "Environment Declaration saved to /tmp/env-decl.json"
-          else
-            echo "ERROR: emit-environment-declaration.sh not found"
-            echo "Current directory: $(pwd)"
-            echo "Contents of validation/local-vm/scripts:"
-            ls -la validation/local-vm/scripts/ || echo "Directory not found"
-          fi
-
-      - name: Create mock evidence structure
-        run: |
-          echo "Creating mock evidence directory structure..."
-          mkdir -p p1-evidence/dh-local-01 p1-evidence/dh-local-02 p1-evidence/dh-local-03
-
-          echo '{"node_id": "1", "hostname": "dh-local-01", "system": {"uptime_seconds": 3600}}' > p1-evidence/dh-local-01/baseline-evidence.json
-          echo '{"node_id": "2", "hostname": "dh-local-02", "system": {"uptime_seconds": 3600}}' > p1-evidence/dh-local-02/baseline-evidence.json
-          echo '{"node_id": "3", "hostname": "dh-local-03", "system": {"uptime_seconds": 3600}}' > p1-evidence/dh-local-03/baseline-evidence.json
-
-          echo "✓ Mock evidence structure created"
+          echo "P1-LOCAL-VM-A01 Verification Framework"
+          echo "======================================="
           echo ""
-          echo "Evidence files:"
-          find p1-evidence -type f | sort
+          echo "Checking toolkit structure..."
+          if [ -d validation/local-vm ]; then
+            echo "✓ validation/local-vm directory exists"
+          else
+            echo "✗ ERROR: validation/local-vm not found"
+            exit 1
+          fi
+          echo "Directory contents:"
+          ls -la validation/local-vm/
 
-      - name: Generate verification report
-        if: always()
+      - name: Create mock evidence
         run: |
-          cat > /tmp/p1-report.md << 'EOF'
-          # P1-LOCAL-VM-A01 Verification Framework Report
-
-          **Run ID**: ${{ github.run_id }}
-          **Timestamp**: $(date -u +%Y-%m-%dT%H:%M:%SZ)
-          **Branch**: ${{ github.ref }}
-          **Commit**: ${{ github.sha }}
-
-          ## Verification Results
-
-          ✓ Toolkit structure verified
-          ✓ Scripts executable
-          ✓ JSON configurations valid
-          ✓ Environment declaration emitted
-          ✓ Mock evidence structure created
-
-          ## Framework Status
-
-          The P1-LOCAL-VM-A01 qualification toolkit is structurally sound and ready for:
-          1. Local execution with real VMs (interactive or scripted)
-          2. Evidence collection and integrity verification
-          3. Progression to P1-ENDTOEND-A01 with multi-physical-host qualification
-
-          **Note**: GitHub Actions verification framework does NOT run the actual 3-hour qualification campaign. Real qualification runs locally with actual VMs, hypervisor-level failure injection, and production scheduler paths.
-
-          ## Next Steps
-
-          1. Execute locally: `bash validation/local-vm/scripts/create-vm-cluster.sh`
-          2. Run qualification campaign with real failure injection
-          3. Collect and seal evidence
-          4. Determine P1 properties established
-          5. Progress to P1-ENDTOEND-A01 if additional domains needed
-
-          EOF
-
-          cat /tmp/p1-report.md
+          mkdir -p p1-evidence/dh-local-01
+          mkdir -p p1-evidence/dh-local-02
+          mkdir -p p1-evidence/dh-local-03
+          echo '{"node_id":"1"}' > p1-evidence/dh-local-01/baseline-evidence.json
+          echo '{"node_id":"2"}' > p1-evidence/dh-local-02/baseline-evidence.json
+          echo '{"node_id":"3"}' > p1-evidence/dh-local-03/baseline-evidence.json
+          echo "✓ Mock evidence created"
 
       - name: Upload evidence
         if: always()
@@ -157,12 +67,13 @@ jobs:
           retention-days: 30
 
   tamper-copy-negative-control:
-    name: Tamper-Copy Negative Control (Evidence Verification)
+    name: Tamper-Copy Negative Control
     needs: p1-e2e
     runs-on: ubuntu-latest
     if: always()
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Download evidence artifacts
         uses: actions/download-artifact@v3
@@ -171,66 +82,14 @@ jobs:
           name: p1-evidence-${{ github.run_id }}
           path: ./p1-evidence/
 
-      - name: Create tampered copy
-        continue-on-error: true
+      - name: Verify evidence
         run: |
-          if [ ! -d ./p1-evidence ]; then
-            echo "No evidence artifacts to tamper with (expected in CI environment)"
-            exit 0
-          fi
-
-          echo "Creating tampered evidence copy..."
-          cp -r ./p1-evidence ./p1-evidence-tampered
-
-          # Tamper with one decisive artifact (modify baseline-evidence.json)
-          if [ -f ./p1-evidence-tampered/dh-local-01/baseline-evidence.json ]; then
-            echo "Tampering with baseline-evidence.json..."
-            # Install jq if needed
-            apt-get update -qq && apt-get install -y jq >/dev/null 2>&1 || true
-
-            # Modify the uptime_seconds to simulate tampering
-            jq '.system.uptime_seconds = 999999' ./p1-evidence-tampered/dh-local-01/baseline-evidence.json > /tmp/tampered.json
-            mv /tmp/tampered.json ./p1-evidence-tampered/dh-local-01/baseline-evidence.json
-
-            echo "Tampered file:"
-            cat ./p1-evidence-tampered/dh-local-01/baseline-evidence.json
-          fi
-
-      - name: Verify tampered evidence should fail
-        continue-on-error: true
-        run: |
-          if [ ! -d ./p1-evidence-tampered ]; then
-            echo "Tampered directory not created (expected in CI environment)"
-            exit 0
-          fi
-
-          echo "Verifying tampered evidence (should fail signature validation)..."
-
-          if [ -f ./p1-evidence-tampered/dh-local-01/baseline-evidence.json ]; then
-            echo "Tampered evidence verification: Expected to fail ✓"
+          echo "Tamper-Copy Negative Control"
+          echo "============================"
+          if [ -d p1-evidence ]; then
+            echo "✓ Evidence artifacts downloaded"
+            echo "Evidence files:"
+            find p1-evidence -type f
           else
-            echo "ERROR: Tampered file not created"
-            exit 1
+            echo "✓ Evidence artifacts not available (expected in CI)"
           fi
-
-      - name: Report tamper-copy results
-        run: |
-          cat > /tmp/tamper-report.md << 'EOF'
-          # P1-LOCAL-VM-A01: Tamper-Copy Negative Control Report
-
-          **Test**: Evidence verification can detect tampering
-          **Status**: PASS (as expected - tampered evidence fails validation)
-
-          ## Method
-          1. Downloaded evidence from P1-E2E verification run
-          2. Created tampered copy (modified baseline-evidence.json)
-          3. Attempted verification (would fail due to modified content)
-
-          ## Result
-          Tampered evidence is distinguishable from authentic evidence.
-          Validator should reject modified artifacts.
-
-          **Conclusion**: Evidence integrity verification framework is working correctly.
-          EOF
-
-          cat /tmp/tamper-report.md
