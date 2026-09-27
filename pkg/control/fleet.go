@@ -241,6 +241,17 @@ func (fn *FleetNode) determineSchedulerEligibility() {
 // FleetInventory returns all approved nodes with comprehensive state including observations, capabilities, and eligibility.
 // Unapproved nodes (pending status with no ApprovedAt) are excluded as they haven't completed identity verification.
 func (s *State) FleetInventory() []*FleetNode {
+	// Ensure ResourceLedger is initialized (for compatibility with tests and recovery)
+	if s.ResourceLedger == nil {
+		s.ResourceLedger = &ResourceLedger{
+			CapacityByNode:   make(map[string]*NodeCapacityModel),
+			Reservations:     make(map[string]*ResourceReservation),
+			Allocations:      make(map[string]*ResourceAllocation),
+			RecentlyReleased: make(map[string]int64),
+			Generation:       0,
+		}
+	}
+
 	now := time.Now().UnixMilli()
 	var nodes []*FleetNode
 
@@ -273,9 +284,44 @@ func (s *State) FleetInventory() []*FleetNode {
 			ObsSeq:     n.ObserveSeq,
 		}
 
-		// Compute available capacity: total - reserved - allocated
-		fn.CapacityAvailable = fn.CapacityTotal - fn.CapacityReserved - fn.CapacityAllocated
-		fn.MemCapacityAvailable = fn.MemCapacityTotal - fn.MemCapacityReserved - fn.MemCapacityAllocated
+		// Load capacity model from ledger; if not set, initialize with zero owner reserve
+		var ownerCPU, ownerMem int64
+		if capacityModel, ok := s.ResourceLedger.CapacityByNode[n.ID]; ok {
+			ownerCPU = capacityModel.OwnerCPU
+			ownerMem = capacityModel.OwnerMem
+		}
+
+		// Compute reserved and allocated from ledger
+		var reservedCPU, allocatedCPU, reservedMem, allocatedMem int64
+		for _, res := range s.ResourceLedger.Reservations {
+			if res.NodeID == n.ID {
+				reservedCPU += res.CPUMilli
+				reservedMem += res.MemBytes
+			}
+		}
+		for _, alloc := range s.ResourceLedger.Allocations {
+			if alloc.NodeID == n.ID {
+				allocatedCPU += alloc.CPUMilli
+				allocatedMem += alloc.MemBytes
+			}
+		}
+
+		fn.CapacityReserved = reservedCPU
+		fn.CapacityAllocated = allocatedCPU
+		fn.MemCapacityReserved = reservedMem
+		fn.MemCapacityAllocated = allocatedMem
+
+		// Compute available capacity: total - ownerReserve - reserved - allocated
+		fn.CapacityAvailable = fn.CapacityTotal - ownerCPU - fn.CapacityReserved - fn.CapacityAllocated
+		fn.MemCapacityAvailable = fn.MemCapacityTotal - ownerMem - fn.MemCapacityReserved - fn.MemCapacityAllocated
+
+		// Ensure non-negative available capacity
+		if fn.CapacityAvailable < 0 {
+			fn.CapacityAvailable = 0
+		}
+		if fn.MemCapacityAvailable < 0 {
+			fn.MemCapacityAvailable = 0
+		}
 
 		// Compute freshness
 		fn.Freshness = computeFreshness(n.LastObsAt, now)
@@ -410,6 +456,198 @@ func (s *State) ComputeFleetSummary() *FleetSummary {
 	}
 
 	return summary
+}
+
+// SetNodeCapacity atomically sets capacity model for a node, including ownerReserve.
+// Returns error if constraints are violated.
+func (s *State) SetNodeCapacity(nodeID string, totalCPU, ownerCPU, totalMem, ownerMem, totalDisk, ownerDisk int64) error {
+	// Validate invariants
+	if ownerCPU < 0 || ownerCPU > totalCPU {
+		return fmt.Errorf("invalid ownerCPU: %d not in [0, %d]", ownerCPU, totalCPU)
+	}
+	if ownerMem < 0 || ownerMem > totalMem {
+		return fmt.Errorf("invalid ownerMem: %d not in [0, %d]", ownerMem, totalMem)
+	}
+	if ownerDisk < 0 || ownerDisk > totalDisk {
+		return fmt.Errorf("invalid ownerDisk: %d not in [0, %d]", ownerDisk, totalDisk)
+	}
+
+	model := &NodeCapacityModel{
+		NodeID:    nodeID,
+		TotalCPU:  totalCPU,
+		OwnerCPU:  ownerCPU,
+		TotalMem:  totalMem,
+		OwnerMem:  ownerMem,
+		TotalDisk: totalDisk,
+		OwnerDisk: ownerDisk,
+		CreatedAt: time.Now().UnixMilli(),
+		Generation: s.ResourceLedger.Generation,
+	}
+
+	s.ResourceLedger.CapacityByNode[nodeID] = model
+	s.ResourceLedger.Generation++
+	return nil
+}
+
+// Reserve atomically reserves capacity on a node. Idempotent on reservation ID.
+// Returns error if insufficient capacity or constraints violated.
+func (s *State) Reserve(reservationID, nodeID string, cpuMilli, memBytes int64) error {
+	// Check for duplicate reservation ID
+	if existing, ok := s.ResourceLedger.Reservations[reservationID]; ok {
+		// Idempotent: same ID means same amount (or at least, we treat it as success)
+		if existing.NodeID == nodeID && existing.CPUMilli == cpuMilli && existing.MemBytes == memBytes {
+			return nil
+		}
+		return fmt.Errorf("reservation ID %s already exists with different parameters", reservationID)
+	}
+
+	// Check if recently released (double-release protection)
+	if releaseTime, ok := s.ResourceLedger.RecentlyReleased[reservationID]; ok {
+		if time.Now().UnixMilli()-releaseTime < 5000 { // within 5 seconds
+			return fmt.Errorf("reservation ID %s recently released; use new ID", reservationID)
+		}
+		delete(s.ResourceLedger.RecentlyReleased, reservationID)
+	}
+
+	// Get node capacity
+	capacity, ok := s.ResourceLedger.CapacityByNode[nodeID]
+	if !ok {
+		return fmt.Errorf("node %s has no capacity model", nodeID)
+	}
+
+	// Calculate current reserved and allocated
+	var reservedCPU, reservedMem, allocatedCPU, allocatedMem int64
+	for _, res := range s.ResourceLedger.Reservations {
+		if res.NodeID == nodeID {
+			reservedCPU += res.CPUMilli
+			reservedMem += res.MemBytes
+		}
+	}
+	for _, alloc := range s.ResourceLedger.Allocations {
+		if alloc.NodeID == nodeID {
+			allocatedCPU += alloc.CPUMilli
+			allocatedMem += alloc.MemBytes
+		}
+	}
+
+	// Check CPU: available = total - owner - reserved - allocated
+	availableCPU := capacity.TotalCPU - capacity.OwnerCPU - reservedCPU - allocatedCPU
+	if cpuMilli > availableCPU {
+		return fmt.Errorf("insufficient CPU: requested %d, available %d", cpuMilli, availableCPU)
+	}
+
+	// Check memory: available = total - owner - reserved - allocated
+	availableMem := capacity.TotalMem - capacity.OwnerMem - reservedMem - allocatedMem
+	if memBytes > availableMem {
+		return fmt.Errorf("insufficient memory: requested %d, available %d", memBytes, availableMem)
+	}
+
+	// Create reservation
+	res := &ResourceReservation{
+		ID:         reservationID,
+		NodeID:     nodeID,
+		CPUMilli:   cpuMilli,
+		MemBytes:   memBytes,
+		CreatedAt:  time.Now().UnixMilli(),
+		Generation: s.ResourceLedger.Generation,
+	}
+
+	s.ResourceLedger.Reservations[reservationID] = res
+	s.ResourceLedger.Generation++
+	return nil
+}
+
+// ReleaseReservation atomically releases a reservation. Idempotent.
+func (s *State) ReleaseReservation(reservationID string) error {
+	_, ok := s.ResourceLedger.Reservations[reservationID]
+	if !ok {
+		// Idempotent: already released
+		s.ResourceLedger.RecentlyReleased[reservationID] = time.Now().UnixMilli()
+		return nil
+	}
+
+	// Check for outstanding allocations on this reservation
+	for _, alloc := range s.ResourceLedger.Allocations {
+		if alloc.ReservationID == reservationID {
+			return fmt.Errorf("cannot release reservation %s: allocation %s still active", reservationID, alloc.ID)
+		}
+	}
+
+	delete(s.ResourceLedger.Reservations, reservationID)
+	s.ResourceLedger.RecentlyReleased[reservationID] = time.Now().UnixMilli()
+	s.ResourceLedger.Generation++
+	return nil
+}
+
+// Allocate atomically allocates from a reservation. Idempotent on allocation ID.
+func (s *State) Allocate(allocationID, reservationID string, cpuMilli, memBytes int64) error {
+	// Check for duplicate allocation ID
+	if existing, ok := s.ResourceLedger.Allocations[allocationID]; ok {
+		// Idempotent: same ID means same amount
+		if existing.ReservationID == reservationID && existing.CPUMilli == cpuMilli && existing.MemBytes == memBytes {
+			return nil
+		}
+		return fmt.Errorf("allocation ID %s already exists with different parameters", allocationID)
+	}
+
+	// Check if recently released
+	if releaseTime, ok := s.ResourceLedger.RecentlyReleased[allocationID]; ok {
+		if time.Now().UnixMilli()-releaseTime < 5000 {
+			return fmt.Errorf("allocation ID %s recently released; use new ID", allocationID)
+		}
+		delete(s.ResourceLedger.RecentlyReleased, allocationID)
+	}
+
+	// Get reservation
+	res, ok := s.ResourceLedger.Reservations[reservationID]
+	if !ok {
+		return fmt.Errorf("reservation %s not found", reservationID)
+	}
+
+	// Calculate already-allocated from this reservation
+	var allocatedCPU, allocatedMem int64
+	for _, alloc := range s.ResourceLedger.Allocations {
+		if alloc.ReservationID == reservationID {
+			allocatedCPU += alloc.CPUMilli
+			allocatedMem += alloc.MemBytes
+		}
+	}
+
+	// Validate allocation doesn't exceed reservation (including existing allocations)
+	if allocatedCPU+cpuMilli > res.CPUMilli || allocatedMem+memBytes > res.MemBytes {
+		return fmt.Errorf("allocation exceeds reservation: CPU %d + %d > %d, Mem %d + %d > %d",
+			allocatedCPU, cpuMilli, res.CPUMilli, allocatedMem, memBytes, res.MemBytes)
+	}
+
+	// Create allocation
+	alloc := &ResourceAllocation{
+		ID:            allocationID,
+		ReservationID: reservationID,
+		NodeID:        res.NodeID,
+		CPUMilli:      cpuMilli,
+		MemBytes:      memBytes,
+		CreatedAt:     time.Now().UnixMilli(),
+		Generation:    s.ResourceLedger.Generation,
+	}
+
+	s.ResourceLedger.Allocations[allocationID] = alloc
+	s.ResourceLedger.Generation++
+	return nil
+}
+
+// ReleaseAllocation atomically releases an allocation. Idempotent.
+func (s *State) ReleaseAllocation(allocationID string) error {
+	_, ok := s.ResourceLedger.Allocations[allocationID]
+	if !ok {
+		// Idempotent: already released
+		s.ResourceLedger.RecentlyReleased[allocationID] = time.Now().UnixMilli()
+		return nil
+	}
+
+	delete(s.ResourceLedger.Allocations, allocationID)
+	s.ResourceLedger.RecentlyReleased[allocationID] = time.Now().UnixMilli()
+	s.ResourceLedger.Generation++
+	return nil
 }
 
 // NodeToSchedulerNode converts control state to scheduler node.

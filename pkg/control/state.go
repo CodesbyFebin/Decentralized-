@@ -45,6 +45,7 @@ type State struct {
 	IndexBase    int64                         `json:"indexBase"` // added to raft indexes after a restore so bundles never go backwards
 	Rejections   []Rejection                   `json:"rejections"`
 	Mirror       MirrorState                   `json:"mirror"`
+	ResourceLedger *ResourceLedger             `json:"resourceLedger"` // authoritative capacity and allocation ledger
 }
 
 // Node is a host as the control plane knows it.
@@ -220,6 +221,58 @@ type MirrorState struct {
 	Enabled bool `json:"enabled"`
 }
 
+// ResourceReservation represents a committed CPU/memory reservation on a node.
+type ResourceReservation struct {
+	ID          string `json:"id"`          // unique reservation identifier (idempotency key)
+	NodeID      string `json:"nodeId"`      // node this reservation applies to
+	CPUMilli    int64  `json:"cpuMilli"`    // reserved CPU in millicores
+	MemBytes    int64  `json:"memBytes"`    // reserved memory in bytes
+	CreatedAt   int64  `json:"createdAt"`   // creation timestamp
+	Generation  int64  `json:"generation"`  // for optimistic concurrency
+}
+
+// ResourceAllocation represents an active workload allocation on a node.
+type ResourceAllocation struct {
+	ID          string `json:"id"`          // unique allocation identifier (idempotency key)
+	ReservationID string `json:"reservationId"` // reservation this allocation was made from
+	NodeID      string `json:"nodeId"`      // node this allocation applies to
+	CPUMilli    int64  `json:"cpuMilli"`    // allocated CPU in millicores
+	MemBytes    int64  `json:"memBytes"`    // allocated memory in bytes
+	CreatedAt   int64  `json:"createdAt"`   // creation timestamp
+	Generation  int64  `json:"generation"`  // for optimistic concurrency
+}
+
+// NodeCapacityModel defines total capacity and owner reserve for a node.
+type NodeCapacityModel struct {
+	NodeID      string `json:"nodeId"`
+	TotalCPU    int64  `json:"totalCpu"`      // total CPU available on node
+	OwnerCPU    int64  `json:"ownerCpu"`      // CPU reserved for owner/cluster use
+	TotalMem    int64  `json:"totalMem"`      // total memory available on node
+	OwnerMem    int64  `json:"ownerMem"`      // memory reserved for owner/cluster use
+	TotalDisk   int64  `json:"totalDisk"`     // total disk available on node
+	OwnerDisk   int64  `json:"ownerDisk"`     // disk reserved for owner/cluster use
+	CreatedAt   int64  `json:"createdAt"`
+	Generation  int64  `json:"generation"`
+}
+
+// ResourceLedger tracks all capacity allocations atomically.
+type ResourceLedger struct {
+	// Capacity models: node -> capacity definition
+	CapacityByNode map[string]*NodeCapacityModel `json:"capacityByNode"`
+
+	// Active reservations: reservationId -> reservation
+	Reservations map[string]*ResourceReservation `json:"reservations"`
+
+	// Active allocations: allocationId -> allocation
+	Allocations map[string]*ResourceAllocation `json:"allocations"`
+
+	// For idempotency: track recently released IDs to detect double-release
+	RecentlyReleased map[string]int64 `json:"recentlyReleased"` // id -> release timestamp
+
+	// Ledger generation for optimistic concurrency control
+	Generation int64 `json:"generation"`
+}
+
 func newState() *State {
 	return &State{
 		Nodes:        map[string]*Node{},
@@ -234,6 +287,13 @@ func newState() *State {
 		Federation:   newFederation(),
 		Secrets:      NewSecretsStore(),
 		ReplayLedger: NewReplayLedger(),
+		ResourceLedger: &ResourceLedger{
+			CapacityByNode:   make(map[string]*NodeCapacityModel),
+			Reservations:     make(map[string]*ResourceReservation),
+			Allocations:      make(map[string]*ResourceAllocation),
+			RecentlyReleased: make(map[string]int64),
+			Generation:       0,
+		},
 	}
 }
 
@@ -271,6 +331,15 @@ func (s *State) ensure() {
 	}
 	if s.ReplayLedger == nil {
 		s.ReplayLedger = NewReplayLedger()
+	}
+	if s.ResourceLedger == nil {
+		s.ResourceLedger = &ResourceLedger{
+			CapacityByNode:   make(map[string]*NodeCapacityModel),
+			Reservations:     make(map[string]*ResourceReservation),
+			Allocations:      make(map[string]*ResourceAllocation),
+			RecentlyReleased: make(map[string]int64),
+			Generation:       0,
+		}
 	}
 	s.Federation.ensure()
 }
