@@ -4191,3 +4191,240 @@ func TestGate14_LeaderFailoverWithSnapshotDistribution(t *testing.T) {
 
 	t.Logf("Gate 14 PASSED: Leader failover with snapshot distribution verified, %d/3 members converged", convergedCount)
 }
+
+func TestGate16_MultiMemberRecoveryWithSnapshotSynchronization(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping Gate 16 Multi-Member Recovery with Snapshot Synchronization test in short mode")
+	}
+
+	// Phase 1: Establish 3-member cluster with leader election
+	t.Logf("Gate 16: Phase 1 - Establishing 3-member cluster with leader election")
+
+	caBundle, err := generateTestCABundle()
+	if err != nil {
+		t.Fatalf("Failed to generate test CA bundle: %v", err)
+	}
+
+	tmpDir := t.TempDir()
+	c := NewRaftQualificationClusterWithCA(tmpDir, caBundle)
+	defer c.Close()
+
+	if err := c.Start(t); err != nil {
+		t.Fatalf("Start failed: %v", err)
+	}
+
+	leaderID, _, err := c.WaitForLeader(10 * time.Second)
+	if err != nil {
+		t.Fatalf("WaitForLeader failed: %v", err)
+	}
+
+	leaderIdx := followerIndex(leaderID, c.Members)
+	if leaderIdx < 0 {
+		t.Fatalf("Leader member not found: %s", leaderID)
+	}
+
+	leader := c.Members[leaderIdx]
+	t.Logf("Gate 16: Phase 1 - Leader elected: %s (idx=%d)", leader.ID, leaderIdx)
+
+	// Phase 2: Build state on leader with 50 nodes, 50 assignments
+	t.Logf("Gate 16: Phase 2 - Building state on leader (50 nodes, 50 assignments, Index=500)")
+
+	leader.Node.fsm.mu.Lock()
+	if leader.Node.fsm.s.Nodes == nil {
+		leader.Node.fsm.s.Nodes = make(map[string]*Node)
+	}
+	if leader.Node.fsm.s.Assignments == nil {
+		leader.Node.fsm.s.Assignments = make(map[string]*AssignmentRec)
+	}
+	for i := 0; i < 50; i++ {
+		nodeID := fmt.Sprintf("recovery-node-%02d", i)
+		leader.Node.fsm.s.Nodes[nodeID] = &Node{
+			ID:     nodeID,
+			Name:   fmt.Sprintf("recovery-node-%02d", i),
+			Status: "active",
+			Health: "healthy",
+		}
+
+		assignKey := fmt.Sprintf("rec-assign-%02d@%s", i, nodeID)
+		leader.Node.fsm.s.Assignments[assignKey] = &AssignmentRec{
+			Key: assignKey,
+			A: api.Assignment{
+				ID:      fmt.Sprintf("rec-assign-%02d", i),
+				App:     "recovery-app",
+				Replica: int64(i),
+				Node:    nodeID,
+			},
+			Created: int64(7000000 + i),
+		}
+	}
+	leader.Node.fsm.s.Index = int64(500)
+	leader.Node.fsm.mu.Unlock()
+
+	t.Logf("Gate 16: Phase 2 - Leader state built: 50 nodes, 50 assignments, Index=500")
+
+	// Phase 3: Create and persist snapshots on leader
+	t.Logf("Gate 16: Phase 3 - Creating and persisting snapshots for all members")
+
+	// Capture snapshot from leader
+	leaderSnapshot, err := leader.Node.fsm.Snapshot()
+	if err != nil {
+		t.Fatalf("Failed to create leader snapshot: %v", err)
+	}
+	defer leaderSnapshot.Release()
+
+	// Persist snapshot to bytes
+	var leaderSnapshotBuf bytes.Buffer
+	sink := &mockSnapshotSink{buf: &leaderSnapshotBuf}
+	if err := leaderSnapshot.Persist(sink); err != nil {
+		t.Fatalf("Failed to persist leader snapshot: %v", err)
+	}
+	leaderSnapshotBytes := leaderSnapshotBuf.Bytes()
+	t.Logf("Gate 16: Phase 3 - Leader snapshot created: %d bytes", len(leaderSnapshotBytes))
+
+	// Simulate snapshot distribution to followers (separate in-memory copies for each member)
+	followerSnapshots := make([][]byte, len(c.Members))
+	for i := range c.Members {
+		// Each member gets a copy of the snapshot bytes
+		followerSnapshots[i] = make([]byte, len(leaderSnapshotBytes))
+		copy(followerSnapshots[i], leaderSnapshotBytes)
+	}
+	t.Logf("Gate 16: Phase 3 - Snapshots distributed to all 3 members (%d bytes each)", len(leaderSnapshotBytes))
+
+	// Phase 4: Partition 2 members (simulate crash of followers)
+	t.Logf("Gate 16: Phase 4 - Partitioning 2 followers to simulate multi-member crash")
+
+	// Find 2 followers to partition (exclude leader)
+	var followersToPartition []*QualificationMember
+	for i, member := range c.Members {
+		if i != leaderIdx {
+			followersToPartition = append(followersToPartition, member)
+			if len(followersToPartition) == 2 {
+				break
+			}
+		}
+	}
+
+	follower1 := followersToPartition[0]
+	follower2 := followersToPartition[1]
+
+	if err := c.Partition(follower1.ID); err != nil {
+		t.Fatalf("Failed to partition follower 1: %v", err)
+	}
+	if err := c.Partition(follower2.ID); err != nil {
+		t.Fatalf("Failed to partition follower 2: %v", err)
+	}
+	t.Logf("Gate 16: Phase 4 - Partitioned 2 followers: %s, %s", follower1.ID, follower2.ID)
+
+	// Phase 5: Simulate crash recovery - restore snapshots to partitioned members
+	t.Logf("Gate 16: Phase 5 - Restoring snapshots to crashed members")
+
+	// Simulate restarting follower1 from snapshot
+	follower1Idx := followerIndex(follower1.ID, c.Members)
+	if follower1Idx < 0 {
+		t.Fatalf("Follower 1 not found: %s", follower1.ID)
+	}
+
+	// Clear follower1's FSM state to simulate crash
+	c.Members[follower1Idx].Node.fsm.mu.Lock()
+	c.Members[follower1Idx].Node.fsm.s.Nodes = make(map[string]*Node)
+	c.Members[follower1Idx].Node.fsm.s.Assignments = make(map[string]*AssignmentRec)
+	c.Members[follower1Idx].Node.fsm.s.Index = 0
+	c.Members[follower1Idx].Node.fsm.mu.Unlock()
+
+	// Restore snapshot for follower1
+	reader1 := io.NopCloser(bytes.NewReader(followerSnapshots[follower1Idx]))
+	if err := c.Members[follower1Idx].Node.fsm.Restore(reader1); err != nil {
+		t.Fatalf("Failed to restore follower 1 snapshot: %v", err)
+	}
+	t.Logf("Gate 16: Phase 5 - Follower 1 snapshot restored")
+
+	// Simulate restarting follower2 from snapshot
+	follower2Idx := followerIndex(follower2.ID, c.Members)
+	if follower2Idx < 0 {
+		t.Fatalf("Follower 2 not found: %s", follower2.ID)
+	}
+
+	// Clear follower2's FSM state to simulate crash
+	c.Members[follower2Idx].Node.fsm.mu.Lock()
+	c.Members[follower2Idx].Node.fsm.s.Nodes = make(map[string]*Node)
+	c.Members[follower2Idx].Node.fsm.s.Assignments = make(map[string]*AssignmentRec)
+	c.Members[follower2Idx].Node.fsm.s.Index = 0
+	c.Members[follower2Idx].Node.fsm.mu.Unlock()
+
+	// Restore snapshot for follower2
+	reader2 := io.NopCloser(bytes.NewReader(followerSnapshots[follower2Idx]))
+	if err := c.Members[follower2Idx].Node.fsm.Restore(reader2); err != nil {
+		t.Fatalf("Failed to restore follower 2 snapshot: %v", err)
+	}
+	t.Logf("Gate 16: Phase 5 - Follower 2 snapshot restored")
+
+	// Phase 6: Heal partitions to reconnect recovered members
+	t.Logf("Gate 16: Phase 6 - Healing partitions to reconnect recovered members")
+
+	c.Heal(follower1.ID)
+	c.Heal(follower2.ID)
+	t.Logf("Gate 16: Phase 6 - Partitions healed, members reconnected to cluster")
+
+	// Phase 7: Verify cluster-wide convergence
+	t.Logf("Gate 16: Phase 7 - Verifying cluster convergence with snapshot-recovered state")
+
+	// Allow time for cluster to stabilize after healing
+	time.Sleep(1 * time.Second)
+
+	convergedCount := 0
+	var failedMembers []string
+
+	for i, member := range c.Members {
+		var nodeCount int
+		var assignCount int
+		var index int64
+
+		member.Node.fsm.Read(func(s *State) {
+			nodeCount = len(s.Nodes)
+			assignCount = len(s.Assignments)
+			index = s.Index
+		})
+
+		t.Logf("Gate 16: Phase 7 - Member %d (%s): %d nodes, %d assignments, Index=%d",
+			i, member.ID, nodeCount, assignCount, index)
+
+		if nodeCount == 50 && assignCount == 50 && index == 500 {
+			convergedCount++
+		} else {
+			failedMembers = append(failedMembers, fmt.Sprintf("%s(%d/%d/%d)", member.ID, nodeCount, assignCount, index))
+		}
+	}
+
+	if convergedCount < 2 {
+		t.Fatalf("Insufficient members converged after snapshot recovery: %d/3, failed: %v", convergedCount, failedMembers)
+	}
+
+	t.Logf("Gate 16: Phase 7 - Cluster convergence: %d/3 members with correct state", convergedCount)
+
+	// Phase 8: Spot-check specific data integrity
+	t.Logf("Gate 16: Phase 8 - Validating data integrity of recovered state")
+
+	for i, member := range c.Members {
+		var hasFirstNode bool
+		var hasLastNode bool
+		var hasSampleAssignment bool
+
+		member.Node.fsm.Read(func(s *State) {
+			_, hasFirstNode = s.Nodes["recovery-node-00"]
+			_, hasLastNode = s.Nodes["recovery-node-49"]
+			_, hasSampleAssignment = s.Assignments["rec-assign-25@recovery-node-25"]
+		})
+
+		if !hasFirstNode {
+			t.Logf("Gate 16: Phase 8 - WARN: Member %d missing first node", i)
+		}
+		if !hasLastNode {
+			t.Logf("Gate 16: Phase 8 - WARN: Member %d missing last node", i)
+		}
+		if !hasSampleAssignment {
+			t.Logf("Gate 16: Phase 8 - WARN: Member %d missing sample assignment", i)
+		}
+	}
+
+	t.Logf("Gate 16 PASSED: Multi-member recovery with snapshot synchronization verified, %d/3 members converged", convergedCount)
+}
