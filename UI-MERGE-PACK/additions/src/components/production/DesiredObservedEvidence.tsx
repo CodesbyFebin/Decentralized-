@@ -1,0 +1,2 @@
+import React from 'react'; import type { TruthEnvelope } from '../../types/truth'; import { TruthValue } from './TruthValue';
+export function DesiredObservedEvidence<T>({desired,observed,evidenceDigest}:{desired:TruthEnvelope<T>;observed:TruthEnvelope<T>;evidenceDigest?:TruthEnvelope<string>}) { return <section aria-label="Desired observed evidence"><TruthValue label="Desired" envelope={desired}/><TruthValue label="Observed" envelope={observed}/>{evidenceDigest&&<TruthValue label="Evidence digest" envelope={evidenceDigest}/>}</section>; }

@@ -1,0 +1,25 @@
+# Merge acceptance checklist
+
+- [ ] Existing production router/shell/adapters retained.
+- [ ] no mockData/NetworkContext/simulated server imported.
+- [ ] TruthEnvelope used for operational values.
+- [ ] UNKNOWN/UNAVAILABLE never rendered as zero/healthy/online/verified.
+- [ ] backend disconnect removes LIVE state.
+- [ ] cordon is orthogonal to lifecycle.
+- [ ] cordon mutation waits for canonical committed-state confirmation.
+- [ ] ResourceLedger uses MODEL A and authoritative backend values.
+- [ ] unsupported GPU/VRAM/network dimensions remain unavailable.
+- [ ] failure-domain UNKNOWN is not treated as diversity.
+- [ ] desired != observed != evidence in UI.
+- [ ] Marketplace gated until P2 qualification.
+- [ ] Web3 gated until P3 qualification.
+- [ ] external DePIN gated until P4 qualified adapter exists.
+- [ ] federation gated until P5 implementation/qualification.
+- [ ] Copilot claims cite canonical context/evidence only.
+- [ ] ACT actions use approval/policy path.
+- [ ] loading/empty/error/unknown/unavailable/stale states present.
+- [ ] keyboard/focus/reduced-motion/mobile states checked.
+- [ ] no-mock gate passes.
+- [ ] typecheck/lint/build/tests pass.
+- [ ] affected Go/control-plane tests pass.
+- [ ] no surface called VERIFIED/SEALED from frontend tests alone.
