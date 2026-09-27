@@ -266,6 +266,7 @@ func (s *State) FleetInventory() []*FleetNode {
 			Name:       n.Name,
 			Status:     n.Status,
 			Health:     n.Health,
+			Cordoned:   n.Cordoned,
 			Region:     n.Enroll.Region,
 			Zone:       n.Enroll.Zone,
 			Host:       n.Enroll.Host,

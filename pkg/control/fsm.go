@@ -962,16 +962,39 @@ func init() {
 		if n == nil {
 			return fail("NOT_FOUND", "no host %s", d.Node)
 		}
-		if n.Status == "cordoned" {
+		if n.Cordoned {
 			return ok("%s is already cordoned", n.Name)
 		}
-		n.Status = "cordoned"
+		n.Cordoned = true
 		s.audit(audit.Entry{TS: c.TS, Actor: c.Actor, Source: audit.SourceOperator, Action: "node-cordon", Resource: "node/" + n.ID,
 			Detail: fmt.Sprintf("%s cordoned (%s). No new work will be assigned.", n.Name, d.Reason)})
 		if f.nlm != nil {
 			f.nlm.CordonNode(context.Background(), d.Node)
 		}
 		return ok("%s cordoned; no new work will be assigned", n.Name)
+	})
+
+	register("uncordon-node", func(f *FSM, s *State, c *Command) *Result {
+		d, err := decode[struct {
+			Node string `json:"node"`
+		}](c)
+		if err != nil {
+			return fail("DECODE", "%v", err)
+		}
+		n := s.Nodes[d.Node]
+		if n == nil {
+			return fail("NOT_FOUND", "no host %s", d.Node)
+		}
+		if !n.Cordoned {
+			return ok("%s is not cordoned", n.Name)
+		}
+		n.Cordoned = false
+		s.audit(audit.Entry{TS: c.TS, Actor: c.Actor, Source: audit.SourceOperator, Action: "node-uncordon", Resource: "node/" + n.ID,
+			Detail: fmt.Sprintf("%s uncordoned. New work will be scheduled.", n.Name)})
+		if f.nlm != nil {
+			f.nlm.UncordonNode(context.Background(), d.Node)
+		}
+		return ok("%s uncordoned", n.Name)
 	})
 
 	register("drain-node", func(f *FSM, s *State, c *Command) *Result {

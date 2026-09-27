@@ -54,6 +54,7 @@ type Node struct {
 	Name          string             `json:"name"`
 	Status        string             `json:"status"` // pending | ready | draining | revoked
 	Health        string             `json:"health"` // live | lost | unknown
+	Cordoned      bool               `json:"cordoned"` // operator-initiated placement hold
 	Keys          []api.KeyRecord    `json:"keys"`
 	Enroll        api.Enroll         `json:"enroll"`
 	EnrollEnv     *envelope.Envelope `json:"enrollEnv"`
