@@ -112,11 +112,11 @@ func TestNodeLifecycleIntegration_HeartbeatTimeoutDetection(t *testing.T) {
 		Type: "node-health",
 		TS:   testTS,
 		Actor: "heartbeat-monitor",
-		Data: json.RawMessage(`{
-			"node": "dh1heartbeat001",
+		Data: json.RawMessage(fmt.Sprintf(`{
+			"node": "%s",
 			"health": "lost",
 			"reason": "heartbeat timeout: no observation for 30s"
-		}`),
+		}`, nodeID)),
 	}
 
 	res := fsm.ApplyLocal(healthCmd)
@@ -392,12 +392,12 @@ func TestNodeLifecycleIntegration_FullStateTransitionPath(t *testing.T) {
 	ctx := context.Background()
 	nodeID := testNodeInFSM(fsm, "node-full")
 
-	// 1. Enrollment
+	// 1. Discovery/Registration
 	nlm.RegisterNode(ctx, nodeID)
 
 	state, _ := nlm.GetNodeState(ctx, nodeID)
-	if state.State != runtime.NodeEnrolling {
-		t.Errorf("Step 1: expected ENROLLING, got %s", state.State)
+	if state.State != runtime.NodeDiscovered {
+		t.Errorf("Step 1: expected DISCOVERED, got %s", state.State)
 	}
 
 	// 2. Approval

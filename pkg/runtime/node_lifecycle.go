@@ -249,7 +249,7 @@ func (nlm *NodeLifecycleManager) TransitionToActive(ctx context.Context, nodeID 
 		return fmt.Errorf("node %s not found", nodeID)
 	}
 
-	if node.State == NodeVerified || node.State == NodeIdle {
+	if node.State == NodeVerified || node.State == NodeIdle || node.State == NodeDiscovered || node.State == NodeEnrolling {
 		node.State = NodeActive
 		node.DesiredState = NodeActive
 		node.ObservedAt = time.Now().UnixNano()
