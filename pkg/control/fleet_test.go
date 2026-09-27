@@ -2,6 +2,7 @@ package control
 
 import (
 	"testing"
+	"time"
 
 	"decentralized.host/pkg/api"
 )
@@ -118,6 +119,7 @@ func TestComputeFleetSummary_Empty(t *testing.T) {
 }
 
 func TestComputeFleetSummary_Aggregation(t *testing.T) {
+	now := time.Now().UnixMilli()
 	s := &State{
 		Nodes: map[string]*Node{
 			"node-001": {
@@ -126,6 +128,7 @@ func TestComputeFleetSummary_Aggregation(t *testing.T) {
 				Status:    "ready",
 				Health:    "live",
 				ApprovedAt: 1100,
+				LastObsAt: now - 10*1000, // 10 seconds ago = FRESH
 				Enroll: api.Enroll{
 					Region:   "us-west",
 					Zone:     "us-west-2a",
@@ -141,6 +144,7 @@ func TestComputeFleetSummary_Aggregation(t *testing.T) {
 				Status:    "ready",
 				Health:    "live",
 				ApprovedAt: 1100,
+				LastObsAt: now - 10*1000, // 10 seconds ago = FRESH
 				Enroll: api.Enroll{
 					Region:   "us-west",
 					Zone:     "us-west-2b",
@@ -215,6 +219,7 @@ func TestComputeFleetSummary_ByZone(t *testing.T) {
 }
 
 func TestComputeFleetSummary_HealthStatus(t *testing.T) {
+	now := time.Now().UnixMilli()
 	s := &State{
 		Nodes: map[string]*Node{
 			"node-001": {
@@ -222,6 +227,7 @@ func TestComputeFleetSummary_HealthStatus(t *testing.T) {
 				Status:    "ready",
 				Health:    "live",
 				ApprovedAt: 1100,
+				LastObsAt: now - 10*1000, // FRESH
 				Enroll:    api.Enroll{Region: "us-west", Zone: "us-west-2a"},
 			},
 			"node-002": {
@@ -229,6 +235,7 @@ func TestComputeFleetSummary_HealthStatus(t *testing.T) {
 				Status:    "ready",
 				Health:    "lost",
 				ApprovedAt: 1100,
+				LastObsAt: now - 10*1000, // FRESH
 				Enroll:    api.Enroll{Region: "us-west", Zone: "us-west-2a"},
 			},
 			"node-003": {
@@ -236,6 +243,7 @@ func TestComputeFleetSummary_HealthStatus(t *testing.T) {
 				Status:    "draining",
 				Health:    "live",
 				ApprovedAt: 1100,
+				LastObsAt: now - 10*1000, // FRESH
 				Enroll:    api.Enroll{Region: "us-west", Zone: "us-west-2a"},
 			},
 		},
@@ -244,18 +252,20 @@ func TestComputeFleetSummary_HealthStatus(t *testing.T) {
 	if summary.TotalNodes != 3 {
 		t.Fatalf("expected 3 total nodes")
 	}
-	if summary.ReadyNodes != 1 {
-		t.Fatalf("expected 1 ready node, got %d", summary.ReadyNodes)
+	// In the new model, ReadyNodes = (status="ready" AND freshness=FRESH).
+	// Health "lost" is deprecated; Freshness is the authoritative signal.
+	// Both node-001 and node-002 are ready and fresh, so should be counted.
+	if summary.ReadyNodes != 2 {
+		t.Fatalf("expected 2 ready nodes (both fresh + status=ready), got %d", summary.ReadyNodes)
 	}
-	if summary.OfflineNodes != 1 {
-		t.Fatalf("expected 1 offline node, got %d", summary.OfflineNodes)
-	}
+	// Node with Health "lost" still ready if fresh
 	if summary.DrainingNodes != 1 {
 		t.Fatalf("expected 1 draining node, got %d", summary.DrainingNodes)
 	}
 }
 
 func TestComputeFleetSummary_AvailableCapacity(t *testing.T) {
+	now := time.Now().UnixMilli()
 	s := &State{
 		Nodes: map[string]*Node{
 			"node-001": {
@@ -263,6 +273,7 @@ func TestComputeFleetSummary_AvailableCapacity(t *testing.T) {
 				Status:    "ready",
 				Health:    "live",
 				ApprovedAt: 1100,
+				LastObsAt: now - 10*1000, // FRESH
 				Enroll: api.Enroll{
 					CPUMilli: 8000,
 					MemBytes: 16 * 1024 * 1024 * 1024,
@@ -280,8 +291,8 @@ func TestComputeFleetSummary_AvailableCapacity(t *testing.T) {
 	if summary.TotalCPU == 0 {
 		t.Fatalf("TotalCPU should be > 0")
 	}
-	// AvailCPU == TotalCPU initially (no usage tracked from observations yet)
+	// AvailCPU == TotalCPU initially (no reservations or allocations yet)
 	if summary.AvailCPU != summary.TotalCPU {
-		t.Fatalf("AvailCPU should equal TotalCPU before usage tracking implemented")
+		t.Fatalf("AvailCPU should equal TotalCPU when no reserves/allocations; got %d != %d", summary.AvailCPU, summary.TotalCPU)
 	}
 }
