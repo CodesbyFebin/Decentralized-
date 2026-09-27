@@ -773,6 +773,121 @@ func init() {
 		return ok("%s is %s", n.Name, d.Health)
 	})
 
+	register("approve-enrollment", func(f *FSM, s *State, c *Command) *Result {
+		d, err := decode[struct {
+			Node string `json:"node"`
+		}](c)
+		if err != nil {
+			return fail("DECODE", "%v", err)
+		}
+		n := s.Nodes[d.Node]
+		if n == nil {
+			return fail("NOT_FOUND", "no host %s", d.Node)
+		}
+		if n.Status == "ready" {
+			return ok("%s is already approved", n.Name)
+		}
+		approve(s, n, c.TS, c.Actor)
+		if f.nlm != nil {
+			ctx := context.Background()
+			f.nlm.TransitionToActive(ctx, d.Node)
+		}
+		return ok("%s approved; it may now admit work", n.Name)
+	})
+
+	register("cordon-node", func(f *FSM, s *State, c *Command) *Result {
+		d, err := decode[struct {
+			Node   string `json:"node"`
+			Reason string `json:"reason"`
+		}](c)
+		if err != nil {
+			return fail("DECODE", "%v", err)
+		}
+		n := s.Nodes[d.Node]
+		if n == nil {
+			return fail("NOT_FOUND", "no host %s", d.Node)
+		}
+		if n.Status == "cordoned" {
+			return ok("%s is already cordoned", n.Name)
+		}
+		n.Status = "cordoned"
+		s.audit(audit.Entry{TS: c.TS, Actor: c.Actor, Source: audit.SourceOperator, Action: "node-cordon", Resource: "node/" + n.ID,
+			Detail: fmt.Sprintf("%s cordoned (%s). No new work will be assigned.", n.Name, d.Reason)})
+		if f.nlm != nil {
+			f.nlm.CordonNode(context.Background(), d.Node)
+		}
+		return ok("%s cordoned; no new work will be assigned", n.Name)
+	})
+
+	register("drain-node", func(f *FSM, s *State, c *Command) *Result {
+		d, err := decode[struct {
+			Node        string `json:"node"`
+			DrainTarget int    `json:"drainTarget"`
+		}](c)
+		if err != nil {
+			return fail("DECODE", "%v", err)
+		}
+		n := s.Nodes[d.Node]
+		if n == nil {
+			return fail("NOT_FOUND", "no host %s", d.Node)
+		}
+		if n.Status == "draining" {
+			return ok("%s is already draining", n.Name)
+		}
+		n.Status = "draining"
+		s.audit(audit.Entry{TS: c.TS, Actor: c.Actor, Source: audit.SourceOperator, Action: "node-drain", Resource: "node/" + n.ID,
+			Detail: fmt.Sprintf("%s draining: replicas will be rescheduled", n.Name)})
+		if f.nlm != nil {
+			f.nlm.DrainNode(context.Background(), d.Node, d.DrainTarget)
+		}
+		return ok("%s draining", n.Name)
+	})
+
+	register("revoke-node", func(f *FSM, s *State, c *Command) *Result {
+		d, err := decode[struct {
+			Node   string `json:"node"`
+			Reason string `json:"reason"`
+		}](c)
+		if err != nil {
+			return fail("DECODE", "%v", err)
+		}
+		n := s.Nodes[d.Node]
+		if n == nil {
+			return fail("NOT_FOUND", "no host %s", d.Node)
+		}
+		if n.Status == "revoked" {
+			return ok("%s is already revoked", n.Name)
+		}
+		n.Status, n.RevokedAt = "revoked", c.TS
+		s.audit(audit.Entry{TS: c.TS, Actor: c.Actor, Source: audit.SourceOperator, Action: "node-revoke", Resource: "node/" + n.ID,
+			Detail: fmt.Sprintf("%s revoked (%s). New admission blocked; admitted processes are not killed by this record.", n.Name, d.Reason)})
+		if f.nlm != nil {
+			f.nlm.RevokeNode(context.Background(), d.Node)
+		}
+		return ok("%s revoked; it refuses new work, admitted work continues until a signed stop", n.Name)
+	})
+
+	register("node-observation", func(f *FSM, s *State, c *Command) *Result {
+		d, err := decode[struct {
+			Node            string `json:"node"`
+			Generation      int64  `json:"generation"`
+			DesiredState    string `json:"desiredState"`
+			ObservedHealth  string `json:"observedHealth"`
+			Workloads       []interface{} `json:"workloads"`
+		}](c)
+		if err != nil {
+			return fail("DECODE", "%v", err)
+		}
+		n := s.Nodes[d.Node]
+		if n == nil {
+			return fail("NOT_FOUND", "no host %s", d.Node)
+		}
+		// Record observation for audit trail
+		s.audit(audit.Entry{TS: c.TS, Actor: c.Actor, Source: audit.SourceHost, Action: "observation", Resource: "node/" + n.ID,
+			Detail: fmt.Sprintf("observed health: %s, generation: %d, desired: %s", d.ObservedHealth, d.Generation, d.DesiredState)})
+		return ok("observation recorded for %s", n.Name)
+	})
+
 	register("wg-binding", func(f *FSM, s *State, c *Command) *Result {
 		env, err := decode[*envelope.Envelope](c)
 		if err != nil {
