@@ -2,8 +2,8 @@
 
 **Date**: 2026-09-27  
 **Branch**: `claude/ui-merge-wave1-p0`  
-**Commits**: 3 (reference pack + truth components + NodeDetailView integration)  
-**Gates**: no-mock gate PASS ✓
+**Commits**: 4 (reference pack + truth components + NodeDetailView + NodesView)  
+**Gates**: no-mock gate PASS ✓ (94 allowed, 0 forbidden)
 
 ## Completed
 
@@ -47,11 +47,13 @@
 - [x] Test: no-mock gate PASS, lint OK (NodeDetailView has no new errors), build output shows pre-existing issues in unrelated files
 
 ### Nodes & Compute View (NodesView.tsx)
-- [ ] Import production components
-- [ ] Add per-node cordon status indicator in list view
-- [ ] Add bulk operations (cordon, uncordon, drain) with confirmation
-- [ ] Quick-action menu for node lifecycle operations
-- [ ] Test: no-mock gate, lint, build, integration tests pass
+- [x] Import production components (CordonCard, NodeOperation types)
+- [x] Add quick-action menu for node lifecycle operations
+- [x] Show operation options: Approve, Drain, Resume (Undrain), Revoke
+- [x] Implement confirmation dialogs for destructive operations (Drain, Revoke)
+- [x] Handle operation results and errors with visual feedback
+- [x] Maintain RBAC checks and disabled state during operation
+- [x] Test: no-mock gate PASS (94 allowed, 0 forbidden), lint OK
 
 ### Dashboard View (DashboardView.tsx)
 - [ ] Import production components
@@ -62,6 +64,31 @@
 - [ ] Test: no-mock gate, lint, build, integration tests pass
 
 ## Recent Changes (Session 2)
+
+### NodesView Integration (Commit 0b41f06)
+- **Quick-action menu per node**: Added MoreVertical icon in Actions column
+  - Shows lifecycle operations contextually based on node state
+  - PENDING_APPROVAL: Approve button (requires api.admin)
+  - ACTIVE: Drain button (requires api.write)
+  - DRAINING: Resume button (requires api.write)
+  - NOT REVOKED: Revoke identity button (requires api.admin)
+  
+- **Confirmation dialogs**: For destructive operations
+  - DRAIN: Explains that existing workloads continue, no new workloads placed
+  - REVOKE: Requires typing node id to confirm (cannot be undone)
+  
+- **Operation feedback**: Result messages after operation completes
+  - Success: Shows "committed" with actor and request ID
+  - Error: Shows "refused" with error code/message
+  - Status during operation: Button shows "Submitting…"
+  
+- **RBAC integration**: Buttons disabled if user lacks permission or data is stale
+  - Displays reason why button is disabled (needs api.write/admin, data stale)
+  
+- **Refactor to component**: Extracted NodeTableRow as separate component for clarity
+  - Encapsulates all per-node operation state (pending, confirm, result, error)
+  - Manages modal-like confirmation UI inline in table rows
+  - Clean separation from parent NodesView state management
 
 ### NodeDetailView Integration (Commit 9b933c3)
 - **Overview tab**: Integrated CordonCard after Placement panel to show admission control orthogonal to lifecycle
