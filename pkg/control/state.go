@@ -50,25 +50,26 @@ type State struct {
 
 // Node is a host as the control plane knows it.
 type Node struct {
-	ID         string             `json:"id"`
-	Name       string             `json:"name"`
-	Status     string             `json:"status"` // pending | ready | draining | revoked
-	Health     string             `json:"health"` // live | lost | unknown
-	Keys       []api.KeyRecord    `json:"keys"`
-	Enroll     api.Enroll         `json:"enroll"`
-	EnrollEnv  *envelope.Envelope `json:"enrollEnv"`
-	MeshIP     string             `json:"meshIp"`
-	Binding    *envelope.Envelope `json:"binding"`
-	Roles      []string           `json:"roles"`
-	JoinedAt   int64              `json:"joinedAt"`
-	ApprovedAt int64              `json:"approvedAt"`
-	RevokedAt  int64              `json:"revokedAt"`
-	ObserveSeq int64              `json:"observeSeq"`
-	LastObsAt  int64              `json:"lastObsAt"` // control-plane receive time
-	Obs        *api.Observation   `json:"obs"`
-	ObsEnv     *envelope.Envelope `json:"obsEnv"`
-	ObsDigest  string             `json:"obsDigest"`
-	FirstSeen  int64              `json:"firstSeen"`
+	ID            string             `json:"id"`
+	Name          string             `json:"name"`
+	Status        string             `json:"status"` // pending | ready | draining | revoked
+	Health        string             `json:"health"` // live | lost | unknown
+	Keys          []api.KeyRecord    `json:"keys"`
+	Enroll        api.Enroll         `json:"enroll"`
+	EnrollEnv     *envelope.Envelope `json:"enrollEnv"`
+	FailureDomain string             `json:"failureDomain"` // e.g. "us-west-1a"; "" or "UNKNOWN" blocks ACTIVE
+	MeshIP        string             `json:"meshIp"`
+	Binding       *envelope.Envelope `json:"binding"`
+	Roles         []string           `json:"roles"`
+	JoinedAt      int64              `json:"joinedAt"`
+	ApprovedAt    int64              `json:"approvedAt"`
+	RevokedAt     int64              `json:"revokedAt"`
+	ObserveSeq    int64              `json:"observeSeq"`
+	LastObsAt     int64              `json:"lastObsAt"` // control-plane receive time
+	Obs           *api.Observation   `json:"obs"`
+	ObsEnv        *envelope.Envelope `json:"obsEnv"`
+	ObsDigest     string             `json:"obsDigest"`
+	FirstSeen     int64              `json:"firstSeen"`
 }
 
 // ValidKeys returns wire keys valid at ts.
