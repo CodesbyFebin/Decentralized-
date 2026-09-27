@@ -1,0 +1,135 @@
+{
+  "qualification": {
+    "id": "P0-CORDON-OWNER-RESERVE-A01",
+    "name": "P0 Blocker #2: Cordon + Owner Reserve Qualification",
+    "description": "Fresh qualification of merged PR #23 with all 30 A06 security gates plus 6 cordon-specific tests",
+    "maturity_before": "TESTED",
+    "maturity_after": "QUALIFIED",
+    "date": "2026-09-27T19:29:45Z",
+    "duration_seconds": 1.082
+  },
+  "source": {
+    "pr_number": 23,
+    "pr_title": "P0 Blocker #2: CORDONED State + Owner Reserve Tracking",
+    "pr_url": "https://github.com/CodesbyFebin/Decentralized-/pull/23",
+    "merge_commit": "208eb2a",
+    "merge_date": "2026-09-27T19:11:40Z",
+    "qualification_commit": "9c96c1e",
+    "a06_source_commit": "057585d",
+    "a06_source_tag": "a06-qualified-057585d"
+  },
+  "test_execution": {
+    "command": "go test -v ./pkg/control -run \"TestA06|TestCordon|TestOwnerReserve|TestLease\" -race -timeout 30s",
+    "environment": "Linux 6.18.44-fc-v37, Go 1.26.4",
+    "total_tests": 37,
+    "passed": 37,
+    "failed": 0,
+    "execution_time_ms": 1082,
+    "timeout_triggered": false,
+    "race_detector_violations": 0
+  },
+  "gate_categories": {
+    "secret_lifecycle_1_8": {
+      "count": 8,
+      "passed": 8,
+      "status": "PASS"
+    },
+    "a04_authorization_9_15": {
+      "count": 7,
+      "passed": 7,
+      "status": "PASS"
+    },
+    "a05_delivery_16_21": {
+      "count": 6,
+      "passed": 6,
+      "status": "PASS"
+    },
+    "rotation_revocation_22_25": {
+      "count": 4,
+      "passed": 4,
+      "status": "PASS"
+    },
+    "recovery_concurrency_26_30": {
+      "count": 5,
+      "passed": 5,
+      "status": "PASS"
+    },
+    "cordon_owner_reserve": {
+      "count": 6,
+      "passed": 6,
+      "status": "PASS",
+      "includes_negative_control": true
+    }
+  },
+  "architectural_verification": {
+    "cordon_orthogonality": {
+      "status": "VERIFIED",
+      "finding": "Cordon is orthogonal to lifecycle state; uncordoning does NOT override lifecycle rejections",
+      "critical": true,
+      "evidence": "TestUncordonRevokedNodeStaysIneligible passes; revoked node remains ineligible even when uncordoned"
+    },
+    "cluster_domain_todo": {
+      "status": "RECONCILED",
+      "current": "Hard-coded as 'cluster' for P0 compatibility",
+      "forward_path": "Extract from fsm.s.Cluster during FSM handler verification (P1)",
+      "impact": "No impact on P0 qualification; all gates use consistent domain"
+    },
+    "owner_reserve_model_a": {
+      "status": "VERIFIED",
+      "constraint": "available = total - owner_reserve - reserved - allocated",
+      "test_evidence": "TestOwnerReserveConstraint: 8000 - 1000 - 2000 = 5000 ✓"
+    },
+    "raft_persistence": {
+      "status": "VERIFIED",
+      "components": ["fsm.s.Secrets", "fsm.s.LeaseReplayLedger", "fsm.s.ResourceLedger"],
+      "recovery": "Survive snapshot/restore, leader failover, restart"
+    }
+  },
+  "negative_controls": [
+    {
+      "test": "TestUncordonRevokedNodeStaysIneligible",
+      "purpose": "Verify cordon orthogonality: uncordoning revoked node does NOT make it eligible",
+      "result": "PASS",
+      "requirement": "Lifecycle state gates eligibility independent of cordon flag",
+      "criticality": "CRITICAL"
+    }
+  ],
+  "evidence_retention": {
+    "test_source_file": "pkg/control/sec_p0_a01_a06_qualification_test.go",
+    "test_source_lines": 1074,
+    "cordon_test_file": "pkg/control/cordoned_test.go",
+    "cordon_test_lines": 430,
+    "git_immutable_chain": [
+      {
+        "commit": "057585d",
+        "tag": "a06-qualified-057585d",
+        "description": "A06 Fresh Integrated Qualification: Complete test harness with all 30 gates passing"
+      },
+      {
+        "commit": "a907c3c",
+        "description": "PR #23 Requalification: Cordon + Owner Reserve validated with fresh A06 source"
+      },
+      {
+        "commit": "208eb2a",
+        "description": "Merge pull request #23 from CodesbyFebin/claude/p0-cordoned-owner-reserve"
+      },
+      {
+        "commit": "9c96c1e",
+        "description": "P0-CORDON-OWNER-RESERVE-A01: Complete qualification with negative controls"
+      }
+    ]
+  },
+  "sign_off": {
+    "qualification_status": "PASS",
+    "maturity_status": "QUALIFIED",
+    "ready_for_seal": true,
+    "ready_for_pv1": true,
+    "ready_for_p0_sovereign_final": false,
+    "blocking_gates": [],
+    "next_phases": [
+      "A06 Verification (independent code review)",
+      "A06 Seal",
+      "PV1 Real Multi-Machine Qualification (≥2 independent hosts)"
+    ]
+  }
+}
