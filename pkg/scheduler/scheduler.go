@@ -4,11 +4,22 @@
 // reconciler turns a plan into desired assignments, and each host still
 // decides whether to admit them.
 //
-// Pipeline per replica: candidate hosts → status → policy (advertised host
-// policy) → trust tier → arch/features → resources → anti-affinity →
-// failure-domain spread → score → node-id tie break. A replica whose current
-// host still passes every filter stays where it is (stability), so applying
-// the same desired state twice yields the same placement.
+// Placement pipeline per replica:
+//   1. Candidate selection: filter nodes by status and eligibility
+//   2. Policy enforcement: validate runtime, federation, workload caps
+//   3. Trust tier: match declared tiers with node capabilities
+//   4. Constraints: architecture, required features
+//   5. Capacity: CPU, memory, disk (skipped for stable replicas)
+//   6. Anti-affinity: hard (unique node) vs soft (prefer spread)
+//   7. Failure-domain spread: distribute across region|zone|host domains
+//   8. Scoring: weighted factors (fit, spread, locality, affinity, stability, headroom)
+//   9. Tie-breaking: sort by node ID for determinism
+//
+// Stability: A replica whose current host still passes every filter stays where it is,
+// so applying the same desired state twice yields the same placement.
+//
+// Volume placement: replicas are placed with explicit domain spreading.
+// Primary first, then current members from unused domains, then new hosts.
 package scheduler
 
 import (
@@ -21,25 +32,37 @@ import (
 )
 
 // Node is the scheduler's view of a host.
+//
+// Placement constraints evaluated in order:
+//   - Status: only "ready" hosts are eligible; draining/revoked are ineligible
+//   - Tiers: node must advertise at least one tier from Placement.Tiers
+//   - Policy: host policy enforces AcceptTiers, AllowRuntimes, MaxWorkloads, and resource caps
+//   - Arch: node must match Placement.Arch (if specified)
+//   - Features: node must have all Features from Placement (e.g., gpu-nvidia, sse4, avx2)
+//   - Capacity: node has sufficient CPUMilli and MemBytes (computed as total-used)
+//   - Anti-affinity: hard = one replica per node; soft = prefer spreading
+//   - Spread: failure-domain = distribute across region|zone|host domains
+//
+// Scoring balances multiple factors for optimal placement (not just feasibility).
 type Node struct {
-	ID        string
-	Name      string
-	Status    string // ready | pending | revoked | draining | lost
-	Tiers     []string
-	Region    string
-	Zone      string
-	Host      string
-	Arch      string
-	Features  []string
-	CPUMilli  int64
-	MemBytes  int64
-	DiskFree  int64 // -1 = not measured
-	UsedCPU   int64
-	UsedMem   int64
-	Workloads int64
-	Policy    api.PolicySummary
-	UptimeMs  int64
-	Roles     []string
+	ID        string                // unique node identifier
+	Name      string                // human-readable name
+	Status    string                // ready | pending | revoked | draining | lost
+	Tiers     []string              // tier labels (e.g., compute, storage, standard)
+	Region    string                // geographic region for locality and spread
+	Zone      string                // availability zone / failure domain
+	Host      string                // physical host name for fine-grained domain separation
+	Arch      string                // CPU architecture (amd64, arm64, etc.)
+	Features  []string              // hardware capabilities (gpu-nvidia, sse4, avx2, etc.)
+	CPUMilli  int64                 // total CPU in millicores
+	MemBytes  int64                 // total memory in bytes
+	DiskFree  int64                 // free disk in bytes, -1 if not measured
+	UsedCPU   int64                 // current CPU allocation across all workloads
+	UsedMem   int64                 // current memory allocation across all workloads
+	Workloads int64                 // count of running workloads (from observations)
+	Policy    api.PolicySummary     // node-advertised policy constraints and caps
+	UptimeMs  int64                 // milliseconds since last reboot (stability signal)
+	Roles     []string              // node roles (e.g., edge-only, dedicated)
 }
 
 // DomainKey is the failure-domain identity used for spreading.
@@ -81,17 +104,26 @@ func (p Plan) Unscheduled() []ReplicaPlan {
 	return out
 }
 
-// Request is one scheduling problem.
+// Request is one scheduling problem: place replicas of an app across available nodes.
 type Request struct {
-	App        string
-	Spec       api.AppSpec
-	Nodes      []Node
-	Current    map[int64]string // replica -> node currently assigned
-	VolumeHint map[int64][]string
-	Federated  bool // placing on behalf of a federation peer
+	App        string                // app identifier
+	Spec       api.AppSpec           // app placement spec with tiers, arch, features, resources, policies
+	Nodes      []Node                // available nodes with capacity and policies
+	Current    map[int64]string      // current assignment: replica index -> node ID (for stability)
+	VolumeHint map[int64][]string    // volume affinity: replica index -> preferred nodes for data locality
+	Federated  bool                  // true if placing on behalf of a federation peer (stricter policies)
 }
 
-// Schedule computes a plan.
+// Schedule computes a placement plan for all replicas.
+// Returns a Plan with either a node ID or "" (unschedulable) for each replica.
+// Pass 1: Keep replicas on current nodes if still eligible (stability).
+// Pass 2: Place remaining replicas using multi-factor scoring, preferring:
+//   - Balanced fit (not overloading any single node)
+//   - Domain spread (replicas across region|zone|host failure domains)
+//   - Region locality (preferred region if specified)
+//   - Volume data locality (affinity to volume members)
+//   - Host stability (uptime / age)
+//   - Headroom (prefer less-utilized nodes)
 func Schedule(req Request) Plan {
 	nodes := append([]Node(nil), req.Nodes...)
 	sort.Slice(nodes, func(i, j int) bool { return nodes[i].ID < nodes[j].ID })
