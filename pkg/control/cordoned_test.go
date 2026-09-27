@@ -372,3 +372,70 @@ func TestCordonIdempotency(t *testing.T) {
 	}
 }
 
+// TestUncordonRevokedNodeStaysIneligible: NEGATIVE CONTROL
+// Verifies cordon is orthogonal to lifecycle: uncordoning a revoked node
+// does NOT make it scheduler-eligible (lifecycle state gates eligibility).
+func TestUncordonRevokedNodeStaysIneligible(t *testing.T) {
+	s := newState()
+	now := time.Now().UnixMilli()
+
+	// Create a revoked node that is also cordoned
+	n := &Node{
+		ID:        "node-revoked",
+		Name:      "node-revoked",
+		Status:    "revoked",
+		RevokedAt: now - 5000,
+		Enroll: api.Enroll{
+			CPUMilli:      8000,
+			MemBytes:      16000000000,
+			Region:        "us-west",
+			Zone:          "us-west-1a",
+			Host:          "host-revoked",
+			Tiers:         []string{"standard"},
+			Arch:          "x86_64",
+			Features:      []string{},
+		},
+		FailureDomain: "us-west-1a",
+		ApprovedAt:    now - 20000,
+		LastObsAt:     now - 1000,
+		Cordoned:      true, // Start cordoned
+		Obs: &api.Observation{
+			Facts: api.Facts{
+				Arch:     "x86_64",
+				MemBytes: 16000000000,
+				CPUs:     8,
+			},
+			Workloads: []api.WorkloadObs{},
+		},
+	}
+	s.Nodes["node-revoked"] = n
+
+	// Verify node is revoked and ineligible
+	fleet := s.FleetInventory()
+	fn := fleet[0]
+	if fn.Status != "revoked" {
+		t.Errorf("expected status=revoked, got %s", fn.Status)
+	}
+	if fn.SchedulerEligible.Eligible {
+		t.Errorf("expected revoked node to be ineligible for placement")
+	}
+
+	// NOW UNCORDON THE REVOKED NODE
+	// This is the critical negative control: uncordoning should NOT override lifecycle rejection
+	n.Cordoned = false
+
+	// Verify node is still ineligible (because lifecycle=revoked, not because of cordon)
+	fleet = s.FleetInventory()
+	fn = fleet[0]
+	if fn.Cordoned {
+		t.Error("expected Cordoned=false after uncordon")
+	}
+	if fn.Status != "revoked" {
+		t.Errorf("expected status=revoked (unchanged), got %s", fn.Status)
+	}
+	// CRITICAL: even though uncordoned, node must remain ineligible
+	if fn.SchedulerEligible.Eligible {
+		t.Error("CRITICAL: uncordoning a revoked node MUST NOT make it eligible; lifecycle gates eligibility")
+	}
+}
+

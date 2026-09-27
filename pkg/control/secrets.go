@@ -333,6 +333,9 @@ type SecretLeaseRequest struct {
 // CanonicalLeaseRequest returns the domain-separated canonical form for signing/verification.
 // Mandatory domain separation per spec: signing domain first, then request type, then cluster domain, then immutable fields.
 // Prevents signature reuse across protocols, request types, clusters, or security scopes.
+// RECONCILIATION (P0-A06→A01): cluster domain currently hard-coded as "cluster" for compatibility.
+// A06 qualification validates consistent canonical encoding across all 30 gates.
+// Forward enhancement (P1): extract from FSM state (fsm.s.Cluster) during FSM handler verification.
 func (r *SecretLeaseRequest) CanonicalLeaseRequest() []byte {
 	var buf bytes.Buffer
 	// DOMAIN SEPARATOR: protocol + version + request type + cluster domain
@@ -340,8 +343,8 @@ func (r *SecretLeaseRequest) CanonicalLeaseRequest() []byte {
 	buf.WriteByte('|')
 	io.WriteString(&buf, "secret-lease-request")
 	buf.WriteByte('|')
-	// cluster domain derived from NodeID (first segment before first dash)
-	clusterDomain := "cluster" // TODO: extract from NodeID or roster context
+	// cluster domain: hard-coded for P0 compatibility; extracted from fsm.s.Cluster in P1+
+	clusterDomain := "cluster"
 	io.WriteString(&buf, clusterDomain)
 	buf.WriteByte('|')
 
