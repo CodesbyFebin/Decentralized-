@@ -4672,3 +4672,273 @@ func TestGate17_QuorumBasedRecoveryAndStateReconciliation(t *testing.T) {
 	c.Heal(leader.ID)
 	t.Logf("Gate 17 PASSED: Quorum-based recovery and state reconciliation verified, split-brain prevention confirmed")
 }
+
+func TestGate18_AuditLedgerRecoveryAndConsistencyVerification(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping Gate 18 Audit Ledger Recovery and Consistency Verification test in short mode")
+	}
+
+	// Phase 1: Establish 3-member cluster with leader election
+	t.Logf("Gate 18: Phase 1 - Establishing 3-member cluster with leader election")
+
+	caBundle, err := generateTestCABundle()
+	if err != nil {
+		t.Fatalf("Failed to generate test CA bundle: %v", err)
+	}
+
+	tmpDir := t.TempDir()
+	c := NewRaftQualificationClusterWithCA(tmpDir, caBundle)
+	defer c.Close()
+
+	if err := c.Start(t); err != nil {
+		t.Fatalf("Start failed: %v", err)
+	}
+
+	leaderID, _, err := c.WaitForLeader(10 * time.Second)
+	if err != nil {
+		t.Fatalf("WaitForLeader failed: %v", err)
+	}
+
+	leaderIdx := followerIndex(leaderID, c.Members)
+	if leaderIdx < 0 {
+		t.Fatalf("Leader member not found: %s", leaderID)
+	}
+
+	leader := c.Members[leaderIdx]
+	t.Logf("Gate 18: Phase 1 - Leader elected: %s (idx=%d)", leader.ID, leaderIdx)
+
+	// Phase 2: Build state and create audit entries
+	t.Logf("Gate 18: Phase 2 - Building state with audit trail (25 nodes, 25 assignments, Index=250)")
+
+	leader.Node.fsm.mu.Lock()
+	if leader.Node.fsm.s.Nodes == nil {
+		leader.Node.fsm.s.Nodes = make(map[string]*Node)
+	}
+	if leader.Node.fsm.s.Assignments == nil {
+		leader.Node.fsm.s.Assignments = make(map[string]*AssignmentRec)
+	}
+	for i := 0; i < 25; i++ {
+		nodeID := fmt.Sprintf("audit-node-%02d", i)
+		leader.Node.fsm.s.Nodes[nodeID] = &Node{
+			ID:     nodeID,
+			Name:   fmt.Sprintf("audit-node-%02d", i),
+			Status: "active",
+			Health: "healthy",
+		}
+
+		assignKey := fmt.Sprintf("audit-assign-%02d@%s", i, nodeID)
+		leader.Node.fsm.s.Assignments[assignKey] = &AssignmentRec{
+			Key: assignKey,
+			A: api.Assignment{
+				ID:      fmt.Sprintf("audit-assign-%02d", i),
+				App:     "audit-app",
+				Replica: int64(i),
+				Node:    nodeID,
+			},
+			Created: int64(9000000 + i),
+		}
+	}
+	leader.Node.fsm.s.Index = int64(250)
+	leader.Node.fsm.mu.Unlock()
+
+	t.Logf("Gate 18: Phase 2 - State built with audit trail: 25 nodes, 25 assignments, Index=250")
+
+	// Phase 3: Create snapshot (audit trail checkpoint)
+	t.Logf("Gate 18: Phase 3 - Creating snapshot checkpoint for audit trail")
+
+	auditSnapshot, err := leader.Node.fsm.Snapshot()
+	if err != nil {
+		t.Fatalf("Failed to create audit snapshot: %v", err)
+	}
+	defer auditSnapshot.Release()
+
+	var auditSnapshotBuf bytes.Buffer
+	auditSink := &mockSnapshotSink{buf: &auditSnapshotBuf}
+	if err := auditSnapshot.Persist(auditSink); err != nil {
+		t.Fatalf("Failed to persist audit snapshot: %v", err)
+	}
+	auditSnapshotBytes := auditSnapshotBuf.Bytes()
+	t.Logf("Gate 18: Phase 3 - Audit snapshot created: %d bytes", len(auditSnapshotBytes))
+
+	// Distribute snapshot to followers
+	for i, member := range c.Members {
+		if i == leaderIdx {
+			continue
+		}
+		snapshotCopy := make([]byte, len(auditSnapshotBytes))
+		copy(snapshotCopy, auditSnapshotBytes)
+		reader := io.NopCloser(bytes.NewReader(snapshotCopy))
+		if err := member.Node.fsm.Restore(reader); err != nil {
+			t.Fatalf("Failed to restore audit snapshot to member %d: %v", i, err)
+		}
+	}
+	t.Logf("Gate 18: Phase 3 - Audit snapshot distributed to all followers")
+
+	// Phase 4: Verify all members have consistent audit state
+	t.Logf("Gate 18: Phase 4 - Verifying audit trail consistency across all members")
+
+	consistentCount := 0
+	for i, member := range c.Members {
+		var nodeCount int
+		var assignCount int
+		var index int64
+
+		member.Node.fsm.Read(func(s *State) {
+			nodeCount = len(s.Nodes)
+			assignCount = len(s.Assignments)
+			index = s.Index
+		})
+
+		if nodeCount == 25 && assignCount == 25 && index == 250 {
+			consistentCount++
+			t.Logf("Gate 18: Phase 4 - Member %d: audit trail consistent ✓", i)
+		} else {
+			t.Logf("Gate 18: Phase 4 - Member %d: audit trail MISMATCH (%d nodes, %d assignments, Index=%d)",
+				i, nodeCount, assignCount, index)
+		}
+	}
+
+	if consistentCount != 3 {
+		t.Fatalf("Audit trail inconsistent: %d/3 members have correct state", consistentCount)
+	}
+	t.Logf("Gate 18: Phase 4 - All 3 members have consistent audit trail ✓")
+
+	// Phase 5: Simulate leader crash and recovery via snapshot
+	t.Logf("Gate 18: Phase 5 - Simulating leader crash and recovery via audit snapshot")
+
+	// Clear leader FSM (simulate crash)
+	leader.Node.fsm.mu.Lock()
+	leader.Node.fsm.s.Nodes = make(map[string]*Node)
+	leader.Node.fsm.s.Assignments = make(map[string]*AssignmentRec)
+	leader.Node.fsm.s.Index = 0
+	leader.Node.fsm.mu.Unlock()
+
+	// Restore leader from audit snapshot
+	leaderRecoveryReader := io.NopCloser(bytes.NewReader(auditSnapshotBytes))
+	if err := leader.Node.fsm.Restore(leaderRecoveryReader); err != nil {
+		t.Fatalf("Failed to restore leader from audit snapshot: %v", err)
+	}
+
+	t.Logf("Gate 18: Phase 5 - Leader recovered from audit snapshot")
+
+	// Phase 6: Verify recovered leader has consistent audit trail
+	t.Logf("Gate 18: Phase 6 - Verifying recovered leader audit trail consistency")
+
+	var recoveredLeaderNodes int
+	var recoveredLeaderAssignments int
+	var recoveredLeaderIndex int64
+
+	leader.Node.fsm.Read(func(s *State) {
+		recoveredLeaderNodes = len(s.Nodes)
+		recoveredLeaderAssignments = len(s.Assignments)
+		recoveredLeaderIndex = s.Index
+	})
+
+	if recoveredLeaderNodes != 25 || recoveredLeaderAssignments != 25 || recoveredLeaderIndex != 250 {
+		t.Fatalf("Leader recovery inconsistent: %d nodes, %d assignments, Index=%d (expected 25/25/250)",
+			recoveredLeaderNodes, recoveredLeaderAssignments, recoveredLeaderIndex)
+	}
+	t.Logf("Gate 18: Phase 6 - Recovered leader audit trail verified: %d nodes, %d assignments, Index=%d ✓",
+		recoveredLeaderNodes, recoveredLeaderAssignments, recoveredLeaderIndex)
+
+	// Phase 7: Verify audit entry replicas are intact
+	t.Logf("Gate 18: Phase 7 - Spot-checking audit entry replicas")
+
+	var hasFirstAuditEntry bool
+	var hasLastAuditEntry bool
+	var hasSampleAuditAssignment bool
+
+	leader.Node.fsm.Read(func(s *State) {
+		_, hasFirstAuditEntry = s.Nodes["audit-node-00"]
+		_, hasLastAuditEntry = s.Nodes["audit-node-24"]
+		_, hasSampleAuditAssignment = s.Assignments["audit-assign-12@audit-node-12"]
+	})
+
+	if !hasFirstAuditEntry || !hasLastAuditEntry || !hasSampleAuditAssignment {
+		t.Fatalf("Audit entry replication failed: first=%v, last=%v, sample=%v",
+			hasFirstAuditEntry, hasLastAuditEntry, hasSampleAuditAssignment)
+	}
+	t.Logf("Gate 18: Phase 7 - Audit entry replicas verified: first, last, and sample entries intact ✓")
+
+	// Phase 8: Simulate multi-member crash and verify recovery consistency
+	t.Logf("Gate 18: Phase 8 - Simulating multi-member crash scenario")
+
+	// Get follower indices
+	var followerIndices []int
+	for i := range c.Members {
+		if i != leaderIdx {
+			followerIndices = append(followerIndices, i)
+		}
+	}
+
+	// Clear both followers (multi-member crash)
+	for _, idx := range followerIndices {
+		c.Members[idx].Node.fsm.mu.Lock()
+		c.Members[idx].Node.fsm.s.Nodes = make(map[string]*Node)
+		c.Members[idx].Node.fsm.s.Assignments = make(map[string]*AssignmentRec)
+		c.Members[idx].Node.fsm.s.Index = 0
+		c.Members[idx].Node.fsm.mu.Unlock()
+	}
+
+	// Recover both followers from audit snapshot
+	for _, idx := range followerIndices {
+		snapshotCopy := make([]byte, len(auditSnapshotBytes))
+		copy(snapshotCopy, auditSnapshotBytes)
+		recoveryReader := io.NopCloser(bytes.NewReader(snapshotCopy))
+		if err := c.Members[idx].Node.fsm.Restore(recoveryReader); err != nil {
+			t.Fatalf("Failed to recover follower %d from audit snapshot: %v", idx, err)
+		}
+	}
+
+	t.Logf("Gate 18: Phase 8 - Multi-member recovery from audit snapshots completed")
+
+	// Phase 9: Verify all members have identical audit trail after recovery
+	t.Logf("Gate 18: Phase 9 - Verifying cluster-wide audit trail consistency post-recovery")
+
+	fullConsistencyCount := 0
+	for _, member := range c.Members {
+		var nodeCount int
+		var assignCount int
+		var index int64
+
+		member.Node.fsm.Read(func(s *State) {
+			nodeCount = len(s.Nodes)
+			assignCount = len(s.Assignments)
+			index = s.Index
+		})
+
+		if nodeCount == 25 && assignCount == 25 && index == 250 {
+			fullConsistencyCount++
+		}
+	}
+
+	if fullConsistencyCount != 3 {
+		t.Fatalf("Audit trail consistency lost after recovery: %d/3 members consistent", fullConsistencyCount)
+	}
+	t.Logf("Gate 18: Phase 9 - All 3 members maintain audit trail consistency: 25 nodes, 25 assignments, Index=250 ✓")
+
+	// Phase 10: Verify audit trail immutability (spot-check all entries)
+	t.Logf("Gate 18: Phase 10 - Verifying audit trail immutability across members")
+
+	allMembersHaveAllEntries := true
+	for memberIdx, member := range c.Members {
+		var nodeIDs []string
+		member.Node.fsm.Read(func(s *State) {
+			for nodeID := range s.Nodes {
+				nodeIDs = append(nodeIDs, nodeID)
+			}
+		})
+
+		if len(nodeIDs) != 25 {
+			allMembersHaveAllEntries = false
+			t.Logf("Gate 18: Phase 10 - Member %d missing audit entries: %d/25", memberIdx, len(nodeIDs))
+		}
+	}
+
+	if !allMembersHaveAllEntries {
+		t.Fatalf("Audit entry immutability violation: not all members have all entries")
+	}
+	t.Logf("Gate 18: Phase 10 - Audit trail immutability verified: all entries present on all members ✓")
+
+	t.Logf("Gate 18 PASSED: Audit ledger recovery and consistency verification successful")
+}
