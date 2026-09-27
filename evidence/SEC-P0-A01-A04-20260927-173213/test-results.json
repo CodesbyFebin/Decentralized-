@@ -1,0 +1,51 @@
+{
+  "test_run_date": "2026-09-27T17:32:13Z",
+  "total_tests": 26,
+  "passed": 26,
+  "failed": 0,
+  "test_suites": {
+    "signature_verification": {
+      "test": "TestSecretLeaseRequest_SignatureVerification",
+      "status": "PASS",
+      "gates": ["direct_sig_verify", "json_roundtrip_precision"]
+    },
+    "basic_authorization": [
+      {"test": "TestSecretLeaseAuthorize_Positive", "status": "PASS"},
+      {"test": "TestSecretLeaseAuthorize_BadSignature", "status": "PASS"},
+      {"test": "TestSecretLeaseAuthorize_Replay", "status": "PASS"},
+      {"test": "TestSecretLeaseAuthorize_Concurrent", "status": "PASS", "details": "50 concurrent, 1 success"},
+      {"test": "TestSecretLeaseAuthorize_SameLeaseDifferentPayload", "status": "PASS", "error_code": "CONFLICT"},
+      {"test": "TestSecretLeaseAuthorize_NonceReuseWithDifferentScope", "status": "PASS"},
+      {"test": "TestSecretLeaseAuthorize_SnapshotRestore", "status": "PASS"}
+    ],
+    "lost_response_protection": {
+      "test": "TestSecretLease_LostResponse",
+      "status": "PASS",
+      "scenario": "commit -> discard response -> retry = DENIED",
+      "gate": "section_17_at_most_once"
+    },
+    "cross_scope_rejection": [
+      {"test": "TestSecretLease_CrossScope_NodeIDRejection", "status": "PASS", "scope": "node"},
+      {"test": "TestSecretLease_CrossScope_WorkloadIDRejection", "status": "PASS", "scope": "workload"},
+      {"test": "TestSecretLease_CrossScope_DeploymentIDRejection", "status": "PASS", "scope": "deployment"},
+      {"test": "TestSecretLease_CrossScope_SecretIDRejection", "status": "PASS", "scope": "secret"},
+      {"test": "TestSecretLease_CrossScope_GenerationRejection", "status": "PASS", "scope": "generation"}
+    ],
+    "negative_controls": [
+      {"test": "TestSecretLease_NegativeControl_ExpiredCredential", "status": "PASS"},
+      {"test": "TestSecretLease_NegativeControl_FutureCredential", "status": "PASS"},
+      {"test": "TestSecretLease_NegativeControl_ClockSkewTooLarge", "status": "PASS"},
+      {"test": "TestSecretLease_NegativeControl_RevokedNode", "status": "PASS"},
+      {"test": "TestSecretLease_NegativeControl_WrongSecret", "status": "PASS"},
+      {"test": "TestSecretLease_NegativeControl_NoAssignment", "status": "PASS"},
+      {"test": "TestSecretLease_NegativeControl_AssignmentNotRunning", "status": "PASS"}
+    ],
+    "production_path": [
+      {"test": "TestSecretLease_Production_Section18_ProcessRestart", "status": "PASS", "gate": "restart_durability"},
+      {"test": "TestSecretLease_Production_Section19_RaftLeaderFailover", "status": "PASS", "gate": "leader_failover"},
+      {"test": "TestSecretLease_Production_Section21_SnapshotLogReplay", "status": "PASS", "gate": "snapshot_log_replay"},
+      {"test": "TestSecretLease_Production_Section22_ConcurrentProposals", "status": "PASS", "gate": "concurrent_safety"},
+      {"test": "TestSecretLease_Production_Section27_SignatureEdgeCases", "status": "PASS", "subtests": ["wrong-key", "malformed-empty", "truncated-signature", "bitwise-flipped"]}
+    ]
+  }
+}
