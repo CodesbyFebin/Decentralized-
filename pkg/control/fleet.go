@@ -247,7 +247,7 @@ func (s *State) FleetInventory() []*FleetNode {
 			CapacityByNode:   make(map[string]*NodeCapacityModel),
 			Reservations:     make(map[string]*ResourceReservation),
 			Allocations:      make(map[string]*ResourceAllocation),
-			RecentlyReleased: make(map[string]int64),
+			TerminalOperations: make(map[string]string),
 			Generation:       0,
 		}
 	}
@@ -490,23 +490,21 @@ func (s *State) SetNodeCapacity(nodeID string, totalCPU, ownerCPU, totalMem, own
 }
 
 // Reserve atomically reserves capacity on a node. Idempotent on reservation ID.
-// Returns error if insufficient capacity or constraints violated.
+// Gate 2: Permanent terminal operation state (no time-based grace period)
+// Returns error if insufficient capacity, constraints violated, or ID was previously released.
 func (s *State) Reserve(reservationID, nodeID string, cpuMilli, memBytes int64) error {
-	// Check for duplicate reservation ID
+	// Check if ID was previously released (permanent terminal state)
+	if _, ok := s.ResourceLedger.TerminalOperations[reservationID]; ok {
+		return fmt.Errorf("reservation ID %s was permanently released; ID reuse not allowed", reservationID)
+	}
+
+	// Check for duplicate active reservation ID
 	if existing, ok := s.ResourceLedger.Reservations[reservationID]; ok {
-		// Idempotent: same ID means same amount (or at least, we treat it as success)
+		// Idempotent: same ID with same params succeeds
 		if existing.NodeID == nodeID && existing.CPUMilli == cpuMilli && existing.MemBytes == memBytes {
 			return nil
 		}
 		return fmt.Errorf("reservation ID %s already exists with different parameters", reservationID)
-	}
-
-	// Check if recently released (double-release protection)
-	if releaseTime, ok := s.ResourceLedger.RecentlyReleased[reservationID]; ok {
-		if time.Now().UnixMilli()-releaseTime < 5000 { // within 5 seconds
-			return fmt.Errorf("reservation ID %s recently released; use new ID", reservationID)
-		}
-		delete(s.ResourceLedger.RecentlyReleased, reservationID)
 	}
 
 	// Get node capacity
@@ -558,11 +556,23 @@ func (s *State) Reserve(reservationID, nodeID string, cpuMilli, memBytes int64) 
 }
 
 // ReleaseReservation atomically releases a reservation. Idempotent.
+// Gate 2: Permanent terminal operation state (durable idempotency, survives restart/failover)
 func (s *State) ReleaseReservation(reservationID string) error {
+	// Check if already in terminal state
+	if opType, ok := s.ResourceLedger.TerminalOperations[reservationID]; ok {
+		// Idempotent: already released (may have been released before restart/failover)
+		if opType == "reservation-released" {
+			return nil
+		}
+		return fmt.Errorf("cannot release reservation %s: ID has terminal state %s", reservationID, opType)
+	}
+
+	// Check if active reservation exists
 	_, ok := s.ResourceLedger.Reservations[reservationID]
 	if !ok {
-		// Idempotent: already released
-		s.ResourceLedger.RecentlyReleased[reservationID] = time.Now().UnixMilli()
+		// Unknown ID - idempotent success (may have been released before state was persisted)
+		s.ResourceLedger.TerminalOperations[reservationID] = "reservation-released"
+		s.ResourceLedger.Generation++
 		return nil
 	}
 
@@ -574,28 +584,26 @@ func (s *State) ReleaseReservation(reservationID string) error {
 	}
 
 	delete(s.ResourceLedger.Reservations, reservationID)
-	s.ResourceLedger.RecentlyReleased[reservationID] = time.Now().UnixMilli()
+	s.ResourceLedger.TerminalOperations[reservationID] = "reservation-released"
 	s.ResourceLedger.Generation++
 	return nil
 }
 
 // Allocate atomically allocates from a reservation. Idempotent on allocation ID.
+// Gate 2: Permanent terminal operation state (no time-based grace period)
 func (s *State) Allocate(allocationID, reservationID string, cpuMilli, memBytes int64) error {
-	// Check for duplicate allocation ID
+	// Check if ID was previously released (permanent terminal state)
+	if _, ok := s.ResourceLedger.TerminalOperations[allocationID]; ok {
+		return fmt.Errorf("allocation ID %s was permanently released; ID reuse not allowed", allocationID)
+	}
+
+	// Check for duplicate active allocation ID
 	if existing, ok := s.ResourceLedger.Allocations[allocationID]; ok {
-		// Idempotent: same ID means same amount
+		// Idempotent: same ID with same params succeeds
 		if existing.ReservationID == reservationID && existing.CPUMilli == cpuMilli && existing.MemBytes == memBytes {
 			return nil
 		}
 		return fmt.Errorf("allocation ID %s already exists with different parameters", allocationID)
-	}
-
-	// Check if recently released
-	if releaseTime, ok := s.ResourceLedger.RecentlyReleased[allocationID]; ok {
-		if time.Now().UnixMilli()-releaseTime < 5000 {
-			return fmt.Errorf("allocation ID %s recently released; use new ID", allocationID)
-		}
-		delete(s.ResourceLedger.RecentlyReleased, allocationID)
 	}
 
 	// Get reservation
@@ -636,16 +644,28 @@ func (s *State) Allocate(allocationID, reservationID string, cpuMilli, memBytes 
 }
 
 // ReleaseAllocation atomically releases an allocation. Idempotent.
+// Gate 2: Permanent terminal operation state (durable idempotency, survives restart/failover)
 func (s *State) ReleaseAllocation(allocationID string) error {
+	// Check if already in terminal state
+	if opType, ok := s.ResourceLedger.TerminalOperations[allocationID]; ok {
+		// Idempotent: already released
+		if opType == "allocation-released" {
+			return nil
+		}
+		return fmt.Errorf("cannot release allocation %s: ID has terminal state %s", allocationID, opType)
+	}
+
+	// Check if active allocation exists
 	_, ok := s.ResourceLedger.Allocations[allocationID]
 	if !ok {
-		// Idempotent: already released
-		s.ResourceLedger.RecentlyReleased[allocationID] = time.Now().UnixMilli()
+		// Unknown ID - idempotent success (may have been released before state was persisted)
+		s.ResourceLedger.TerminalOperations[allocationID] = "allocation-released"
+		s.ResourceLedger.Generation++
 		return nil
 	}
 
 	delete(s.ResourceLedger.Allocations, allocationID)
-	s.ResourceLedger.RecentlyReleased[allocationID] = time.Now().UnixMilli()
+	s.ResourceLedger.TerminalOperations[allocationID] = "allocation-released"
 	s.ResourceLedger.Generation++
 	return nil
 }

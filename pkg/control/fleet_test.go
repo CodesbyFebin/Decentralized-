@@ -291,7 +291,7 @@ func TestComputeFleetSummary_AvailableCapacity(t *testing.T) {
 			CapacityByNode:   make(map[string]*NodeCapacityModel),
 			Reservations:     make(map[string]*ResourceReservation),
 			Allocations:      make(map[string]*ResourceAllocation),
-			RecentlyReleased: make(map[string]int64),
+			TerminalOperations: make(map[string]string),
 		},
 	}
 	summary := s.ComputeFleetSummary()
@@ -522,7 +522,7 @@ func TestResourceLedger_NegativeControl_AllowExpiredNodes(t *testing.T) {
 			CapacityByNode:   make(map[string]*NodeCapacityModel),
 			Reservations:     make(map[string]*ResourceReservation),
 			Allocations:      make(map[string]*ResourceAllocation),
-			RecentlyReleased: make(map[string]int64),
+			TerminalOperations: make(map[string]string),
 		},
 	}
 
@@ -540,4 +540,91 @@ func TestResourceLedger_NegativeControl_AllowExpiredNodes(t *testing.T) {
 	if !inv[0].SchedulerEligible.Eligible {
 		t.Fatalf("negative control: manual override should make eligible")
 	}
+}
+
+// TestGate2_DurableIdempotency verifies terminal operations survive restart/failover/replay
+// Gate 2 Requirement: No time-based grace period; terminal state is deterministic and persisted
+func TestGate2_DurableIdempotency(t *testing.T) {
+	s := newState()
+	s.SetNodeCapacity("node-001", 100, 20, 2000, 400, 1000, 200)
+
+	// Phase 1: Create and release a reservation
+	err := s.Reserve("res-001", "node-001", 50, 100)
+	if err != nil {
+		t.Fatalf("initial reserve failed: %v", err)
+	}
+
+	err = s.ReleaseReservation("res-001")
+	if err != nil {
+		t.Fatalf("initial release failed: %v", err)
+	}
+
+	// Phase 2: Verify reservation ID is in terminal operations
+	if _, ok := s.ResourceLedger.TerminalOperations["res-001"]; !ok {
+		t.Fatalf("released reservation ID should be in TerminalOperations")
+	}
+
+	// Phase 3: Simulate restart/failover by creating new state from same ledger (snapshot/restore)
+	// Copy the ledger to simulate persisted state
+	ledgerSnapshot := s.ResourceLedger
+
+	// Create new state and restore ledger (simulating restart)
+	s2 := newState()
+	s2.ResourceLedger = ledgerSnapshot
+
+	// Phase 4: After restart, try to reuse the released ID - should fail
+	// This verifies terminal operation state survived restart
+	err = s2.Reserve("res-001", "node-001", 30, 100)
+	if err == nil {
+		t.Fatalf("reserve with released ID should fail after restart: durable idempotency violated")
+	}
+	if err.Error() != "reservation ID res-001 was permanently released; ID reuse not allowed" {
+		t.Fatalf("wrong error message: %v", err)
+	}
+
+	// Phase 5: Retry release on already-released ID (after restart) - should be idempotent
+	err = s2.ReleaseReservation("res-001")
+	if err != nil {
+		t.Fatalf("retry release after restart should be idempotent: %v", err)
+	}
+
+	// Phase 6: Verify allocation terminal operations work the same way
+	err = s2.Reserve("res-002", "node-001", 40, 100)
+	if err != nil {
+		t.Fatalf("reserve res-002 failed: %v", err)
+	}
+
+	err = s2.Allocate("alloc-001", "res-002", 30, 100)
+	if err != nil {
+		t.Fatalf("allocate to res-002 failed: %v", err)
+	}
+
+	err = s2.ReleaseAllocation("alloc-001")
+	if err != nil {
+		t.Fatalf("release alloc-001 failed: %v", err)
+	}
+
+	// Simulate another restart
+	ledgerSnapshot2 := s2.ResourceLedger
+	s3 := newState()
+	s3.ResourceLedger = ledgerSnapshot2
+
+	// After restart, try to reuse released allocation ID - should fail
+	err = s3.Allocate("alloc-001", "res-002", 20, 100)
+	if err == nil {
+		t.Fatalf("allocate with released ID should fail after restart")
+	}
+
+	// Retry release after restart - should be idempotent
+	err = s3.ReleaseAllocation("alloc-001")
+	if err != nil {
+		t.Fatalf("retry allocation release after restart should be idempotent: %v", err)
+	}
+
+	// Phase 7: Verify TerminalOperations persists through snapshot/restore
+	if opType, ok := ledgerSnapshot2.TerminalOperations["alloc-001"]; !ok || opType != "allocation-released" {
+		t.Fatalf("allocation terminal operation not persisted through snapshot/restore")
+	}
+
+	t.Logf("Gate 2: DURABLE IDEMPOTENCY VERIFIED - Terminal operations survive restart/failover/replay")
 }

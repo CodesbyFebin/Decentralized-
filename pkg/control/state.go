@@ -256,6 +256,7 @@ type NodeCapacityModel struct {
 }
 
 // ResourceLedger tracks all capacity allocations atomically.
+// Gate 2 Requirement: Durable terminal operation state survives restart/failover/replay
 type ResourceLedger struct {
 	// Capacity models: node -> capacity definition
 	CapacityByNode map[string]*NodeCapacityModel `json:"capacityByNode"`
@@ -266,8 +267,12 @@ type ResourceLedger struct {
 	// Active allocations: allocationId -> allocation
 	Allocations map[string]*ResourceAllocation `json:"allocations"`
 
-	// For idempotency: track recently released IDs to detect double-release
-	RecentlyReleased map[string]int64 `json:"recentlyReleased"` // id -> release timestamp
+	// Terminal operations: operations permanently released (persisted, not time-based)
+	// id -> operation type ("reservation-released" | "allocation-released")
+	// Once an operation is released, its ID becomes permanently terminal
+	// Survives: restart, leader change, snapshot, replay
+	// No time-based grace period; terminal state is deterministic
+	TerminalOperations map[string]string `json:"terminalOperations"`
 
 	// Ledger generation for optimistic concurrency control
 	Generation int64 `json:"generation"`
@@ -291,7 +296,7 @@ func newState() *State {
 			CapacityByNode:   make(map[string]*NodeCapacityModel),
 			Reservations:     make(map[string]*ResourceReservation),
 			Allocations:      make(map[string]*ResourceAllocation),
-			RecentlyReleased: make(map[string]int64),
+			TerminalOperations: make(map[string]string),
 			Generation:       0,
 		},
 	}
@@ -337,7 +342,7 @@ func (s *State) ensure() {
 			CapacityByNode:   make(map[string]*NodeCapacityModel),
 			Reservations:     make(map[string]*ResourceReservation),
 			Allocations:      make(map[string]*ResourceAllocation),
-			RecentlyReleased: make(map[string]int64),
+			TerminalOperations: make(map[string]string),
 			Generation:       0,
 		}
 	}
