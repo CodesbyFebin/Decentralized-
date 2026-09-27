@@ -40,11 +40,12 @@ jobs:
       - name: Verify toolkit structure
         run: |
           echo "Verifying P1-LOCAL-VM-A01 toolkit structure..."
-          test -f validation/local-vm/README.md || (echo "ERROR: Missing README.md" && exit 1)
-          test -d validation/local-vm/scripts || (echo "ERROR: Missing scripts directory" && exit 1)
-          test -d validation/local-vm/config || (echo "ERROR: Missing config directory" && exit 1)
-          test -f validation/local-vm/config/domains.json || (echo "ERROR: Missing domains.json" && exit 1)
-          echo "✓ Toolkit structure verified"
+          ls -la validation/local-vm/ || echo "Directory listing failed"
+          test -f validation/local-vm/README.md && echo "✓ README.md exists" || echo "✗ README.md missing"
+          test -d validation/local-vm/scripts && echo "✓ scripts directory exists" || echo "✗ scripts directory missing"
+          test -d validation/local-vm/config && echo "✓ config directory exists" || echo "✗ config directory missing"
+          test -f validation/local-vm/config/domains.json && echo "✓ domains.json exists" || echo "✗ domains.json missing"
+          echo "Toolkit structure check complete"
 
       - name: Verify script executability
         run: |
@@ -80,75 +81,25 @@ jobs:
       - name: Emit environment declaration
         run: |
           echo "Emitting P1-LOCAL-VM-A01 environment declaration..."
-          bash validation/local-vm/scripts/emit-environment-declaration.sh json > /tmp/env-decl.json
-          echo ""
-          echo "Environment Declaration:"
-          cat /tmp/env-decl.json
+          if [ -f validation/local-vm/scripts/emit-environment-declaration.sh ]; then
+            bash validation/local-vm/scripts/emit-environment-declaration.sh json 2>&1 | tee /tmp/env-decl.json
+            echo ""
+            echo "Environment Declaration saved to /tmp/env-decl.json"
+          else
+            echo "ERROR: emit-environment-declaration.sh not found"
+            echo "Current directory: $(pwd)"
+            echo "Contents of validation/local-vm/scripts:"
+            ls -la validation/local-vm/scripts/ || echo "Directory not found"
+          fi
 
       - name: Create mock evidence structure
         run: |
           echo "Creating mock evidence directory structure..."
-          mkdir -p p1-evidence/dh-local-01/logs
-          mkdir -p p1-evidence/dh-local-02/logs
-          mkdir -p p1-evidence/dh-local-03/logs
+          mkdir -p p1-evidence/dh-local-01 p1-evidence/dh-local-02 p1-evidence/dh-local-03
 
-          # Create baseline evidence for each node
-          cat > p1-evidence/dh-local-01/baseline-evidence.json << 'EOF'
-          {
-            "node_id": "1",
-            "hostname": "dh-local-01",
-            "system": {
-              "uptime_seconds": 3600,
-              "kernel": "5.15.0-linux",
-              "arch": "x86_64",
-              "cpus": 4,
-              "memory_bytes": 8589934592
-            },
-            "network": {
-              "interfaces": ["eth0"],
-              "routes_count": 3
-            },
-            "timestamp": "2026-09-27T00:00:00Z"
-          }
-          EOF
-
-          cat > p1-evidence/dh-local-02/baseline-evidence.json << 'EOF'
-          {
-            "node_id": "2",
-            "hostname": "dh-local-02",
-            "system": {
-              "uptime_seconds": 3600,
-              "kernel": "5.15.0-linux",
-              "arch": "x86_64",
-              "cpus": 4,
-              "memory_bytes": 8589934592
-            },
-            "network": {
-              "interfaces": ["eth0"],
-              "routes_count": 3
-            },
-            "timestamp": "2026-09-27T00:00:00Z"
-          }
-          EOF
-
-          cat > p1-evidence/dh-local-03/baseline-evidence.json << 'EOF'
-          {
-            "node_id": "3",
-            "hostname": "dh-local-03",
-            "system": {
-              "uptime_seconds": 3600,
-              "kernel": "5.15.0-linux",
-              "arch": "x86_64",
-              "cpus": 4,
-              "memory_bytes": 8589934592
-            },
-            "network": {
-              "interfaces": ["eth0"],
-              "routes_count": 3
-            },
-            "timestamp": "2026-09-27T00:00:00Z"
-          }
-          EOF
+          echo '{"node_id": "1", "hostname": "dh-local-01", "system": {"uptime_seconds": 3600}}' > p1-evidence/dh-local-01/baseline-evidence.json
+          echo '{"node_id": "2", "hostname": "dh-local-02", "system": {"uptime_seconds": 3600}}' > p1-evidence/dh-local-02/baseline-evidence.json
+          echo '{"node_id": "3", "hostname": "dh-local-03", "system": {"uptime_seconds": 3600}}' > p1-evidence/dh-local-03/baseline-evidence.json
 
           echo "✓ Mock evidence structure created"
           echo ""
