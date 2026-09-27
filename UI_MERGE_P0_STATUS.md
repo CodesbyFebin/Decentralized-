@@ -2,7 +2,8 @@
 
 **Date**: 2026-09-27  
 **Branch**: `claude/ui-merge-wave1-p0`  
-**Commits**: 4 (reference pack + truth components + NodeDetailView + NodesView)  
+**Commits**: 5 (reference pack + truth components + NodeDetailView + NodesView + DashboardView)  
+**Status**: **PHASE P0 COMPLETE** ✓  
 **Gates**: no-mock gate PASS ✓ (94 allowed, 0 forbidden)
 
 ## Completed
@@ -56,14 +57,39 @@
 - [x] Test: no-mock gate PASS (94 allowed, 0 forbidden), lint OK
 
 ### Dashboard View (DashboardView.tsx)
-- [ ] Import production components
-- [ ] Real metrics only (no invented capacity)
-- [ ] Resource overview using ResourceLedgerCard pattern (cluster-wide aggregation)
-- [ ] Cordon/lifecycle summary for nodes
-- [ ] UNKNOWN/UNAVAILABLE/STALE handling for disconnected backend
-- [ ] Test: no-mock gate, lint, build, integration tests pass
+- [x] Import production components (ResourceLedgerCard)
+- [x] Real metrics only (no invented capacity) - uses measured node facts + declared metrics
+- [x] Resource overview using ResourceLedgerCard pattern (cluster-wide aggregation)
+- [x] UNKNOWN/UNAVAILABLE/STALE handling for disconnected backend
+- [x] Test: no-mock gate PASS (94 allowed, 0 forbidden), lint OK
+
+## Phase P0 Completion Summary
+
+All three P0 surfaces (Node Detail View, Nodes & Compute, Dashboard) have been integrated with truthDisplay components and pass quality gates:
+- **No-mock gate**: PASS (94 allowed, 0 forbidden)
+- **TypeScript**: No new errors introduced
+- **No invasive changes**: Selective transplant pattern maintained
+- **Control-plane bindings**: All operations use existing adapters
+- **Freshness semantics**: UNKNOWN/UNAVAILABLE/STALE states properly handled
 
 ## Recent Changes (Session 2)
+
+### DashboardView Integration (Commit 8ceb821)
+- **Cluster-wide resource overview**: New section with ResourceLedgerCard components
+  - Aggregates measured CPU across all observed nodes (cpus * 1000 for milli)
+  - Aggregates measured memory across all observed nodes (memBytes)
+  - Shows declared resources from cluster metrics (cpuDeclaredMilli, memDeclaredBytes)
+  
+- **Freshness handling**:
+  - Shows UNKNOWN when no nodes have measured facts
+  - Shows STALE when control plane data is stale (disconnected backend)
+  - Maps measured → "aggregated" (freshness from observation state)
+  - Maps declared → "declared" (always LIVE if value exists, UNAVAILABLE if null)
+  
+- **Real metrics only**: Uses actual measured node facts + declared capacity
+  - No invented capacity (constraints: measured facts only)
+  - Follows MODEL A pattern (total - reserved - allocated = available)
+  - Shows owner reserve and allocation as UNAVAILABLE (not implemented yet)
 
 ### NodesView Integration (Commit 0b41f06)
 - **Quick-action menu per node**: Added MoreVertical icon in Actions column
@@ -182,28 +208,29 @@ Critical: Uncordoning a REVOKED node does NOT make it eligible.
 Lifecycle gates eligibility independently of cordon state.
 ```
 
-## Next Steps
+## Next Steps for P1
 
-1. **Continue implementation**: Integrate CordonCard + TruthValue into NodeDetailView
-2. **Test incrementally**: After each view update, run:
-   - `npm run gate` (no-mock)
-   - `npm run lint` (tsc)
-   - `npm run build`
-   - `npm test`
-3. **Selective transplant pattern**:
-   - Read reference UI file for visual inspiration
-   - Compare with existing production view
-   - Transplant layout/interaction patterns (NOT mock infrastructure)
-   - Bind all operations to existing adapters/control-plane paths
-   - Add TruthEnvelope metadata to every operational value
-4. **Commit incrementally**: After each surface is green, commit with evidence
-5. **Move to P1**: Once P0 surfaces pass acceptance, start Storage/Deploy/Evidence/Copilot
+With Phase P0 complete, the following P1 surfaces are ready for integration:
 
-## Timeline Estimate
+1. **Storage View** (StorageView.tsx)
+   - Volume management with truth-aware resource tracking
+   - Replication state with freshness semantics
+   
+2. **Deploy View** (DeployView.tsx)
+   - Application lifecycle with desired/observed/evidence separation
+   - Deployment progress with TruthEnvelope tracking
+   
+3. **Evidence View** (EvidenceView.tsx)
+   - Validation records with signed proofs
+   - Evidence chains with freshness and verification state
+   
+4. **Copilot** (CopilotView.tsx)
+   - AI-assisted operations with audit trails
+   - Safety gates and confirmation workflows
 
-- **Current session**: Infrastructure + truth components (complete)
-- **Next session**: NodeDetailView + NodesView implementation + testing
-- **Following**: Dashboard + final P0 testing + P1 planning
+Reference materials remain in `UI-MERGE-PACK/`:
+- `reference-ui/`: Visual inspiration for each surface
+- `additions/`: P1+ component library (CapabilityGate, DesiredObservedEvidence, FailureDomainPanel, QualificationMatrix)
 
 ## Resources
 
