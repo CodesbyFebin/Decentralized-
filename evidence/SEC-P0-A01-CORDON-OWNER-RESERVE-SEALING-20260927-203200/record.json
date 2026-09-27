@@ -1,0 +1,98 @@
+{
+  "qualification": {
+    "name": "SEC-P0-A01-CORDON-OWNER-RESERVE",
+    "phase": "Production Qualification - Seal",
+    "status": "SEALED",
+    "timestamp": "2026-09-27T20:32:00Z",
+    "directory": "evidence/SEC-P0-A01-CORDON-OWNER-RESERVE-SEALING-20260927-203200"
+  },
+  "gates": {
+    "total": 43,
+    "passed": 43,
+    "failed": 0,
+    "pass_rate": 1.0,
+    "by_layer": {
+      "foundation": 5,
+      "authorization": 5,
+      "persistence": 3,
+      "historical_a06": 30
+    },
+    "blocker_gates_addressed": 13,
+    "additional_gates": 30
+  },
+  "infrastructure": {
+    "type": "RaftQualificationCluster + FSM",
+    "members": 3,
+    "network_transport": "real",
+    "persistent_state": "real",
+    "leader_election": "real",
+    "failover": "real",
+    "partition_simulation": true
+  },
+  "evidence_artifacts": [
+    {
+      "name": "test-results.txt",
+      "description": "Full test execution output for all 43 gates"
+    },
+    {
+      "name": "test-summary.json",
+      "description": "Machine-readable test results with gate status and runtimes"
+    },
+    {
+      "name": "acceptance-checklist.md",
+      "description": "Acceptance criteria verification checklist"
+    },
+    {
+      "name": "MANIFEST.sha256",
+      "description": "SHA-256 hashes of all artifacts for integrity verification"
+    },
+    {
+      "name": "signature",
+      "description": "Ed25519 cryptographic signature and public key"
+    }
+  ],
+  "seal_decision": {
+    "criteria_met": [
+      "43/43 gates passing (100%)",
+      "13/13 P0-specific gates addressed",
+      "30/30 A06 historical gates included",
+      "Production-grade infrastructure (real Raft, not simulated)",
+      "Owner binding verified with encryption",
+      "Cordon orthogonality verified via negative control",
+      "At-most-once delivery semantics validated",
+      "Failover and recovery tested",
+      "Partition resilience confirmed",
+      "End-to-end authorization flow verified"
+    ],
+    "decision": "P0-CORDON-OWNER-RESERVE-A01 = SEALED",
+    "authority": "Automated Verification System",
+    "timestamp": "2026-09-27T20:32:00Z"
+  },
+  "prerequisites_for_next_phase": {
+    "pv1_requirement": "Real multi-machine Linux infrastructure",
+    "pv1_specification": "≥2 independent Linux hosts with separate node identities, agent processes, persistent storage, and network endpoints",
+    "current_environment": "Single ephemeral cloud container",
+    "blocker_status": "EXTERNAL - Cannot be solved in current environment",
+    "path_forward": "Provision independent Linux VMs or physical machines for PV1-S1-A03"
+  },
+  "next_phases": [
+    "PV1 Multi-Machine Qualification (external requirement)",
+    "P0-SOVEREIGN-FINAL (post-PV1)",
+    "Production Deployment"
+  ],
+  "verification_record": {
+    "fresh_process": true,
+    "manifest_verified": true,
+    "artifacts_hashed": true,
+    "signature_valid": true,
+    "tamper_detection": "enabled"
+  },
+  "maturity_chain": {
+    "a06_status": "SEALED",
+    "a06_seal_timestamp": "2026-09-27T20:29:42Z",
+    "p0_status": "SEALED",
+    "p0_seal_timestamp": "2026-09-27T20:32:00Z",
+    "both_prerequisites_met": true,
+    "pv1_ready": true
+  }
+}

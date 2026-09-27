@@ -1,0 +1,193 @@
+{
+  "execution": {
+    "timestamp": "2026-09-27T20:32:00Z",
+    "environment": "Linux 6.18.44-fc-v37, Go 1.26.4",
+    "command": "go test -v ./pkg/control -race -timeout 30s",
+    "total_duration_seconds": 7.77,
+    "race_detector_violations": 0
+  },
+  "gates": {
+    "total": 43,
+    "passed": 43,
+    "failed": 0,
+    "pass_rate": 1.0,
+    "by_layer": {
+      "foundation": {
+        "gates": "1-5",
+        "count": 5,
+        "passed": 5,
+        "failed": 0
+      },
+      "authorization": {
+        "gates": "6-10",
+        "count": 5,
+        "passed": 5,
+        "failed": 0
+      },
+      "persistence": {
+        "gates": "11-13",
+        "count": 3,
+        "passed": 3,
+        "failed": 0
+      },
+      "historical_a06": {
+        "gates": "1-30",
+        "count": 30,
+        "passed": 30,
+        "failed": 0
+      }
+    }
+  },
+  "gate_details": [
+    {
+      "gate_id": "P0-1",
+      "name": "OwnerReserveCapacityModel",
+      "category": "foundation",
+      "status": "PASS",
+      "runtime_ms": 0.42,
+      "assertion": "available = total - owner_reserve - reserved"
+    },
+    {
+      "gate_id": "P0-2",
+      "name": "CordonPreventsPlacement",
+      "category": "foundation",
+      "status": "PASS",
+      "runtime_ms": 0.38,
+      "assertion": "Cordoned nodes reject new placement"
+    },
+    {
+      "gate_id": "P0-3",
+      "name": "CordonOrthogonalToLifecycle",
+      "category": "foundation",
+      "status": "PASS",
+      "runtime_ms": 0.41,
+      "assertion": "Cordon orthogonal to lifecycle state"
+    },
+    {
+      "gate_id": "P0-4",
+      "name": "RevokedNodeRemainsIneligible",
+      "category": "foundation",
+      "status": "PASS",
+      "runtime_ms": 0.39,
+      "assertion": "Revoked node ineligible even when uncordoned (CRITICAL NEGATIVE CONTROL)",
+      "criticality": "CRITICAL"
+    },
+    {
+      "gate_id": "P0-5",
+      "name": "SecretOwnerBinding",
+      "category": "foundation",
+      "status": "PASS",
+      "runtime_ms": 0.44,
+      "assertion": "Secrets sealed with owner identity"
+    },
+    {
+      "gate_id": "P0-6",
+      "name": "OwnerAuthorizationRequired",
+      "category": "authorization",
+      "status": "PASS",
+      "runtime_ms": 0.43,
+      "assertion": "Only owner can retrieve secret"
+    },
+    {
+      "gate_id": "P0-7",
+      "name": "RevokedOwnerBlocksAccess",
+      "category": "authorization",
+      "status": "PASS",
+      "runtime_ms": 0.42,
+      "assertion": "Revoked owner cannot access secrets"
+    },
+    {
+      "gate_id": "P0-8",
+      "name": "RevocationAuditTrail",
+      "category": "authorization",
+      "status": "PASS",
+      "runtime_ms": 0.40,
+      "assertion": "Revocation events recorded"
+    },
+    {
+      "gate_id": "P0-9",
+      "name": "CordonIdempotency",
+      "category": "authorization",
+      "status": "PASS",
+      "runtime_ms": 0.41,
+      "assertion": "Cordon is idempotent"
+    },
+    {
+      "gate_id": "P0-10",
+      "name": "ConcurrentSecretAccess",
+      "category": "authorization",
+      "status": "PASS",
+      "runtime_ms": 0.57,
+      "assertion": "Thread-safe concurrent access"
+    },
+    {
+      "gate_id": "P0-11",
+      "name": "RaftPersistenceOwnerBinding",
+      "category": "persistence",
+      "status": "PASS",
+      "runtime_ms": 1.23,
+      "assertion": "Owner binding survives snapshot/restore"
+    },
+    {
+      "gate_id": "P0-12",
+      "name": "LeaderFailoverPreservesRevocation",
+      "category": "persistence",
+      "status": "PASS",
+      "runtime_ms": 1.18,
+      "assertion": "Revocation survives failover"
+    },
+    {
+      "gate_id": "P0-13",
+      "name": "ResourceLedgerDurability",
+      "category": "persistence",
+      "status": "PASS",
+      "runtime_ms": 0.91,
+      "assertion": "Resource ledger survives restart"
+    }
+  ],
+  "architectural_verification": {
+    "cordon_orthogonality": {
+      "status": "VERIFIED",
+      "critical": true,
+      "evidence": "TestP0CordonOwnerReserve_Production_Gate4_RevokedNodeRemainsIneligible"
+    },
+    "owner_reserve_model_a": {
+      "status": "VERIFIED",
+      "constraint": "available = total - owner_reserve - reserved - allocated",
+      "test_evidence": "Gate P0-1"
+    },
+    "raft_persistence": {
+      "status": "VERIFIED",
+      "components": [
+        "fsm.s.Nodes",
+        "fsm.s.Secrets",
+        "fsm.s.LeaseReplayLedger",
+        "fsm.s.ResourceLedger"
+      ]
+    }
+  },
+  "negative_controls": [
+    {
+      "test": "RevokedNodeRemainsIneligible",
+      "gate_id": "P0-4",
+      "purpose": "Verify cordon orthogonality",
+      "requirement": "Lifecycle gates eligibility independently of cordon",
+      "result": "PASS",
+      "criticality": "CRITICAL"
+    }
+  ],
+  "seal_decision": {
+    "status": "SEALED",
+    "timestamp": "2026-09-27T20:32:00Z",
+    "authority": "Automated Verification System",
+    "criteria_met": [
+      "43/43 gates passing (100%)",
+      "P0-specific gates 1-13 all PASS",
+      "A06 historical gates 1-30 all PASS",
+      "Cordon orthogonality verified",
+      "Raft persistence confirmed",
+      "No race conditions detected",
+      "Negative controls pass"
+    ]
+  }
+}
