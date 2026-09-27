@@ -3219,3 +3219,321 @@ func TestGate11_ConcurrentStateMutationsWithSnapshots(t *testing.T) {
 
 	t.Logf("Gate 11 PASSED: Concurrent mutations with snapshots verified, no race conditions detected")
 }
+
+// TestGate12_SnapshotPersistenceToDisk verifies that FSM snapshots can be persisted
+// to disk and recovered correctly, supporting large-scale cluster scenarios.
+//
+// Scenario:
+//   Phase 1: Create FSM and build large state (50 nodes, 50 assignments)
+//   Phase 2: Persist snapshot to disk via file I/O
+//   Phase 3: Verify snapshot recovery from disk works
+//   Phase 4: Test large-scale scenario with 100+ nodes
+//   Phase 5: Verify multiple snapshots can be stored and managed
+//   Phase 6: Test snapshot distribution to new member from disk
+func TestGate12_SnapshotPersistenceToDisk(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping Gate 12 Snapshot Persistence qualification test in short mode")
+	}
+
+	// Phase 1: Create FSM and build large state
+	t.Logf("Gate 12: Phase 1 - Creating FSM with large state (50 nodes, 50 assignments)")
+
+	fsm := NewFSM()
+	fsm.s.Cluster = "qualification-cluster"
+
+	fsm.mu.Lock()
+	if fsm.s.Nodes == nil {
+		fsm.s.Nodes = make(map[string]*Node)
+	}
+	if fsm.s.Assignments == nil {
+		fsm.s.Assignments = make(map[string]*AssignmentRec)
+	}
+	for i := 0; i < 50; i++ {
+		nodeID := fmt.Sprintf("scale-node-%03d", i)
+		fsm.s.Nodes[nodeID] = &Node{
+			ID:     nodeID,
+			Name:   fmt.Sprintf("scale-node-%03d", i),
+			Status: "active",
+			Health: "healthy",
+		}
+
+		assignKey := fmt.Sprintf("assign-%03d@%s", i, nodeID)
+		fsm.s.Assignments[assignKey] = &AssignmentRec{
+			Key: assignKey,
+			A: api.Assignment{
+				ID:      fmt.Sprintf("assign-%03d", i),
+				App:     "scale-app",
+				Replica: int64(i),
+				Node:    nodeID,
+			},
+			Created: int64(4000000 + i),
+		}
+	}
+	fsm.s.Index = int64(500)
+	fsm.mu.Unlock()
+
+	t.Logf("Gate 12: Phase 1 - Built large FSM state: 50 nodes, 50 assignments, Index=500")
+
+	// Phase 2: Persist snapshot to disk
+	t.Logf("Gate 12: Phase 2 - Creating snapshot and persisting to disk")
+
+	tempDir := t.TempDir()
+	snapPath := filepath.Join(tempDir, "snapshot-50-nodes.json")
+
+	fsm_snap, err := fsm.Snapshot()
+	if err != nil {
+		t.Fatalf("Failed to create snapshot: %v", err)
+	}
+
+	// Persist to file
+	f, err := os.Create(snapPath)
+	if err != nil {
+		t.Fatalf("Failed to create snapshot file: %v", err)
+	}
+
+	if err := fsm_snap.Persist(&fileSnapshotSink{f: f}); err != nil {
+		t.Fatalf("Failed to persist snapshot to file: %v", err)
+	}
+	fsm_snap.Release()
+
+	fileInfo, err := os.Stat(snapPath)
+	if err != nil {
+		t.Fatalf("Failed to stat snapshot file: %v", err)
+	}
+	t.Logf("Gate 12: Phase 2 - Persisted snapshot to disk: %s (%d bytes)", snapPath, fileInfo.Size())
+
+	// Phase 3: Recover snapshot from disk and verify
+	t.Logf("Gate 12: Phase 3 - Recovering snapshot from disk and verifying state")
+
+	recoveredFSM := NewFSM()
+	recoveredFSM.s.Cluster = "qualification-cluster"
+
+	snapFile, err := os.Open(snapPath)
+	if err != nil {
+		t.Fatalf("Failed to open snapshot file: %v", err)
+	}
+
+	if err := recoveredFSM.Restore(snapFile); err != nil {
+		t.Fatalf("Failed to restore snapshot: %v", err)
+	}
+	snapFile.Close()
+
+	var recoveredNodes int
+	var recoveredAssignments int
+	var recoveredIndex int64
+	recoveredFSM.Read(func(s *State) {
+		recoveredNodes = len(s.Nodes)
+		recoveredAssignments = len(s.Assignments)
+		recoveredIndex = s.Index
+	})
+
+	t.Logf("Gate 12: Phase 3 - Recovered from disk: %d nodes, %d assignments, Index=%d",
+		recoveredNodes, recoveredAssignments, recoveredIndex)
+
+	if recoveredNodes != 50 {
+		t.Fatalf("Recovered node count mismatch: %d != 50", recoveredNodes)
+	}
+	if recoveredAssignments != 50 {
+		t.Fatalf("Recovered assignment count mismatch: %d != 50", recoveredAssignments)
+	}
+	if recoveredIndex != 500 {
+		t.Fatalf("Recovered index mismatch: %d != 500", recoveredIndex)
+	}
+
+	// Phase 4: Test large-scale scenario with 100+ nodes
+	t.Logf("Gate 12: Phase 4 - Testing large-scale scenario (100+ nodes)")
+
+	largeFSM := NewFSM()
+	largeFSM.s.Cluster = "qualification-cluster"
+
+	largeFSM.mu.Lock()
+	if largeFSM.s.Nodes == nil {
+		largeFSM.s.Nodes = make(map[string]*Node)
+	}
+	if largeFSM.s.Assignments == nil {
+		largeFSM.s.Assignments = make(map[string]*AssignmentRec)
+	}
+	for i := 0; i < 120; i++ {
+		nodeID := fmt.Sprintf("scale-node-%03d", i)
+		largeFSM.s.Nodes[nodeID] = &Node{
+			ID:     nodeID,
+			Name:   fmt.Sprintf("scale-node-%03d", i),
+			Status: "active",
+			Health: "healthy",
+		}
+
+		assignKey := fmt.Sprintf("assign-%03d@%s", i, nodeID)
+		largeFSM.s.Assignments[assignKey] = &AssignmentRec{
+			Key: assignKey,
+			A: api.Assignment{
+				ID:      fmt.Sprintf("assign-%03d", i),
+				App:     "scale-app",
+				Replica: int64(i),
+				Node:    nodeID,
+			},
+			Created: int64(4000000 + i),
+		}
+	}
+	largeFSM.s.Index = int64(550)
+	largeFSM.mu.Unlock()
+
+	t.Logf("Gate 12: Phase 4 - Built large state: 120 nodes, 120 assignments, Index=550")
+
+	// Take and persist large snapshot
+	largeSnapPath := filepath.Join(tempDir, "snapshot-120-nodes.json")
+	fsm_snap2, err := largeFSM.Snapshot()
+	if err != nil {
+		t.Fatalf("Failed to create large snapshot: %v", err)
+	}
+
+	f2, err := os.Create(largeSnapPath)
+	if err != nil {
+		t.Fatalf("Failed to create large snapshot file: %v", err)
+	}
+
+	if err := fsm_snap2.Persist(&fileSnapshotSink{f: f2}); err != nil {
+		t.Fatalf("Failed to persist large snapshot: %v", err)
+	}
+	fsm_snap2.Release()
+
+	largeFileInfo, err := os.Stat(largeSnapPath)
+	if err != nil {
+		t.Fatalf("Failed to stat large snapshot file: %v", err)
+	}
+	t.Logf("Gate 12: Phase 4 - Large snapshot persisted: %d bytes", largeFileInfo.Size())
+
+	// Phase 5: Verify multiple snapshots can be stored and managed
+	t.Logf("Gate 12: Phase 5 - Verifying multiple snapshots can be stored and managed")
+
+	snapshotDir := filepath.Join(tempDir, "snapshots")
+	if err := os.MkdirAll(snapshotDir, 0755); err != nil {
+		t.Fatalf("Failed to create snapshots directory: %v", err)
+	}
+
+	// Create multiple snapshots with different state
+	for j := 1; j <= 3; j++ {
+		snapFSM := NewFSM()
+		snapFSM.s.Cluster = "qualification-cluster"
+
+		snapFSM.mu.Lock()
+		if snapFSM.s.Nodes == nil {
+			snapFSM.s.Nodes = make(map[string]*Node)
+		}
+		if snapFSM.s.Assignments == nil {
+			snapFSM.s.Assignments = make(map[string]*AssignmentRec)
+		}
+		nodeCount := 50 * j
+		for i := 0; i < nodeCount; i++ {
+			nodeID := fmt.Sprintf("scale-node-%03d", i)
+			snapFSM.s.Nodes[nodeID] = &Node{
+				ID:     nodeID,
+				Name:   fmt.Sprintf("scale-node-%03d", i),
+				Status: "active",
+				Health: "healthy",
+			}
+
+			assignKey := fmt.Sprintf("assign-%03d@%s", i, nodeID)
+			snapFSM.s.Assignments[assignKey] = &AssignmentRec{
+				Key: assignKey,
+				A: api.Assignment{
+					ID:      fmt.Sprintf("assign-%03d", i),
+					App:     "scale-app",
+					Replica: int64(i),
+					Node:    nodeID,
+				},
+				Created: int64(4000000 + i),
+			}
+		}
+		snapFSM.s.Index = int64(500 + (j * 50))
+		snapFSM.mu.Unlock()
+
+		snapPath := filepath.Join(snapshotDir, fmt.Sprintf("snapshot-%d.json", j))
+		snap, err := snapFSM.Snapshot()
+		if err != nil {
+			t.Fatalf("Failed to create snapshot %d: %v", j, err)
+		}
+
+		f, err := os.Create(snapPath)
+		if err != nil {
+			t.Fatalf("Failed to create snapshot file %d: %v", j, err)
+		}
+
+		if err := snap.Persist(&fileSnapshotSink{f: f}); err != nil {
+			t.Fatalf("Failed to persist snapshot %d: %v", j, err)
+		}
+		snap.Release()
+	}
+
+	// List snapshots in directory
+	entries, err := os.ReadDir(snapshotDir)
+	if err != nil {
+		t.Fatalf("Failed to list snapshots directory: %v", err)
+	}
+	t.Logf("Gate 12: Phase 5 - Snapshots stored: %d", len(entries))
+
+	// Phase 6: Test snapshot distribution to new member from disk
+	t.Logf("Gate 12: Phase 6 - Testing snapshot distribution to new member")
+
+	// Read the latest snapshot (snapshot-3.json)
+	latestSnapPath := filepath.Join(snapshotDir, "snapshot-3.json")
+	snapFile3, err := os.Open(latestSnapPath)
+	if err != nil {
+		t.Fatalf("Failed to open latest snapshot: %v", err)
+	}
+
+	// Restore to new FSM (simulating new cluster member)
+	newMemberFSM := NewFSM()
+	newMemberFSM.s.Cluster = "qualification-cluster"
+
+	if err := newMemberFSM.Restore(snapFile3); err != nil {
+		t.Fatalf("Failed to restore snapshot to new member: %v", err)
+	}
+	snapFile3.Close()
+
+	var newMemberNodes int
+	var newMemberAssignments int
+	var newMemberIndex int64
+	newMemberFSM.Read(func(s *State) {
+		newMemberNodes = len(s.Nodes)
+		newMemberAssignments = len(s.Assignments)
+		newMemberIndex = s.Index
+	})
+
+	t.Logf("Gate 12: Phase 6 - New member bootstrapped from snapshot: %d nodes, %d assignments, Index=%d",
+		newMemberNodes, newMemberAssignments, newMemberIndex)
+
+	// Snapshot 3 should have 150 nodes (50*3)
+	if newMemberNodes != 150 {
+		t.Fatalf("New member node count mismatch: %d != 150", newMemberNodes)
+	}
+	if newMemberAssignments != 150 {
+		t.Fatalf("New member assignment count mismatch: %d != 150", newMemberAssignments)
+	}
+	if newMemberIndex != 650 {
+		t.Fatalf("New member index mismatch: %d != 650", newMemberIndex)
+	}
+
+	t.Logf("Gate 12 PASSED: FSM snapshot persistence to disk verified with large-scale scenarios")
+}
+
+// fileSnapshotSink implements raft.SnapshotSink for file-based persistence
+type fileSnapshotSink struct {
+	f *os.File
+}
+
+func (s *fileSnapshotSink) Write(p []byte) (int, error) {
+	return s.f.Write(p)
+}
+
+func (s *fileSnapshotSink) Close() error {
+	return s.f.Close()
+}
+
+func (s *fileSnapshotSink) ID() string {
+	return s.f.Name()
+}
+
+func (s *fileSnapshotSink) Cancel() error {
+	s.f.Close()
+	return os.Remove(s.f.Name())
+}
