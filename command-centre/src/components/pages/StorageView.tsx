@@ -1,17 +1,35 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Plus, Database, HardDrive, Server, Archive, ShieldCheck, Monitor, Terminal, Settings2, Box, Copy, Layers, Package } from 'lucide-react';
+import { Plus, Database, HardDrive, Server, Archive, ShieldCheck, Monitor, Terminal, Settings2, Box, Copy, Layers, Package, Trash2, RotateCcw, Zap } from 'lucide-react';
 import type { ArtifactRec, Freshness, Metric, NodeHealth, NodeRec, VolumeRec } from '../../types/reality';
 import { useResource } from '../../lib/useResource';
+import { useSession } from '../../lib/session';
+import { api, ApiError } from '../../lib/client';
 import { SurfaceLayout, SurfaceHero, Eyebrow, regionGroups, groupMarkers, meshArcs } from '../common/CommandSurface';
 import { Glass, KpiTile, PageTabs, RailPanel, RailItem, NetworkRow, PanelHeader, IconTile, StatusPill, Grad, PrimaryButton, GhostButton, Tone } from '../common/ui';
-import { Gate, fmtBytes, since, shortDigest, Unavailable, Empty, FreshnessPill, metricText, Note } from '../common/states';
+import { Gate, fmtBytes, since, shortDigest, Unavailable, Empty, FreshnessPill, metricText, Note, ErrorState } from '../common/states';
 import { ConnectDialog, ConnectTarget } from '../common/ConnectDialog';
 
 type Tab = 'overview' | 'mine' | 'volumes' | 'objects' | 'replication' | 'contributions' | 'depin' | 'activity';
 
+interface CreateVolumeForm {
+  name: string;
+  sizeBytes: string;
+  durability: number;
+  app: string;
+}
+
 const STORAGE_NOTE =
   'Volumes are content-addressed (BLAKE3, FastCDC chunks) and replicated across hosts; snapshots commit at quorum 2 and corrupted chunks are repaired from peers. Erasure coding is not implemented.';
+
+const parseSizeBytes = (val: string): number => {
+  const match = val.match(/^(\d+)([KMG]i)?$/);
+  if (!match) return 0;
+  const num = parseInt(match[1], 10);
+  const unit = match[2] || '';
+  const multipliers: Record<string, number> = { 'Ki': 1024, 'Mi': 1024 * 1024, 'Gi': 1024 * 1024 * 1024 };
+  return num * (multipliers[unit] || 1);
+};
 
 const ADD_STORAGE: (ConnectTarget & { icon: React.ReactNode; tone: Tone })[] = [
   { id: 'local', title: 'Local Disk', subtitle: 'Add storage from this machine', hostName: 'this-computer', note: STORAGE_NOTE, icon: <Monitor className="w-5 h-5" />, tone: 'blue' },
@@ -31,11 +49,78 @@ interface Payload {
 }
 
 export default function StorageView() {
+  const { can, mode } = useSession();
   const res = useResource<Payload>('/storage');
+  const apps = useResource<{ apps: Array<{ name: string }> }>('/apps');
   const [params, setParams] = useSearchParams();
   const tab = (params.get('tab') as Tab) || 'overview';
   const setTab = (t: Tab) => setParams((p) => (t === 'overview' ? (p.delete('tab'), p) : (p.set('tab', t), p)), { replace: true });
   const [connect, setConnect] = useState<ConnectTarget | null>(params.get('add') ? ADD_STORAGE[0] : null);
+
+  const [showCreateVolume, setShowCreateVolume] = useState(false);
+  const [selectedVolume, setSelectedVolume] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<ApiError | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [form, setForm] = useState<CreateVolumeForm>({
+    name: '',
+    sizeBytes: '10Gi',
+    durability: 2,
+    app: ''
+  });
+
+  const allowed = can('api.write') && mode === 'controlplane';
+  const appList = useMemo(() => apps.data?.apps ?? [], [apps.data]);
+
+  const createVolume = async () => {
+    if (!form.name || !form.sizeBytes || !form.app) return;
+    setBusy(true);
+    setErr(null);
+    setSuccessMsg(null);
+    try {
+      await api.post('/volumes', {
+        name: form.name,
+        sizeBytes: parseSizeBytes(form.sizeBytes),
+        durabilityReplicas: form.durability,
+        app: form.app
+      });
+      setSuccessMsg(`Volume ${form.name} created`);
+      setForm({ name: '', sizeBytes: '10Gi', durability: 2, app: '' });
+      setShowCreateVolume(false);
+    } catch (e) {
+      setErr(e as ApiError);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const deleteVolume = async (id: string) => {
+    if (!confirm(`Delete volume ${id}? This cannot be undone.`)) return;
+    setBusy(true);
+    setErr(null);
+    try {
+      await api.del(`/volumes/${encodeURIComponent(id)}`);
+      setSuccessMsg(`Volume ${id} deleted`);
+      setSelectedVolume(null);
+    } catch (e) {
+      setErr(e as ApiError);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const repairVolume = async (id: string) => {
+    setBusy(true);
+    setErr(null);
+    try {
+      await api.post(`/volumes/${encodeURIComponent(id)}/repair`, {});
+      setSuccessMsg(`Repair triggered for volume ${id}`);
+    } catch (e) {
+      setErr(e as ApiError);
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const hosts = res.data?.hosts ?? [];
   const groups = regionGroups(hosts.map((h) => ({ ...h, location: h.location } as unknown as NodeRec)));
@@ -68,6 +153,7 @@ export default function StorageView() {
           actions={
             <>
               <PrimaryButton onClick={() => setConnect(ADD_STORAGE[0])}><Plus className="w-4 h-4" /> Add Storage</PrimaryButton>
+              {allowed && <PrimaryButton onClick={() => setShowCreateVolume(true)}><Plus className="w-4 h-4" /> Create Volume</PrimaryButton>}
               <GhostButton onClick={() => setTab('volumes')}><Layers className="w-4 h-4" /> Volumes</GhostButton>
               <GhostButton onClick={() => setTab('objects')}><Package className="w-4 h-4" /> Artifacts</GhostButton>
             </>
@@ -81,6 +167,72 @@ export default function StorageView() {
           { id: 'overview', label: 'Overview' }, { id: 'mine', label: 'My Storage' }, { id: 'volumes', label: 'Volumes' }, { id: 'objects', label: 'Objects & Artifacts' },
           { id: 'replication', label: 'Replication' }, { id: 'contributions', label: 'Contributions' }, { id: 'depin', label: 'DePIN Networks' }, { id: 'activity', label: 'Activity' }
         ] as { id: Tab; label: string }[]} active={tab} onChange={setTab} />
+
+        {successMsg && (
+          <div className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 p-3 text-[12.5px] text-emerald-100">
+            {successMsg}
+          </div>
+        )}
+        {err && <ErrorState error={err} />}
+
+        {showCreateVolume && (
+          <Glass className="p-4 space-y-3">
+            <div className="text-lg font-bold text-white">Create volume</div>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="block text-[12px] text-slate-300 space-y-1">
+                Volume name
+                <input
+                  className="w-full rounded-lg bg-black/30 border border-[rgba(125,190,255,0.2)] focus:border-cyan-400/60 outline-none px-2.5 py-2 text-[13px]"
+                  placeholder="data-v1"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value.trim().toLowerCase() })}
+                  disabled={busy}
+                />
+              </label>
+              <label className="block text-[12px] text-slate-300 space-y-1">
+                Size
+                <input
+                  className="w-full rounded-lg bg-black/30 border border-[rgba(125,190,255,0.2)] focus:border-cyan-400/60 outline-none px-2.5 py-2 text-[13px]"
+                  placeholder="10Gi"
+                  value={form.sizeBytes}
+                  onChange={(e) => setForm({ ...form, sizeBytes: e.target.value.trim() })}
+                  disabled={busy}
+                />
+              </label>
+              <label className="block text-[12px] text-slate-300 space-y-1">
+                Replicas
+                <select
+                  className="w-full rounded-lg bg-black/30 border border-[rgba(125,190,255,0.2)] focus:border-cyan-400/60 outline-none px-2.5 py-2 text-[13px]"
+                  value={form.durability}
+                  onChange={(e) => setForm({ ...form, durability: parseInt(e.target.value, 10) })}
+                  disabled={busy}
+                >
+                  <option value="2">2× (recommended)</option>
+                  <option value="3">3×</option>
+                  <option value="4">4×</option>
+                </select>
+              </label>
+              <label className="block text-[12px] text-slate-300 space-y-1">
+                Application
+                <select
+                  className="w-full rounded-lg bg-black/30 border border-[rgba(125,190,255,0.2)] focus:border-cyan-400/60 outline-none px-2.5 py-2 text-[13px]"
+                  value={form.app}
+                  onChange={(e) => setForm({ ...form, app: e.target.value })}
+                  disabled={busy}
+                >
+                  <option value="">Select app...</option>
+                  {appList.map((a) => <option key={a.name} value={a.name}>{a.name}</option>)}
+                </select>
+              </label>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <GhostButton onClick={() => setShowCreateVolume(false)} disabled={busy}>Cancel</GhostButton>
+              <PrimaryButton onClick={createVolume} disabled={!form.name || !form.sizeBytes || !form.app || busy}>
+                {busy ? 'Creating...' : 'Create volume'}
+              </PrimaryButton>
+            </div>
+          </Glass>
+        )}
 
         <Gate res={res}>
           {(d) => {
@@ -107,11 +259,11 @@ export default function StorageView() {
             );
             const volumeTable = d.volumes.length ? (
               <Glass className="overflow-x-auto">
-                <table className="dh-table w-full min-w-[860px]">
-                  <thead><tr><th>Volume</th><th>State</th><th>Size</th><th>Durability</th><th>Verified replicas</th><th>Members</th><th>Committed snapshot</th></tr></thead>
+                <table className="dh-table w-full min-w-[920px]">
+                  <thead><tr><th>Volume</th><th>State</th><th>Size</th><th>Durability</th><th>Verified replicas</th><th>Members</th><th>Committed snapshot</th>{allowed && <th>Actions</th>}</tr></thead>
                   <tbody>
                     {d.volumes.map((v) => (
-                      <tr key={v.id}>
+                      <tr key={v.id} className={selectedVolume === v.id ? 'bg-cyan-500/10' : ''}>
                         <td><Link to={`/apps/${encodeURIComponent(v.app)}?tab=storage`} className="text-slate-100 font-semibold hover:text-cyan-300">{v.id}</Link></td>
                         <td title={v.detail}><StatusPill status={v.state} /></td>
                         <td className="tabular-nums">{fmtBytes(v.sizeBytes)}</td>
@@ -119,6 +271,30 @@ export default function StorageView() {
                         <td className="tabular-nums">{v.verified} / {v.durabilityReplicas}</td>
                         <td className="text-slate-300">{v.memberNames.join(', ')}</td>
                         <td className="font-mono text-[11px] text-slate-400">{v.committed ? `${shortDigest(v.committed.root)} · ${since(v.committed.ts)}` : 'none'}</td>
+                        {allowed && (
+                          <td>
+                            <div className="flex items-center gap-1">
+                              {v.verified < v.durabilityReplicas && (
+                                <button
+                                  onClick={() => repairVolume(v.id)}
+                                  disabled={busy}
+                                  className="text-slate-400 hover:text-cyan-300 p-1"
+                                  title="Trigger repair"
+                                >
+                                  <RotateCcw className="w-4 h-4" />
+                                </button>
+                              )}
+                              <button
+                                onClick={() => deleteVolume(v.id)}
+                                disabled={busy}
+                                className="text-slate-400 hover:text-rose-300 p-1"
+                                title="Delete volume"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>

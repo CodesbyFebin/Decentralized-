@@ -1,6 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Rocket, FileCode2, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, Rocket, FileCode2, Plus, Trash2, Search, Check } from 'lucide-react';
 import type { ArtifactRec } from '../../types/reality';
 import { useResource } from '../../lib/useResource';
 import { useSession } from '../../lib/session';
@@ -27,6 +27,12 @@ interface Form {
 }
 
 const q = (s: string) => JSON.stringify(s); // JSON strings are valid YAML double-quoted scalars
+
+/** Mask sensitive environment variable values */
+function maskSecretEnv(manifest: string): string {
+  const secretPatterns = ['PASSWORD', 'SECRET', 'TOKEN', 'KEY', 'CREDENTIAL', 'APIKEY', 'API_KEY', 'PRIVATE', 'SIGNING', 'AUTH'];
+  return manifest.replace(/^(\s+[A-Z_]*(?:PASSWORD|SECRET|TOKEN|KEY|CREDENTIAL|APIKEY|API_KEY|PRIVATE|SIGNING|AUTH)[A-Z_]*: )(".*?"|\S+)$/gm, '$1"••••••••"');
+}
 
 /** Build a dh/v1 manifest. Only fields the control plane's schema accepts. */
 export function toManifest(f: Form): string {
@@ -75,6 +81,7 @@ export default function DeployNewView() {
   const arts = useResource<{ artifacts: ArtifactRec[] }>('/deployments', { pollMs: 0 });
   const [mode2, setMode2] = useState<'form' | 'yaml'>(params.get('mode') === 'yaml' ? 'yaml' : 'form');
   const [yaml, setYaml] = useState('');
+  const [artifactSearch, setArtifactSearch] = useState('');
   const [f, setF] = useState<Form>({
     name: '',
     runtime: params.get('runtime') === 'docker' ? 'docker' : 'process',
@@ -92,16 +99,21 @@ export default function DeployNewView() {
     healthPath: '/healthz',
     env: []
   });
-  const [step, setStep] = useState<'configure' | 'review'>('configure');
+  const [step, setStep] = useState<'configure' | 'review' | 'progress'>('configure');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<ApiError | null>(null);
   const [refused, setRefused] = useState<string | null>(null);
+  const [deploymentResult, setDeploymentResult] = useState<{ app: string; generation: number } | null>(null);
 
   const manifest = mode2 === 'yaml' ? yaml : toManifest(f);
   const errors = mode2 === 'yaml' ? (yaml.trim() ? [] : ['Paste a dh/v1 manifest.']) : validateForm(f);
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setF((x) => ({ ...x, [k]: v }));
   const allowed = can('api.write') && mode === 'controlplane';
   const artifacts = useMemo(() => arts.data?.artifacts ?? [], [arts.data]);
+  const filteredArtifacts = useMemo(() => {
+    const query = artifactSearch.toLowerCase();
+    return artifacts.filter((a) => a.name.toLowerCase().includes(query) || a.digest.includes(artifactSearch));
+  }, [artifacts, artifactSearch]);
 
   const submit = async () => {
     setBusy(true);
@@ -109,8 +121,12 @@ export default function DeployNewView() {
     setRefused(null);
     try {
       const r = await api.post<{ data: { ok: boolean; message: string; app: string | null; deployment: { app: string; generation: number } | null } }>('/deployments', { manifest });
-      if (r.data.deployment) navigate(`/deploy/${encodeURIComponent(r.data.deployment.app)}/${r.data.deployment.generation}`);
-      else if (r.data.app) navigate(`/apps/${encodeURIComponent(r.data.app)}`);
+      if (r.data.deployment) {
+        setDeploymentResult(r.data.deployment);
+        setStep('progress');
+      } else if (r.data.app) {
+        navigate(`/apps/${encodeURIComponent(r.data.app)}`);
+      }
     } catch (e) {
       const x = e as ApiError;
       if (x.code === 'CONFLICT' || x.code === 'VALIDATION_FAILED') setRefused(x.message);
@@ -141,7 +157,8 @@ export default function DeployNewView() {
       {!allowed && <Note>{mode === 'demo' ? 'The demo replay is read-only.' : 'Applying needs a capability with api.write. You can still compose and review.'}</Note>}
 
       {step === 'configure' && mode2 === 'form' && (
-        <div className="grid lg:grid-cols-2 gap-4">
+        <div className="grid lg:grid-cols-3 gap-4">
+          <div className="lg:col-span-2 space-y-4">
           <Glass className="p-4 space-y-3">
             <PanelHeader title="Source" subtitle="Only digest-pinned artifacts can be deployed." />
             <label className={label}>Application name<input className={input} value={f.name} onChange={(e) => set('name', e.target.value)} placeholder="my-app" /></label>
@@ -153,16 +170,53 @@ export default function DeployNewView() {
               </select>
             </label>
             {f.runtime === 'process' ? (
-              <label className={label}>
+              <div className={label}>
                 Artifact
-                <select className={input} value={f.image} onChange={(e) => set('image', e.target.value)}>
-                  <option value="">Select an artifact…</option>
-                  {artifacts.map((a) => (
-                    <option key={a.digest} value={`${a.name}@${a.digest}`}>{a.name} · {shortDigest(a.digest)}{a.attested ? ' · attested' : ' · UNSIGNED'}</option>
-                  ))}
-                </select>
-                {!artifacts.length && <span className="text-slate-500">No artifacts in the CAS. Push one with dh artifact push.</span>}
-              </label>
+                <div className="mt-1 relative">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Search className="w-4 h-4 text-slate-400 absolute left-3 pointer-events-none" />
+                    <input
+                      type="text"
+                      className={`${input} pl-8`}
+                      value={artifactSearch}
+                      onChange={(e) => setArtifactSearch(e.target.value)}
+                      placeholder="Search artifacts…"
+                    />
+                  </div>
+                  <div className="space-y-1 max-h-64 overflow-y-auto">
+                    {filteredArtifacts.length > 0 ? (
+                      filteredArtifacts.map((a) => (
+                        <button
+                          key={a.digest}
+                          onClick={() => { set('image', `${a.name}@${a.digest}`); setArtifactSearch(''); }}
+                          className={`w-full text-left px-3 py-2 rounded-lg text-[12px] transition-colors ${
+                            f.image === `${a.name}@${a.digest}`
+                              ? 'bg-cyan-500/20 border border-cyan-400/60 text-cyan-100'
+                              : 'bg-black/20 border border-transparent hover:bg-cyan-500/10 text-slate-300'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1 min-w-0">
+                              <div className="font-mono truncate">{a.name}</div>
+                              <div className="text-slate-400 text-[11px]">{shortDigest(a.digest)}</div>
+                            </div>
+                            {a.attested ? (
+                              <span className="text-emerald-400 text-[11px] ml-2 flex-shrink-0">attested</span>
+                            ) : (
+                              <span className="text-amber-400 text-[11px] ml-2 flex-shrink-0">unsigned</span>
+                            )}
+                            {f.image === `${a.name}@${a.digest}` && <Check className="w-4 h-4 text-cyan-400 ml-2 flex-shrink-0" />}
+                          </div>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="text-slate-500 text-[12px] p-2 text-center">
+                        {artifacts.length === 0 ? 'No artifacts in the CAS. Push one with dh artifact push.' : 'No matching artifacts.'}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             ) : (
               <label className={label}>Image (ref@sha256:…)<input className={`${input} font-mono`} value={f.image} onChange={(e) => set('image', e.target.value.trim())} placeholder="ghcr.io/org/app@sha256:…" /></label>
             )}
@@ -172,34 +226,41 @@ export default function DeployNewView() {
               <label className={label}>Memory<input className={input} value={f.mem} onChange={(e) => set('mem', e.target.value)} /></label>
             </div>
             <Note>The process runtime does not enforce CPU or memory limits; use the docker runtime when limits must be enforced.</Note>
-          </Glass>
-          <Glass className="p-4 space-y-3">
-            <PanelHeader title="Placement & network" />
-            <label className={label}>Tiers (comma-separated)<input className={input} value={f.tiers} onChange={(e) => set('tiers', e.target.value)} /></label>
-            <div className="grid grid-cols-2 gap-2">
-              <label className={label}>Spread<select className={input} value={f.spread} onChange={(e) => set('spread', e.target.value as Form['spread'])}><option>failure-domain</option><option>none</option></select></label>
-              <label className={label}>Anti-affinity<select className={input} value={f.antiAffinity} onChange={(e) => set('antiAffinity', e.target.value as Form['antiAffinity'])}><option>hard</option><option>soft</option><option>none</option></select></label>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <label className={label}>Port name<input className={input} value={f.port} onChange={(e) => set('port', e.target.value)} placeholder="http (empty = no port)" /></label>
-              {f.runtime === 'docker' && <label className={label}>Container port<input className={input} value={f.containerPort} onChange={(e) => set('containerPort', e.target.value)} /></label>}
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <label className={label}>Ingress host<input className={input} value={f.ingressHost} onChange={(e) => set('ingressHost', e.target.value)} placeholder="app.example.com" /></label>
-              <label className={label}>TLS<select className={input} value={f.tls} onChange={(e) => set('tls', e.target.value as Form['tls'])}><option value="local">local (cluster CA)</option><option value="acme">acme</option><option value="none">none</option></select></label>
-            </div>
-            <label className={label}>Health check path<input className={input} value={f.healthPath} onChange={(e) => set('healthPath', e.target.value)} /></label>
-            <div>
-              <div className="flex items-center justify-between text-[12px] text-slate-300">Environment <button onClick={() => set('env', [...f.env, { k: '', v: '' }])} className="text-cyan-300 inline-flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> add</button></div>
-              {f.env.map((e, i) => (
-                <div key={i} className="flex gap-2 mt-1.5">
-                  <input className={`${input} font-mono`} value={e.k} placeholder="NAME" onChange={(x) => set('env', f.env.map((y, j) => (j === i ? { ...y, k: x.target.value } : y)))} />
-                  <input className={input} value={e.v} placeholder="value" onChange={(x) => set('env', f.env.map((y, j) => (j === i ? { ...y, v: x.target.value } : y)))} />
-                  <button onClick={() => set('env', f.env.filter((_, j) => j !== i))} aria-label="remove" className="text-slate-400 hover:text-rose-300"><Trash2 className="w-4 h-4" /></button>
-                </div>
-              ))}
-              <Note>Env values are stored in control-plane state; there is no secrets store yet, so do not put secrets here.</Note>
-            </div>
+            </Glass>
+            <Glass className="p-4 space-y-3">
+                <PanelHeader title="Placement & network" />
+              <label className={label}>Tiers (comma-separated)<input className={input} value={f.tiers} onChange={(e) => set('tiers', e.target.value)} /></label>
+              <div className="grid grid-cols-2 gap-2">
+                <label className={label}>Spread<select className={input} value={f.spread} onChange={(e) => set('spread', e.target.value as Form['spread'])}><option>failure-domain</option><option>none</option></select></label>
+                <label className={label}>Anti-affinity<select className={input} value={f.antiAffinity} onChange={(e) => set('antiAffinity', e.target.value as Form['antiAffinity'])}><option>hard</option><option>soft</option><option>none</option></select></label>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <label className={label}>Port name<input className={input} value={f.port} onChange={(e) => set('port', e.target.value)} placeholder="http (empty = no port)" /></label>
+                {f.runtime === 'docker' && <label className={label}>Container port<input className={input} value={f.containerPort} onChange={(e) => set('containerPort', e.target.value)} /></label>}
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <label className={label}>Ingress host<input className={input} value={f.ingressHost} onChange={(e) => set('ingressHost', e.target.value)} placeholder="app.example.com" /></label>
+                <label className={label}>TLS<select className={input} value={f.tls} onChange={(e) => set('tls', e.target.value as Form['tls'])}><option value="local">local (cluster CA)</option><option value="acme">acme</option><option value="none">none</option></select></label>
+              </div>
+              <label className={label}>Health check path<input className={input} value={f.healthPath} onChange={(e) => set('healthPath', e.target.value)} /></label>
+              <div>
+                <div className="flex items-center justify-between text-[12px] text-slate-300">Environment <button onClick={() => set('env', [...f.env, { k: '', v: '' }])} className="text-cyan-300 inline-flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> add</button></div>
+                {f.env.map((e, i) => (
+                  <div key={i} className="flex gap-2 mt-1.5">
+                    <input className={`${input} font-mono`} value={e.k} placeholder="NAME" onChange={(x) => set('env', f.env.map((y, j) => (j === i ? { ...y, k: x.target.value } : y)))} />
+                    <input className={input} value={e.v} placeholder="value" onChange={(x) => set('env', f.env.map((y, j) => (j === i ? { ...y, v: x.target.value } : y)))} />
+                    <button onClick={() => set('env', f.env.filter((_, j) => j !== i))} aria-label="remove" className="text-slate-400 hover:text-rose-300"><Trash2 className="w-4 h-4" /></button>
+                  </div>
+                ))}
+                <Note>Env values are stored in control-plane state; there is no secrets store yet, so do not put secrets here.</Note>
+              </div>
+            </Glass>
+          </div>
+          <Glass className="p-4 space-y-3 sticky top-4 h-fit">
+            <PanelHeader title="Manifest preview" subtitle="Real-time YAML" />
+            <pre className="rounded-lg bg-[#020814] border border-[rgba(125,190,255,0.12)] p-3 text-[11px] text-cyan-100 font-mono overflow-x-auto whitespace-pre-wrap break-words max-h-96 overflow-y-auto">
+              {toManifest(f)}
+            </pre>
           </Glass>
         </div>
       )}
@@ -213,8 +274,29 @@ export default function DeployNewView() {
       {step === 'review' && (
         <Glass className="p-4 space-y-3">
           <PanelHeader title="Review deployment intent" subtitle="This exact manifest is sent to POST /api/v1/apply. The control plane validates it, commits a new generation, and hosts decide admission." />
-          <pre className="rounded-xl bg-[#020814] border border-[rgba(125,190,255,0.12)] p-3 text-[12px] text-cyan-100 font-mono overflow-x-auto">{mode2 === 'yaml' ? manifest : manifest.replace(/^(\s+[A-Z_][A-Z0-9_]*: ).*$/gm, '$1"••••"')}</pre>
-          {mode2 === 'form' && f.env.length > 0 && <Note>Environment values are masked in this review.</Note>}
+          <pre className="rounded-xl bg-[#020814] border border-[rgba(125,190,255,0.12)] p-3 text-[12px] text-cyan-100 font-mono overflow-x-auto">{maskSecretEnv(manifest)}</pre>
+          {mode2 === 'form' && f.env.length > 0 && <Note>Sensitive environment variables are masked in this review.</Note>}
+        </Glass>
+      )}
+
+      {step === 'progress' && deploymentResult && (
+        <Glass className="p-4 space-y-4">
+          <div className="flex items-start gap-3">
+            <div className="w-3 h-3 rounded-full bg-cyan-400 mt-1.5 animate-pulse" />
+            <div>
+              <h2 className="text-xl font-bold text-white">Deployment in progress</h2>
+              <p className="text-sm text-slate-400 mt-1">Generation #{deploymentResult.generation} of <code className="text-cyan-300">{deploymentResult.app}</code></p>
+            </div>
+          </div>
+          <Note>The control plane is validating the manifest and scheduling replicas across your cluster. Check the deployment detail page for real-time progress.</Note>
+          <div className="flex gap-2">
+            <PrimaryButton onClick={() => navigate(`/deploy/${encodeURIComponent(deploymentResult.app)}/${deploymentResult.generation}`)}>
+              View deployment progress
+            </PrimaryButton>
+            <GhostButton onClick={() => navigate(`/apps/${encodeURIComponent(deploymentResult.app)}`)}>
+              Go to app
+            </GhostButton>
+          </div>
         </Glass>
       )}
 
@@ -226,16 +308,18 @@ export default function DeployNewView() {
       {refused && <div role="alert" className="rounded-xl border border-rose-400/30 bg-rose-500/10 p-3 text-[12.5px] text-rose-100"><b>Control plane refused the manifest:</b> {refused}</div>}
       {err && <ErrorState error={err} />}
 
-      <div className="flex gap-2 justify-end">
-        {step === 'review' && <GhostButton onClick={() => setStep('configure')}>Back</GhostButton>}
-        {step === 'configure' ? (
-          <PrimaryButton disabled={errors.length > 0} onClick={() => setStep('review')}>Review</PrimaryButton>
-        ) : (
-          <PrimaryButton disabled={!allowed || busy} onClick={submit}>
-            <Rocket className="w-4 h-4" /> {busy ? 'Applying…' : 'Apply manifest'}
-          </PrimaryButton>
-        )}
-      </div>
+      {step !== 'progress' && (
+        <div className="flex gap-2 justify-end">
+          {step === 'review' && <GhostButton onClick={() => setStep('configure')}>Back</GhostButton>}
+          {step === 'configure' ? (
+            <PrimaryButton disabled={errors.length > 0} onClick={() => setStep('review')}>Review</PrimaryButton>
+          ) : step === 'review' ? (
+            <PrimaryButton disabled={!allowed || busy} onClick={submit}>
+              <Rocket className="w-4 h-4" /> {busy ? 'Applying…' : 'Apply manifest'}
+            </PrimaryButton>
+          ) : null}
+        </div>
+      )}
     </div>
   );
 }
