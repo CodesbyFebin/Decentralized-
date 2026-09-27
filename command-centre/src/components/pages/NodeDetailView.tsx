@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Server, Radio, Pause, Play, CheckCircle2, ShieldOff, Terminal, KeyRound } from 'lucide-react';
+import { ArrowLeft, Server, Radio, Pause, Play, CheckCircle2, ShieldOff, Terminal, KeyRound, AlertCircle, CheckSquare } from 'lucide-react';
 import type { AuditEntryRec, NodeOperation, NodeRec, ReplicaRec, VolumeRec } from '../../types/reality';
 import { useResource } from '../../lib/useResource';
 import { useSession } from '../../lib/session';
@@ -11,6 +11,24 @@ import { Gate, FreshnessPill, fmtBytes, fmtTime, fmtAge, since, shortDigest, Err
 import { Digest, FreshnessBadge, viewFreshness } from '../common/truth';
 import { TruthValue, ResourceLedgerCard, CordonCard, type TruthEnvelope, type ResourceDimension } from '../common/truthDisplay';
 
+interface PlacementConstraint {
+  id: string;
+  type: 'AFFINITY' | 'ANTI_AFFINITY' | 'TOPOLOGY_SPREAD';
+  label: string;
+  description: string;
+  enforced: TruthEnvelope<boolean>;
+  appliesTo: string[];
+  evidenceId: string | null;
+}
+
+interface FailureDomainHierarchy {
+  region: TruthEnvelope<string>;
+  zone: TruthEnvelope<string>;
+  host: TruthEnvelope<string>;
+  rack: TruthEnvelope<string | null>;
+  constraints: PlacementConstraint[];
+}
+
 interface Payload {
   node: NodeRec;
   replicas: (ReplicaRec & { app: string })[];
@@ -18,9 +36,10 @@ interface Payload {
   diagnostics: { subject: string; item: string; value: string; basis: string; detail: string }[];
   volumes: VolumeRec[];
   allocated: { cpuMilli: number; memBytes: number; replicas: number; undeclared: number };
+  failureDomain?: FailureDomainHierarchy;
 }
 
-type Tab = 'overview' | 'workloads' | 'resources' | 'network' | 'contribution' | 'depin' | 'security' | 'logs' | 'evidence' | 'settings';
+type Tab = 'overview' | 'workloads' | 'resources' | 'network' | 'placement' | 'contribution' | 'depin' | 'security' | 'logs' | 'evidence' | 'settings';
 const LEGACY: Record<string, Tab> = { facts: 'resources', storage: 'resources', mesh: 'network', identity: 'security', events: 'evidence' };
 
 const Row: React.FC<{ k: string; children: React.ReactNode }> = ({ k, children }) => (
@@ -142,6 +161,7 @@ export default function NodeDetailView() {
                   { id: 'workloads', label: `Workloads (${d.replicas.length})` },
                   { id: 'resources', label: 'Resources' },
                   { id: 'network', label: 'Network' },
+                  { id: 'placement', label: 'Placement (P1)' },
                   { id: 'contribution', label: 'Contribution' },
                   { id: 'depin', label: 'DePIN' },
                   { id: 'security', label: 'Security' },
@@ -386,6 +406,8 @@ export default function NodeDetailView() {
                 </Glass>
               )}
 
+              {tab === 'placement' && d.failureDomain && <FailureDomainsSection domain={d.failureDomain} />}
+
               {tab === 'contribution' && (
                 <Unavailable title="Contribution policy" state="PLANNED" detail="This host serves its owner only. There is no community or marketplace contribution, and nothing is contributed by default. Capacity can be shared with a peer cluster only through a root-signed federation grant, which the host's own policy (allowFederated) can still refuse." />
               )}
@@ -462,6 +484,93 @@ export default function NodeDetailView() {
           );
         }}
       </Gate>
+    </div>
+  );
+}
+
+function FailureDomainsSection({ domain }: { domain: FailureDomainHierarchy }) {
+  const [expandedConstraintId, setExpandedConstraintId] = React.useState<string | null>(null);
+
+  return (
+    <div className="space-y-4">
+      <Glass className="p-4">
+        <PanelHeader icon={<IconTile tone="blue" size="sm"><Server className="w-4 h-4" /></IconTile>} title="Failure domain hierarchy (P1)" subtitle="Logical grouping for placement constraints and affinity rules." />
+        <div className="mt-4 space-y-2">
+          <TruthValue
+            label="Region"
+            envelope={domain.region}
+            format={(v) => v}
+          />
+          <TruthValue
+            label="Zone"
+            envelope={domain.zone}
+            format={(v) => v}
+          />
+          <TruthValue
+            label="Host"
+            envelope={domain.host}
+            format={(v) => v}
+          />
+          <TruthValue
+            label="Rack"
+            envelope={domain.rack}
+            format={(v) => v || 'not assigned'}
+          />
+        </div>
+        <Note>Failure domains group nodes for placement constraints. LIVE indicates current observation; STALE or UNKNOWN indicates measurement is old or unavailable.</Note>
+      </Glass>
+
+      {domain.constraints.length > 0 && (
+        <Glass className="p-4">
+          <PanelHeader icon={<IconTile tone="emerald" size="sm"><CheckSquare className="w-4 h-4" /></IconTile>} title="Placement constraints (P1)" subtitle="Affinity and anti-affinity rules that apply to this host." />
+          <div className="mt-4 space-y-2">
+            {domain.constraints.map((constraint) => (
+              <div
+                key={constraint.id}
+                className="p-3 rounded-lg bg-slate-800/30 border border-slate-700/20 cursor-pointer hover:bg-slate-800/50 transition-colors"
+                onClick={() => setExpandedConstraintId(expandedConstraintId === constraint.id ? null : constraint.id)}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1">
+                      <div className="text-[12px] font-semibold text-slate-100">{constraint.label}</div>
+                      <div className="text-[11px] text-slate-400 mt-0.5">{constraint.description}</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <StatusPill status={constraint.type} tone={constraint.type === 'AFFINITY' ? 'blue' : constraint.type === 'ANTI_AFFINITY' ? 'amber' : 'violet'} dot={false} />
+                    <div className={`text-[10px] font-mono ${constraint.enforced.freshness === 'LIVE' ? 'text-emerald-400' : 'text-slate-400'}`}>{constraint.enforced.freshness}</div>
+                  </div>
+                </div>
+
+                {expandedConstraintId === constraint.id && (
+                  <div className="mt-3 pt-3 border-t border-slate-700/30 space-y-2">
+                    <TruthValue
+                      label="Enforced"
+                      envelope={constraint.enforced}
+                      format={(v) => v ? 'yes' : 'no'}
+                    />
+                    {constraint.appliesTo.length > 0 && (
+                      <div className="text-[11px] text-slate-400 pt-1">
+                        <div className="font-semibold text-slate-300 mb-1">Applies to:</div>
+                        <div className="space-y-0.5">
+                          {constraint.appliesTo.map((app) => (
+                            <div key={app} className="text-slate-400 ml-3">• {app}</div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {constraint.evidenceId && (
+                      <div className="text-[10px] text-slate-500 font-mono pt-1">Evidence: {shortDigest(constraint.evidenceId)}</div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+          <Note>Constraints enforce placement rules: AFFINITY keeps replicas together, ANTI_AFFINITY spreads them apart, TOPOLOGY_SPREAD distributes across failure domains.</Note>
+        </Glass>
+      )}
     </div>
   );
 }
