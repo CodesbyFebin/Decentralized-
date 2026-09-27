@@ -1,6 +1,7 @@
 package control
 
 import (
+	"bytes"
 	"context"
 	"crypto/ed25519"
 	"encoding/base64"
@@ -122,6 +123,58 @@ func (f *FSM) AuthorizeSecretRetrievalCommand(req *SecretRetrievalRequest) (*Com
 
 	// Instrumentation: record authorization proposal
 	requestDigest := req.RequestDigest()
+	if f.retrievalObserver != nil {
+		f.retrievalObserver.AuthorizationProposed(map[string]string{
+			"requestDigest": requestDigest,
+			"requestID":     req.RequestID,
+			"nodeID":        req.NodeID,
+			"secretID":      req.SecretID,
+			"timestamp":     fmt.Sprintf("%d", now),
+		})
+	}
+
+	return cmd, nil
+}
+
+// secretLeasePayload holds the lease request and proposal timestamp.
+// Using a proper struct avoids float64 precision loss that occurs with map[string]interface{}.
+type secretLeasePayload struct {
+	ProposalTS int64                   `json:"proposal_ts"`
+	Request    *SecretLeaseRequest     `json:"request"`
+}
+
+// AuthorizeSecretLeaseCommand validates the lease request and constructs the FSM command (A04).
+// This runs on the leader only; the FSM will re-validate deterministically on all members.
+func (f *FSM) AuthorizeSecretLeaseCommand(req *SecretLeaseRequest) (*Command, error) {
+	// Leader-side static validation (signature)
+	if err := req.VerifyLeaseSignature(); err != nil {
+		return nil, fmt.Errorf("lease signature verification failed: %w", err)
+	}
+
+	// Construct deterministic authorization command
+	// Include leader's current timestamp for clock skew evaluation
+	now := time.Now().UnixNano()
+
+	// Encode the request as JSON for Raft transmission
+	// Use a proper struct to preserve int64 precision (avoid map[string]interface{} float64 conversion)
+	payload := &secretLeasePayload{
+		ProposalTS: now,
+		Request:    req,
+	}
+	dataJSON, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("encode lease command: %w", err)
+	}
+
+	cmd := &Command{
+		Type:  "secret-lease-authorize",
+		TS:    now,
+		Actor: "node/" + req.NodeID,
+		Data:  json.RawMessage(dataJSON),
+	}
+
+	// Instrumentation: record authorization proposal
+	requestDigest := req.RequestLeaseDigest()
 	if f.retrievalObserver != nil {
 		f.retrievalObserver.AuthorizationProposed(map[string]string{
 			"requestDigest": requestDigest,
@@ -1870,6 +1923,167 @@ func secretRetrievalAuthorize(f *FSM, s *State, c *Command) *Result {
 	return ok("authorization succeeded; request digest %s", requestDigest[:16])
 }
 
+// secretLeaseAuthorize validates and commits a lease authorization request (A04).
+// This handler performs atomic authorization: VALIDATE + AUTHORIZE + CONSUME + RECORD in one FSM transition.
+// Critical: one committed request = at most one authorization right; lost response does not recreate it.
+func secretLeaseAuthorize(f *FSM, s *State, c *Command) *Result {
+	// Decode payload containing proposal_ts and lease request
+	var payload secretLeasePayload
+	if err := json.Unmarshal(c.Data, &payload); err != nil {
+		return fail("DECODE", "secret-lease-authorize: invalid payload: %v", err)
+	}
+
+	proposalTS := payload.ProposalTS
+	req := payload.Request
+	if req == nil {
+		return fail("DECODE", "secret-lease-authorize: missing request in payload")
+	}
+
+	// Check 1: Lease request schema valid
+	if req.Protocol != "dhp://secrets/v1" {
+		return fail("INVALID", "secret-lease-authorize: unsupported protocol %q", req.Protocol)
+	}
+	if req.Version != 1 {
+		return fail("INVALID", "secret-lease-authorize: unsupported version %d", req.Version)
+	}
+	if req.RequestType != "secret-lease-request" {
+		return fail("INVALID", "secret-lease-authorize: invalid request type %q", req.RequestType)
+	}
+	if req.RequestID == "" || req.SecretID == "" || req.NodeID == "" {
+		return fail("INVALID", "secret-lease-authorize: missing required fields")
+	}
+
+	// Check 2: Signature verifies against node public key (deterministic)
+	if err := req.VerifyLeaseSignature(); err != nil {
+		return fail("DENIED", "secret-lease-authorize: signature: %v", err)
+	}
+
+	// Check 2a: Credential not yet issued (IssuedAt > now)
+	if req.IssuedAt > proposalTS {
+		return fail("DENIED", "secret-lease-authorize: credential not yet issued (IssuedAt: %d, now: %d)", req.IssuedAt, proposalTS)
+	}
+
+	// Check 2b: Credential already expired (ExpiresAt <= now)
+	if req.ExpiresAt <= proposalTS {
+		return fail("DENIED", "secret-lease-authorize: credential already expired (ExpiresAt: %d, now: %d)", req.ExpiresAt, proposalTS)
+	}
+
+	// Check 3: Node exists in current state
+	node, exists := s.Nodes[req.NodeID]
+	if !exists {
+		return fail("DENIED", "secret-lease-authorize: node %s not found", req.NodeID)
+	}
+
+	// Check 4: Node not revoked
+	if node.RevokedAt != 0 {
+		return fail("DENIED", "secret-lease-authorize: node %s is revoked", req.NodeID)
+	}
+
+	// Check 5: Request timestamp within clock skew tolerance (±5s)
+	var reqTS int64
+	if _, err := fmt.Sscanf(req.Timestamp, "%d", &reqTS); err != nil {
+		return fail("DECODE", "secret-lease-authorize: invalid request timestamp: %v", err)
+	}
+	if proposalTS < reqTS-authClockSkewTolerance || proposalTS > reqTS+authClockSkewTolerance {
+		return fail("DENIED", "secret-lease-authorize: request timestamp %d out of sync (now: %d, skew: ±%dns)", reqTS, proposalTS, authClockSkewTolerance)
+	}
+
+	// Check 6: Secret exists
+	secretRecord := s.Secrets.GetRecord(req.SecretID, req.SecretVersion)
+	if secretRecord == nil {
+		return fail("DENIED", "secret-lease-authorize: secret %s version %d not found", req.SecretID, req.SecretVersion)
+	}
+
+	// Check 7: Secret scope fields match request
+	if secretRecord.DeploymentID != req.DeploymentID || secretRecord.WorkloadID != req.WorkloadID || secretRecord.Environment != req.Environment {
+		return fail("DENIED", "secret-lease-authorize: scope mismatch (secret: %s/%s/%s, request: %s/%s/%s)",
+			secretRecord.DeploymentID, secretRecord.WorkloadID, secretRecord.Environment,
+			req.DeploymentID, req.WorkloadID, req.Environment)
+	}
+
+	// Check 8: Assignment exists for this node
+	var assignmentRec *AssignmentRec
+	for _, rec := range s.Assignments {
+		if rec.A.Node == req.NodeID {
+			assignmentRec = rec
+			break
+		}
+	}
+	if assignmentRec == nil {
+		return fail("DENIED", "secret-lease-authorize: no assignment found for node %s", req.NodeID)
+	}
+
+	// Check 9: Assignment in eligible state (Desired="running")
+	if assignmentRec.A.Desired != "running" {
+		return fail("DENIED", "secret-lease-authorize: assignment %s desired state is %q, not running", assignmentRec.A.ID, assignmentRec.A.Desired)
+	}
+
+	// Check 10: Caller identity matches node
+	if req.CallerID != req.NodeID {
+		return fail("DENIED", "secret-lease-authorize: caller %s does not match node %s", req.CallerID, req.NodeID)
+	}
+
+	// Check 11: Lease request not already consumed (replay protection via request digest)
+	requestDigest := req.RequestLeaseDigest()
+	if s.LeaseReplayLedger.IsConsumedLease(requestDigest) {
+		return fail("DENIED", "secret-lease-authorize: lease request already authorized (replay)")
+	}
+
+	// Check 12: CONFLICT CHECK - same RequestID with different payload
+	// This is critical: same ID + different canonical form = CONFLICT
+	if conflict := s.LeaseReplayLedger.GetConflict(req.RequestID, requestDigest); conflict != nil {
+		return fail("CONFLICT", "secret-lease-authorize: request ID %s previously authorized with different payload (digest %s vs %s)",
+			req.RequestID, conflict.RequestDigest[:16], requestDigest[:16])
+	}
+
+	// Check 13: Nonce not replayed with different scope
+	// Any nonce reused with different secret/workload/deployment/node/generation = DENY
+	for _, auth := range s.LeaseReplayLedger {
+		if bytes.Equal(auth.ConsumedNonce, req.Nonce) {
+			// Nonce was used before; check scope mismatch
+			if auth.SecretID != req.SecretID ||
+				auth.SecretVersion != req.SecretVersion ||
+				auth.NodeID != req.NodeID ||
+				auth.WorkloadID != req.WorkloadID ||
+				auth.DeploymentID != req.DeploymentID ||
+				auth.Generation != req.Generation {
+				return fail("DENIED", "secret-lease-authorize: nonce reused with different scope (secret/workload/deployment/node/generation mismatch)")
+			}
+		}
+	}
+
+	// All checks passed: record consumption atomically (ONE FSM TRANSITION)
+	auth := &ConsumedLeaseAuthorization{
+		RequestID:     req.RequestID,
+		RequestDigest: requestDigest,
+		ConsumedNonce: req.Nonce,
+		ConsumedAt:    fmt.Sprintf("%d", c.TS),
+		NodeID:        req.NodeID,
+		SecretID:      req.SecretID,
+		SecretVersion: req.SecretVersion,
+		WorkloadID:    req.WorkloadID,
+		DeploymentID:  req.DeploymentID,
+		Environment:   req.Environment,
+		Generation:    req.Generation,
+		CallerID:      req.CallerID,
+		Outcome:       "SUCCESS",
+	}
+	s.LeaseReplayLedger.RecordLease(auth)
+
+	// Audit
+	s.audit(audit.Entry{
+		TS:       c.TS / 1e6, // convert nanoseconds to milliseconds
+		Actor:    req.NodeID,
+		Source:   audit.SourceHost,
+		Action:   "secret-lease-authorize",
+		Resource: fmt.Sprintf("secret/%s/v%d", req.SecretID, req.SecretVersion),
+		Detail:   fmt.Sprintf("workload %s deployment %s env %s gen %d", req.WorkloadID, req.DeploymentID, req.Environment, req.Generation),
+		Evidence: requestDigest,
+	})
+
+	return ok("lease authorization succeeded; request digest %s", requestDigest[:16])
+}
+
 // Secret command handlers
 
 func secretCreate(f *FSM, s *State, c *Command) *Result {
@@ -2048,6 +2262,7 @@ func releaseAllocationHandler(f *FSM, s *State, c *Command) *Result {
 
 func init() {
 	register("secret-retrieval-authorize", secretRetrievalAuthorize)
+	register("secret-lease-authorize", secretLeaseAuthorize)
 	register("secret-create", secretCreate)
 	register("secret-version-add", secretVersionAdd)
 	// Resource ledger commands (Gate 3-4)
