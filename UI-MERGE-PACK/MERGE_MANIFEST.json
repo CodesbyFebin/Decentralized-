@@ -1,0 +1,217 @@
+{
+  "pack": "decentralized-host-ui-merge-pack-final",
+  "purpose": "Selective production-safe UI transplant plus truth/resource/admission/capability/qualification primitives",
+  "target_repo": "CodesbyFebin/Decentralized-",
+  "observed_main_sha": "9738aa5f699b14cdc92881da894dbb377edaafa1",
+  "files": [
+    {
+      "path": "AGENT_MERGE_PROMPT.md",
+      "size": 2968,
+      "sha256": "fa7c6b1db9b30dad6c93f2f8a666a56060b9e502c4fa8f2f696cfeca857e7e05"
+    },
+    {
+      "path": "README_MERGE.md",
+      "size": 4110,
+      "sha256": "f8b5d977c9f05016da3e21c0b2afe2f9e41e825190fab9116e9d363277c6b95e"
+    },
+    {
+      "path": "additions/docs/API_CONTRACT_REQUIREMENTS.md",
+      "size": 1101,
+      "sha256": "5b1ad494c0902cc8b89989a224af5e5955c561a6dd32ccf1fee8ac91759cda10"
+    },
+    {
+      "path": "additions/docs/CURRENT_REPO_FEATURE_ADDITIONS.md",
+      "size": 1998,
+      "sha256": "91acca772009d6d39537948a4b9bd57165fe7e6ca18a260dc71aa7e58ba88c3c"
+    },
+    {
+      "path": "additions/docs/MERGE_ACCEPTANCE_CHECKLIST.md",
+      "size": 1286,
+      "sha256": "03ba47091607fd3a3c594d768a866b23ebf9816248ce90fd5b7cb4920c3ecff4"
+    },
+    {
+      "path": "additions/src/components/production/AdmissionCordonCard.tsx",
+      "size": 998,
+      "sha256": "96592691b39de286b776e53fe09d52321fb0fe563f25b41bcb31f084215c134a"
+    },
+    {
+      "path": "additions/src/components/production/CapabilityGate.tsx",
+      "size": 729,
+      "sha256": "28be5db7d753237091539cb7072c32f873787c37bf3340cec9bfa07eb32b53ff"
+    },
+    {
+      "path": "additions/src/components/production/DesiredObservedEvidence.tsx",
+      "size": 545,
+      "sha256": "2e726d727c020852305216dac0d130f4b2d7fdba8a0aa64f330c85cbdf9af5c6"
+    },
+    {
+      "path": "additions/src/components/production/FailureDomainPanel.tsx",
+      "size": 874,
+      "sha256": "5954d36bb07b6e9593bcd8a1cd0c4eeb1f0c7eb40aafd84b3098c11afb1429ff"
+    },
+    {
+      "path": "additions/src/components/production/QualificationMatrix.tsx",
+      "size": 509,
+      "sha256": "edf9cd4b883f825cc2e01b0a803dc0d00fd5629c73823727e09cf71c6f553f37"
+    },
+    {
+      "path": "additions/src/components/production/ResourceLedgerCard.tsx",
+      "size": 1062,
+      "sha256": "0b4cf682487a7a8c1329581dafbb0de0793ba56890ab0762784e8259e08b0697"
+    },
+    {
+      "path": "additions/src/components/production/TruthValue.tsx",
+      "size": 819,
+      "sha256": "7a7491c0e3e7d1273a4f1955629920f740dbe3b14580015a55920772fb9ccfd3"
+    },
+    {
+      "path": "additions/src/lib/resourceLedger.ts",
+      "size": 579,
+      "sha256": "620f71487b90e5b17aacf9729888bee25c5ca9a829180b98b0c8536c9a22ecc3"
+    },
+    {
+      "path": "additions/src/types/truth.ts",
+      "size": 959,
+      "sha256": "98dacf899b1928fb5a1116d8d9cd49c803e70bfbe272c9a2091a0965204ff747"
+    },
+    {
+      "path": "reference-ui/src/components/AddNodeModal.tsx",
+      "size": 14461,
+      "sha256": "f683ad86d01645a555ddacce6444a70259b8604a81c36866e208ab29a5cf5fa8"
+    },
+    {
+      "path": "reference-ui/src/components/AddStorageModal.tsx",
+      "size": 7908,
+      "sha256": "28811e21e806d424125c8fb79bdd401858d248b5d670c26477a14066aa8d51f9"
+    },
+    {
+      "path": "reference-ui/src/components/CommandPalette.tsx",
+      "size": 8100,
+      "sha256": "183be0e265f47d8d7a3c1885c4264f9d94008268a56c4066d4884600c5f8ee5f"
+    },
+    {
+      "path": "reference-ui/src/components/DeploymentDetailModal.tsx",
+      "size": 11238,
+      "sha256": "a32b5d0698cacf3c2f4215be57c3c6d5d690601f3fe6c90c1f7ef9f58e97bda0"
+    },
+    {
+      "path": "reference-ui/src/components/GlobeMap.tsx",
+      "size": 16095,
+      "sha256": "e8fc6016f09701f9303f1d1af07b9d9b867a78829f8ae91958f180724a4dc426"
+    },
+    {
+      "path": "reference-ui/src/components/Header.tsx",
+      "size": 8726,
+      "sha256": "f604b878e437e8a030104d87685972e98f756a1c8a56e7e25d290851ba8ac9df"
+    },
+    {
+      "path": "reference-ui/src/components/NewDeploymentModal.tsx",
+      "size": 14922,
+      "sha256": "d060f782a3a1e77e93b5bbf13d935fe01dc46c5fa271284283776a5056c18222"
+    },
+    {
+      "path": "reference-ui/src/components/NodeDetailModal.tsx",
+      "size": 18806,
+      "sha256": "f5c8c3cbd4dfd5e48eb213655c5640ab1fd443ee0e62e013e5aa795ee8f3fd20"
+    },
+    {
+      "path": "reference-ui/src/components/Sidebar.tsx",
+      "size": 8768,
+      "sha256": "bf1f916bbb729e4be8fb42d92769ac458c3267416be4a0923a5d3d96d8316f41"
+    },
+    {
+      "path": "reference-ui/src/index.css",
+      "size": 712,
+      "sha256": "ba099e688b6b3d88190cc462a65971c2a1be60427e28cf53789b1df7ff37516b"
+    },
+    {
+      "path": "reference-ui/src/pages/Analytics.tsx",
+      "size": 3861,
+      "sha256": "856ec1cfcbaba57323ccfacc5e5dc86c3b4c5861f7374d2fc56a850990e64ba5"
+    },
+    {
+      "path": "reference-ui/src/pages/Billing.tsx",
+      "size": 4555,
+      "sha256": "6b273ba694261dbb63604fbc5511a9520337b81a6dc4cbacf53e956b4bd88ed5"
+    },
+    {
+      "path": "reference-ui/src/pages/Dashboard.tsx",
+      "size": 29143,
+      "sha256": "abdaca978c96fe0005d7e6bdcdbf6b8afca6bd249e087fb3a37445ddd7841c23"
+    },
+    {
+      "path": "reference-ui/src/pages/DePINMarketplace.tsx",
+      "size": 12653,
+      "sha256": "ced5dbef2241e3faede518e579b922540984e9aabe4eeb565f71e159c5693c75"
+    },
+    {
+      "path": "reference-ui/src/pages/Deploy.tsx",
+      "size": 26112,
+      "sha256": "6d762760a932c77ba563732834262ba71681226a64aa4fb80500eb1db445ae1d"
+    },
+    {
+      "path": "reference-ui/src/pages/Domains.tsx",
+      "size": 6394,
+      "sha256": "7fe3266f3a06d43c838dfeb66809a2027182a3bbad7ad49b53c18d42dbc6d854"
+    },
+    {
+      "path": "reference-ui/src/pages/EvidenceAudit.tsx",
+      "size": 5965,
+      "sha256": "8e5f3b10568dba281e06b7015654ce700296aadf6ee1b54034c8546452de0d6b"
+    },
+    {
+      "path": "reference-ui/src/pages/NodesCompute.tsx",
+      "size": 28691,
+      "sha256": "59b7a89cf7c33c85aecc9d7e5c0e63f693f170602f32693252ab59727671b5dd"
+    },
+    {
+      "path": "reference-ui/src/pages/RagCopilot.tsx",
+      "size": 16217,
+      "sha256": "0c1f71794cb09fc687b0bd3c55d14fc5a106fec5a487decf59224e9b16239110"
+    },
+    {
+      "path": "reference-ui/src/pages/Security.tsx",
+      "size": 7949,
+      "sha256": "986ef6f7eedf980292ca2f1066a0a30941cd778a97287b0205915959bdf6df4f"
+    },
+    {
+      "path": "reference-ui/src/pages/Settings.tsx",
+      "size": 4778,
+      "sha256": "ccd1b6b1a562508accbe084672cdd57a535b6796c13bb35208d6a36a4d6954e8"
+    },
+    {
+      "path": "reference-ui/src/pages/Storage.tsx",
+      "size": 22867,
+      "sha256": "0f4c1766b19d0bcb952f7071fedfdc3519cc539721ebe769d306c8bf9cbe6ed9"
+    },
+    {
+      "path": "reference-ui/src/pages/Team.tsx",
+      "size": 5561,
+      "sha256": "708970da7198aff141ff9eff8b092779681bd1fc73f41b20ba0aa226f32d5e98"
+    },
+    {
+      "path": "reference-ui/src/pages/WebsitesApps.tsx",
+      "size": 6167,
+      "sha256": "6f17890d188582c08a32a2dd26f2b9de7a41ce9108cfa46667fe7cb6d5e061f1"
+    },
+    {
+      "path": "reference-ui/src/types/index.ts",
+      "size": 4553,
+      "sha256": "5906d0195d500db9db266e791092b43ffaab638a11ead5ada654dcbabf1be793"
+    }
+  ],
+  "excluded": [
+    "src/data/mockData.ts",
+    "src/context/NetworkContext.tsx",
+    "server.ts",
+    "prototype App/main/build config"
+  ],
+  "rules": [
+    "current repo remains engineering authority",
+    "no fake operational data",
+    "no local-only infrastructure mutations",
+    "unknown is never zero",
+    "desired != observed != evidence",
+    "future DePIN/Web3/Federation surfaces are capability-gated"
+  ]
+}

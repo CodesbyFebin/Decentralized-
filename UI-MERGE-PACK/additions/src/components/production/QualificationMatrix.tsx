@@ -1,0 +1,2 @@
+import React from 'react'; import type { GateStatus } from '../../types/truth';
+export function QualificationMatrix({title,gates}:{title:string;gates:{id:string;name:string;status:GateStatus;evidence?:string}[]}) { return <section aria-label={`${title} qualification`}><h3>{title}</h3><table><thead><tr><th>Gate</th><th>Status</th><th>Evidence</th></tr></thead><tbody>{gates.map(g=><tr key={g.id}><td>{g.id} — {g.name}</td><td>{g.status}</td><td>{g.evidence??'—'}</td></tr>)}</tbody></table></section>; }

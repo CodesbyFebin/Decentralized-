@@ -9,6 +9,7 @@ import { regionGroups, groupMarkers, meshArcs, NoGeoNote } from '../common/Comma
 import { Glass, PanelHeader, IconTile, StatusPill, TONE, type Tone } from '../common/ui';
 import { Gate, fmtBytes, since, fmtTime, TruthTag, Unavailable } from '../common/states';
 import { TruthValue, MetricValue, FreshnessBadge, EvidenceSeal, viewFreshness, type ViewFreshness } from '../common/truth';
+import { ResourceLedgerCard, type ResourceDimension } from '../common/truthDisplay';
 
 type AppSummary = Omit<AppRec, 'replicas' | 'history'> & { replicaCount: number; lastChange: AppRec['history'][number] | null };
 
@@ -183,6 +184,39 @@ export default function DashboardView() {
                 <MetricValue m={m.domains} size="lg" freshness={fresh} observedAt={observedAt} />
                 <div className="text-[11px] text-slate-400">{routing} routing at the edge · DNS not observed</div>
               </OverviewCard>
+            </section>
+
+            {/* Resource overview - cluster-wide aggregation */}
+            <section aria-label="Cluster resources" className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {(() => {
+                const observed = d.nodes.filter((n) => n.facts);
+                const cpuTotal = observed.reduce((sum, n) => sum + (n.facts?.cpus ?? 0) * 1000, 0);
+                const memTotal = observed.reduce((sum, n) => sum + (n.facts?.memBytes ?? 0), 0);
+                const freshness = stale ? 'STALE' : 'LIVE';
+
+                const cpuDim: ResourceDimension = {
+                  total: { value: cpuTotal > 0 ? cpuTotal : null, freshness: observed.length > 0 ? freshness : 'UNKNOWN', source: 'aggregated' },
+                  ownerReserve: { value: null, freshness: 'UNAVAILABLE', source: 'none' },
+                  reserved: { value: m.cpuDeclaredMilli.value ?? null, freshness: m.cpuDeclaredMilli.value !== null ? 'LIVE' : 'UNAVAILABLE', source: 'declared' },
+                  allocated: { value: null, freshness: 'UNAVAILABLE', source: 'none' },
+                  unit: 'cores'
+                };
+
+                const memDim: ResourceDimension = {
+                  total: { value: memTotal > 0 ? memTotal : null, freshness: observed.length > 0 ? freshness : 'UNKNOWN', source: 'aggregated' },
+                  ownerReserve: { value: null, freshness: 'UNAVAILABLE', source: 'none' },
+                  reserved: { value: m.memDeclaredBytes.value ?? null, freshness: m.memDeclaredBytes.value !== null ? 'LIVE' : 'UNAVAILABLE', source: 'declared' },
+                  allocated: { value: null, freshness: 'UNAVAILABLE', source: 'none' },
+                  unit: 'bytes'
+                };
+
+                return (
+                  <>
+                    <ResourceLedgerCard label="CPU (cores) - Measured / Declared" dimension={cpuDim} />
+                    <ResourceLedgerCard label="Memory (RAM) - Measured / Declared" dimension={memDim} />
+                  </>
+                );
+              })()}
             </section>
 
             <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] gap-4">

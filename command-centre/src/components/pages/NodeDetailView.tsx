@@ -9,6 +9,7 @@ import { Glass, PageTabs, PanelHeader, IconTile, StatusPill, GhostButton } from 
 import { LogViewer } from '../common/LogViewer';
 import { Gate, FreshnessPill, fmtBytes, fmtTime, fmtAge, since, shortDigest, ErrorState, Empty, Note, TruthTag, Unavailable } from '../common/states';
 import { Digest, FreshnessBadge, viewFreshness } from '../common/truth';
+import { TruthValue, ResourceLedgerCard, CordonCard, type TruthEnvelope, type ResourceDimension } from '../common/truthDisplay';
 
 interface Payload {
   node: NodeRec;
@@ -179,22 +180,66 @@ export default function NodeDetailView() {
                       <Row k="Mode">{n.mode || '—'} {n.modeDetail}</Row>
                     </div>
                   </Glass>
+                  <CordonCard
+                    cordoned={false}
+                    lifecycle={n.lifecycle}
+                    disabled={true}
+                    className="md:col-span-1"
+                  />
                   <Glass className="p-4 md:col-span-2">
                     <PanelHeader title="Hardware" subtitle="Measured by the host agent and signed in its observation. Nothing here is declared or inferred." />
                     {!n.facts || n.facts.unknown === null ? (
                       <p className="text-[12.5px] text-slate-400 mt-2">{n.facts ? 'This host agent predates measured hardware facts: memory, disks and GPUs show as NOT MEASURED. Upgrade the agent.' : 'No observation yet.'}</p>
                     ) : (
                       <div className="mt-2 grid sm:grid-cols-2 gap-x-6">
-                        <Row k="CPU">{n.facts.cpus} logical{n.facts.physicalCores ? ` · ${n.facts.physicalCores} physical` : ''}{n.facts.cpuModel ? ` · ${n.facts.cpuModel}` : ''}</Row>
-                        <Row k="Measured RAM">{n.facts.memBytes != null ? fmtBytes(n.facts.memBytes) : 'NOT MEASURED'}</Row>
-                        <Row k="Swap">{n.facts.swapBytes === null ? 'NOT MEASURED' : fmtBytes(n.facts.swapBytes)}</Row>
-                        <Row k="Filesystem (agent data)">{n.facts.dataFs ? `${fmtBytes(n.facts.dataFs.freeBytes)} free of ${fmtBytes(n.facts.dataFs.totalBytes)}` : 'NOT MEASURED'}</Row>
-                        <Row k="Storage devices">
-                          {n.facts.disks === null ? 'NOT MEASURED' : n.facts.disks.length === 0 ? 'none visible' : n.facts.disks.map((x) => `${x.name} ${fmtBytes(x.sizeBytes)}${x.rotational ? ' HDD' : ''}${x.removable ? ' removable' : ''}`).join(', ')}
-                        </Row>
-                        <Row k="GPU">
-                          {n.facts.gpus === null ? 'NOT MEASURED' : n.facts.gpus.length === 0 ? 'none found' : n.facts.gpus.map((g) => `${g.vendor}${g.model ? ` ${g.model}` : ''}${g.vramBytes ? ` ${fmtBytes(g.vramBytes)}` : ''} (${g.source})`).join(', ')}
-                        </Row>
+                        <TruthValue
+                          label="CPU"
+                          envelope={{
+                            value: `${n.facts.cpus} logical${n.facts.physicalCores ? ` · ${n.facts.physicalCores} physical` : ''}${n.facts.cpuModel ? ` · ${n.facts.cpuModel}` : ''}`,
+                            freshness: stale ? 'STALE' : 'LIVE',
+                            source: 'measured'
+                          }}
+                        />
+                        <TruthValue
+                          label="Measured RAM"
+                          envelope={{
+                            value: n.facts.memBytes != null ? fmtBytes(n.facts.memBytes) : null,
+                            freshness: n.facts.memBytes != null ? (stale ? 'STALE' : 'LIVE') : 'UNKNOWN',
+                            source: 'measured'
+                          }}
+                        />
+                        <TruthValue
+                          label="Swap"
+                          envelope={{
+                            value: n.facts.swapBytes !== null ? fmtBytes(n.facts.swapBytes) : null,
+                            freshness: n.facts.swapBytes !== null ? (stale ? 'STALE' : 'LIVE') : 'UNKNOWN',
+                            source: 'measured'
+                          }}
+                        />
+                        <TruthValue
+                          label="Filesystem (agent data)"
+                          envelope={{
+                            value: n.facts.dataFs ? `${fmtBytes(n.facts.dataFs.freeBytes)} free of ${fmtBytes(n.facts.dataFs.totalBytes)}` : null,
+                            freshness: n.facts.dataFs ? (stale ? 'STALE' : 'LIVE') : 'UNKNOWN',
+                            source: 'measured'
+                          }}
+                        />
+                        <TruthValue
+                          label="Storage devices"
+                          envelope={{
+                            value: n.facts.disks === null ? null : n.facts.disks.length === 0 ? 'none visible' : n.facts.disks.map((x) => `${x.name} ${fmtBytes(x.sizeBytes)}${x.rotational ? ' HDD' : ''}${x.removable ? ' removable' : ''}`).join(', '),
+                            freshness: n.facts.disks !== null ? (stale ? 'STALE' : 'LIVE') : 'UNKNOWN',
+                            source: 'measured'
+                          }}
+                        />
+                        <TruthValue
+                          label="GPU"
+                          envelope={{
+                            value: n.facts.gpus === null ? null : n.facts.gpus.length === 0 ? 'none found' : n.facts.gpus.map((g) => `${g.vendor}${g.model ? ` ${g.model}` : ''}${g.vramBytes ? ` ${fmtBytes(g.vramBytes)}` : ''} (${g.source})`).join(', '),
+                            freshness: n.facts.gpus !== null ? (stale ? 'STALE' : 'LIVE') : 'UNKNOWN',
+                            source: 'measured'
+                          }}
+                        />
                         <Row k="Could not measure">{n.facts.unknown.length ? n.facts.unknown.join(', ') : 'nothing'}</Row>
                       </div>
                     )}
@@ -228,43 +273,65 @@ export default function NodeDetailView() {
                 ))}
 
               {tab === 'resources' && (() => {
-                // Available is bounded by what was measured and by what the host's policy admits, whichever is smaller.
-                const cap = (policy: unknown, measured: number | null) => {
-                  const p = typeof policy === 'number' && policy > 0 ? policy : null;
-                  if (p === null) return measured;
-                  return measured === null ? p : Math.min(p, measured);
+                const freshness = stale ? 'STALE' : 'LIVE';
+
+                const cpuDim: ResourceDimension = {
+                  total: {
+                    value: n.facts ? n.facts.cpus * 1000 : null,
+                    freshness: n.facts ? freshness : 'UNKNOWN',
+                    source: 'measured'
+                  },
+                  ownerReserve: {
+                    value: null,
+                    freshness: 'UNAVAILABLE',
+                    source: 'none'
+                  },
+                  reserved: {
+                    value: typeof n.policy?.maxCpuMilli === 'number' && n.policy.maxCpuMilli > 0 ? n.policy.maxCpuMilli : null,
+                    freshness: 'LIVE',
+                    source: 'policy'
+                  },
+                  allocated: {
+                    value: d.allocated.cpuMilli,
+                    freshness: freshness,
+                    source: 'derived'
+                  },
+                  unit: 'cores'
                 };
-                const cpuCeil = cap(n.policy?.maxCpuMilli, n.facts ? n.facts.cpus * 1000 : null);
-                const memCeil = cap(n.policy?.maxMemBytes, n.facts?.memBytes ?? null);
+
+                const memDim: ResourceDimension = {
+                  total: {
+                    value: n.facts?.memBytes ?? null,
+                    freshness: n.facts?.memBytes != null ? freshness : 'UNKNOWN',
+                    source: 'measured'
+                  },
+                  ownerReserve: {
+                    value: null,
+                    freshness: 'UNAVAILABLE',
+                    source: 'none'
+                  },
+                  reserved: {
+                    value: typeof n.policy?.maxMemBytes === 'number' && n.policy.maxMemBytes > 0 ? n.policy.maxMemBytes : null,
+                    freshness: 'LIVE',
+                    source: 'policy'
+                  },
+                  allocated: {
+                    value: d.allocated.memBytes,
+                    freshness: freshness,
+                    source: 'derived'
+                  },
+                  unit: 'bytes'
+                };
+
                 return (
                 <div className="grid md:grid-cols-2 gap-4 [&>*]:min-w-0">
-                  <Glass className="p-4 md:col-span-2 overflow-x-auto">
-                    <PanelHeader title="Resources" subtitle="Each column has its own source. Nothing is filled in to make the row add up." />
-                    <table className="dh-table w-full min-w-[680px] mt-2">
-                      <thead><tr><th /><th>Total (measured)</th><th>Owner reserved</th><th>Host admits (policy)</th><th>Allocated</th><th>Available</th></tr></thead>
-                      <tbody>
-                        <tr>
-                          <td className="text-slate-300">CPU</td>
-                          <td>{n.facts ? `${n.facts.cpus} logical` : 'not measured'}</td>
-                          <td className="text-slate-500">no record</td>
-                          <td>{typeof n.policy?.maxCpuMilli === 'number' && n.policy.maxCpuMilli > 0 ? <>{Number(n.policy.maxCpuMilli) / 1000} cores <TruthTag state="CONFIGURED" /></> : <span className="text-slate-500">no cap</span>}</td>
-                          <td>{d.allocated.cpuMilli / 1000} cores <TruthTag state="DERIVED" /></td>
-                          <td>{cpuCeil !== null ? <>{Math.max(0, cpuCeil - d.allocated.cpuMilli) / 1000} cores <TruthTag state="DERIVED" /></> : <span className="text-slate-500">unknown</span>}</td>
-                        </tr>
-                        <tr>
-                          <td className="text-slate-300">Memory</td>
-                          <td>{n.facts?.memBytes != null ? fmtBytes(n.facts.memBytes) : 'not measured'}</td>
-                          <td className="text-slate-500">no record</td>
-                          <td>{typeof n.policy?.maxMemBytes === 'number' && n.policy.maxMemBytes > 0 ? <>{fmtBytes(Number(n.policy.maxMemBytes))} <TruthTag state="CONFIGURED" /></> : <span className="text-slate-500">no cap</span>}</td>
-                          <td>{fmtBytes(d.allocated.memBytes)} <TruthTag state="DERIVED" /></td>
-                          <td>{memCeil !== null ? <>{fmtBytes(Math.max(0, memCeil - d.allocated.memBytes))} <TruthTag state="DERIVED" /></> : <span className="text-slate-500">unknown</span>}</td>
-                        </tr>
-                      </tbody>
-                    </table>
+                  <ResourceLedgerCard label="CPU (cores)" dimension={cpuDim} className="md:col-span-2" />
+                  <ResourceLedgerCard label="Memory (RAM)" dimension={memDim} className="md:col-span-2" />
+                  <div className="md:col-span-2">
                     <Note>
-                      Allocated is the sum of the manifest requests of the {d.allocated.replicas} replica(s) desired on this host{d.allocated.undeclared ? `; ${d.allocated.undeclared} declare no request and count as 0` : ''}. Available = the smaller of measured total and the policy limit, minus allocated. Declared capacity at enrolment: {n.declared.cpuMilli / 1000} cores, {fmtBytes(n.declared.memBytes)} (CONFIGURED). The platform has no owner-reserve record yet, so none is shown.
+                      MODEL A: AVAILABLE = TOTAL - OWNER_RESERVE - RESERVED - ALLOCATED. Allocated is the sum of manifest requests of {d.allocated.replicas} replica(s) desired on this host{d.allocated.undeclared ? `; ${d.allocated.undeclared} declare no request and count as 0` : ''}. Declared capacity at enrolment: {n.declared.cpuMilli / 1000} cores, {fmtBytes(n.declared.memBytes)} (CONFIGURED).
                     </Note>
-                  </Glass>
+                  </div>
                   <Glass className="p-4">
                     <PanelHeader title="Storage" />
                     {n.storage ? (
