@@ -36,7 +36,7 @@ type ResourceCapacity struct {
 	OwnerReserve  int64  `json:"ownerReserve"`  // reserved for cluster ownership
 	Reserved      int64  `json:"reserved"`      // reserved for future allocation
 	Allocated     int64  `json:"allocated"`     // actively allocated to workloads
-	Available     int64  `json:"available"`     // available = total - owner - reserved - allocated
+	Available     int64  `json:"available"`     // available = total - owner - reserved (MODEL A)
 }
 
 // SchedulerEligibility tracks whether a node can accept new placements.
@@ -311,9 +311,9 @@ func (s *State) FleetInventory() []*FleetNode {
 		fn.MemCapacityReserved = reservedMem
 		fn.MemCapacityAllocated = allocatedMem
 
-		// Compute available capacity: total - ownerReserve - reserved - allocated
-		fn.CapacityAvailable = fn.CapacityTotal - ownerCPU - fn.CapacityReserved - fn.CapacityAllocated
-		fn.MemCapacityAvailable = fn.MemCapacityTotal - ownerMem - fn.MemCapacityReserved - fn.MemCapacityAllocated
+		// Compute available capacity: total - ownerReserve - reserved (MODEL A: allocated is subset of reserved)
+		fn.CapacityAvailable = fn.CapacityTotal - ownerCPU - fn.CapacityReserved
+		fn.MemCapacityAvailable = fn.MemCapacityTotal - ownerMem - fn.MemCapacityReserved
 
 		// Ensure non-negative available capacity
 		if fn.CapacityAvailable < 0 {
@@ -530,14 +530,14 @@ func (s *State) Reserve(reservationID, nodeID string, cpuMilli, memBytes int64) 
 		}
 	}
 
-	// Check CPU: available = total - owner - reserved - allocated
-	availableCPU := capacity.TotalCPU - capacity.OwnerCPU - reservedCPU - allocatedCPU
+	// Check CPU: available = total - owner - reserved (MODEL A: allocated is subset of reserved)
+	availableCPU := capacity.TotalCPU - capacity.OwnerCPU - reservedCPU
 	if cpuMilli > availableCPU {
 		return fmt.Errorf("insufficient CPU: requested %d, available %d", cpuMilli, availableCPU)
 	}
 
-	// Check memory: available = total - owner - reserved - allocated
-	availableMem := capacity.TotalMem - capacity.OwnerMem - reservedMem - allocatedMem
+	// Check memory: available = total - owner - reserved (MODEL A: allocated is subset of reserved)
+	availableMem := capacity.TotalMem - capacity.OwnerMem - reservedMem
 	if memBytes > availableMem {
 		return fmt.Errorf("insufficient memory: requested %d, available %d", memBytes, availableMem)
 	}
