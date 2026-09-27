@@ -194,12 +194,14 @@ type Bundle struct {
 }
 
 type BundleNode struct {
-	ID     string      `json:"id"`
-	Name   string      `json:"name"`
-	Status string      `json:"status"`
-	MeshIP string      `json:"meshIp"`
-	Keys   []KeyRecord `json:"keys"`
-	Roles  []string    `json:"roles"`
+	ID           string      `json:"id"`
+	Name         string      `json:"name"`
+	Status       string      `json:"status"`
+	DesiredState string      `json:"desiredState"` // canonical state from control plane (DISCOVERED, ENROLLING, etc)
+	Generation   int64       `json:"generation"`   // version counter for optimistic conflict detection
+	MeshIP       string      `json:"meshIp"`
+	Keys         []KeyRecord `json:"keys"`
+	Roles        []string    `json:"roles"`
 }
 
 // KeyRecord is one valid signing key for a stable dh1 identity.
@@ -347,21 +349,24 @@ type Rotation struct {
 // Observation is signed by the host (envelope kind "observation"). Seq is a
 // per-host counter; the control plane rejects any seq it has already seen.
 type Observation struct {
-	Node         string        `json:"node"`
-	Seq          int64         `json:"seq"`
-	TS           int64         `json:"ts"`
-	Mode         string        `json:"mode"` // normal | offline-hold | frozen-hold | clock-skew | ledger-corrupt | untrusted-plane
-	ModeDetail   string        `json:"modeDetail"`
-	BundleIndex  int64         `json:"bundleIndex"`
-	BundleIssued int64         `json:"bundleIssued"`
-	BundleIssuer string        `json:"bundleIssuer"`
-	Workloads    []WorkloadObs `json:"workloads"`
-	Mesh         *MeshObs      `json:"mesh"`
-	Storage      *StorageObs   `json:"storage"`
-	Edge         *EdgeObs      `json:"edge"`
-	Facts        Facts         `json:"facts"`
-	Ledger       LedgerHead    `json:"ledger"`
-	Buffered     bool          `json:"buffered"` // queued while the control plane was unreachable
+	Node           string        `json:"node"`
+	Seq            int64         `json:"seq"`
+	TS             int64         `json:"ts"`
+	Mode           string        `json:"mode"` // normal | offline-hold | frozen-hold | clock-skew | ledger-corrupt | untrusted-plane
+	ModeDetail     string        `json:"modeDetail"`
+	BundleIndex    int64         `json:"bundleIndex"`
+	BundleIssued   int64         `json:"bundleIssued"`
+	BundleIssuer   string        `json:"bundleIssuer"`
+	DesiredState   string        `json:"desiredState"`   // desired state from control plane (DISCOVERED, ENROLLING, VERIFIED, ACTIVE, CORDONED, DRAINING, etc)
+	ObservedHealth string        `json:"observedHealth"` // observed health: healthy | degraded | offline
+	Generation     int64         `json:"generation"`     // version counter for conflict detection
+	Workloads      []WorkloadObs `json:"workloads"`
+	Mesh           *MeshObs      `json:"mesh"`
+	Storage        *StorageObs   `json:"storage"`
+	Edge           *EdgeObs      `json:"edge"`
+	Facts          Facts         `json:"facts"`
+	Ledger         LedgerHead    `json:"ledger"`
+	Buffered       bool          `json:"buffered"` // queued while the control plane was unreachable
 }
 
 type WorkloadObs struct {

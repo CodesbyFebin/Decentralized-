@@ -174,7 +174,7 @@ func init() {
 	// restore replaces a freshly initialized state with a verified backup of
 	// the same root. The new roster is kept, and the state index continues
 	// above the backup's so hosts never see a rollback.
-	register("restore", func(s *State, c *Command) *Result {
+	register("restore", func(f *FSM, s *State, c *Command) *Result {
 		env, err := decode[*envelope.Envelope](c)
 		if err != nil {
 			return fail("DECODE", "%v", err)

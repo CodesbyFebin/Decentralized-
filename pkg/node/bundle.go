@@ -122,6 +122,13 @@ func (a *Agent) syncBundle() {
 	a.lastBundleAt = time.Now()
 	a.fresh = now-b.Issued <= a.pol.FreshWindowMs && skew <= a.pol.MaxClockSkewMs
 	a.st.LastIndex, a.st.LastIssued = b.StateIndex, b.Issued
+	// Extract desired state and generation from control plane for lifecycle reconciliation
+	if b.Node.DesiredState != "" {
+		a.st.DesiredState = b.Node.DesiredState
+	}
+	if b.Node.Generation > 0 {
+		a.st.Generation = b.Node.Generation
+	}
 	var eps []string
 	if b.Roster != nil {
 		var r api.Roster

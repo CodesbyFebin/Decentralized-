@@ -102,23 +102,25 @@ type VolState struct {
 
 // State is persisted after every tick.
 type State struct {
-	NodeID     string               `json:"nodeId"` // genesis dh1 id; stable across key rotation
-	Cluster    string               `json:"cluster"`
-	Root       string               `json:"root"`
-	RootCACert string               `json:"rootCaCert"`
-	Endpoints  []string             `json:"endpoints"`
-	TLS        bool                 `json:"tls"`
-	JoinCap    string               `json:"joinCap"`
-	Enrolled   bool                 `json:"enrolled"`
-	LastIndex  int64                `json:"lastIndex"`
-	LastIssued int64                `json:"lastIssued"`
-	Seq        int64                `json:"seq"`
-	Admitted   map[string]*Admitted `json:"admitted"`
-	MeshPorts  map[string]int64     `json:"meshPorts"`
-	NextMesh   int64                `json:"nextMesh"`
-	Volumes    map[string]*VolState `json:"volumes"`
-	Decisions  map[string]string    `json:"decisions"` // last journaled decision key per assignment
-	Mode       string               `json:"mode"`
+	NodeID       string               `json:"nodeId"` // genesis dh1 id; stable across key rotation
+	Cluster      string               `json:"cluster"`
+	Root         string               `json:"root"`
+	RootCACert   string               `json:"rootCaCert"`
+	Endpoints    []string             `json:"endpoints"`
+	TLS          bool                 `json:"tls"`
+	JoinCap      string               `json:"joinCap"`
+	Enrolled     bool                 `json:"enrolled"`
+	LastIndex    int64                `json:"lastIndex"`
+	LastIssued   int64                `json:"lastIssued"`
+	Seq          int64                `json:"seq"`
+	Admitted     map[string]*Admitted `json:"admitted"`
+	MeshPorts    map[string]int64     `json:"meshPorts"`
+	NextMesh     int64                `json:"nextMesh"`
+	Volumes      map[string]*VolState `json:"volumes"`
+	Decisions    map[string]string    `json:"decisions"` // last journaled decision key per assignment
+	Mode         string               `json:"mode"`
+	DesiredState string               `json:"desiredState"` // canonical state from control plane (DISCOVERED, ENROLLING, VERIFIED, ACTIVE, CORDONED, DRAINING, etc)
+	Generation   int64                `json:"generation"`   // version counter for optimistic conflict detection
 	// Retiring holds old-generation instances still serving while their
 	// replacement warms up (make-before-break). An agent that restarts
 	// mid-handover stops them instead of orphaning them.

@@ -24,8 +24,8 @@ type Secret struct {
 // SecretVersion represents a versioned plaintext (volatile, never persisted).
 type SecretVersion struct {
 	SecretID     string `json:"secretId"`
-	Version      int32  `json:"version"`     // 1-indexed
-	Data         []byte `json:"data"`        // plaintext (memory-only)
+	Version      int32  `json:"version"` // 1-indexed
+	Data         []byte `json:"data"`    // plaintext (memory-only)
 	DeploymentID string `json:"deploymentId"`
 	WorkloadID   string `json:"workloadId"`
 	Environment  string `json:"environment"` // "prod", "staging", etc.
@@ -38,9 +38,9 @@ type SecretRecord struct {
 	SecretID      string `json:"secretId"`
 	Version       int32  `json:"version"`
 	Algorithm     string `json:"algorithm"`     // "aes-256-gcm"
-	KeyID         string `json:"keyId"`        // identifies which DEK version
+	KeyID         string `json:"keyId"`         // identifies which DEK version
 	EncryptedData []byte `json:"encryptedData"` // ciphertext
-	Nonce         []byte `json:"nonce"`        // 96-bit random
+	Nonce         []byte `json:"nonce"`         // 96-bit random
 	ClusterID     string `json:"clusterId"`
 	DeploymentID  string `json:"deploymentId"`
 	WorkloadID    string `json:"workloadId"`
@@ -140,10 +140,10 @@ func (s *SecretsStore) UnmarshalJSON(data []byte) error {
 
 // KekStatus tracks KEK availability and bootstrap state.
 type KekStatus struct {
-	Locked    bool   // true if bootstrap missing/corrupted
+	Locked        bool   // true if bootstrap missing/corrupted
 	BootstrapHash string // BLAKE3 hash of bootstrap (never stores bootstrap itself)
-	DerivedAt int64  // Unix ns when KEK was last derived
-	Error     string // error message if locked
+	DerivedAt     int64  // Unix ns when KEK was last derived
+	Error         string // error message if locked
 }
 
 // NewKekStatus initializes the KEK status (initially locked until derived).
@@ -156,11 +156,11 @@ func NewKekStatus() KekStatus {
 
 // SecretCommand is the Raft command for secret operations.
 type SecretCommand struct {
-	Type      string         `json:"type"`      // "secret-create", "secret-version-add"
-	Timestamp int64          `json:"timestamp"` // Unix ns
-	Actor     string         `json:"actor"`     // who requested (for audit)
-	SecretID  string         `json:"secretId"`
-	Record    *SecretRecord  `json:"record"`    // encrypted record
+	Type      string        `json:"type"`      // "secret-create", "secret-version-add"
+	Timestamp int64         `json:"timestamp"` // Unix ns
+	Actor     string        `json:"actor"`     // who requested (for audit)
+	SecretID  string        `json:"secretId"`
+	Record    *SecretRecord `json:"record"` // encrypted record
 }
 
 // Now returns current Unix nanoseconds (used in tests to mock time).
@@ -173,19 +173,19 @@ func Now() int64 {
 // Replay identity combines request digest and nonce: caller cannot change requestId/other fields while reusing same request.
 // EphemeralID (A05): optional ephemeral tmpfs delivery mode (phase 1: returned as path instead of plaintext)
 type SecretRetrievalRequest struct {
-	Version        int    `json:"version"`        // always 1
-	RequestID      string `json:"requestId"`      // unique request identifier
-	SecretID       string `json:"secretId"`       // target secret
-	SecretVersion  int32  `json:"secretVersion"`  // target version
-	NodeID         string `json:"nodeId"`         // requesting node (dh1...)
-	WorkloadID     string `json:"workloadId"`     // workload scope (matches assignment)
-	DeploymentID   string `json:"deploymentId"`   // deployment scope (matches assignment)
-	Environment    string `json:"environment"`    // environment scope (matches assignment)
-	Timestamp      string `json:"timestamp"`      // Unix nanoseconds as decimal string (clock skew tolerance ±5s)
-	Nonce          []byte `json:"nonce"`          // unique per-request nonce (for replay ledger)
-	NodePublicKey  string `json:"nodePublicKey"`  // wire-encoded Ed25519 public key
-	Signature      []byte `json:"signature"`      // Ed25519 signature over canonical request (excluding signature field)
-	EphemeralID    string `json:"ephemeralId,omitempty"`  // [A05] UUID for ephemeral tmpfs delivery (optional, phase 1)
+	Version       int    `json:"version"`               // always 1
+	RequestID     string `json:"requestId"`             // unique request identifier
+	SecretID      string `json:"secretId"`              // target secret
+	SecretVersion int32  `json:"secretVersion"`         // target version
+	NodeID        string `json:"nodeId"`                // requesting node (dh1...)
+	WorkloadID    string `json:"workloadId"`            // workload scope (matches assignment)
+	DeploymentID  string `json:"deploymentId"`          // deployment scope (matches assignment)
+	Environment   string `json:"environment"`           // environment scope (matches assignment)
+	Timestamp     string `json:"timestamp"`             // Unix nanoseconds as decimal string (clock skew tolerance ±5s)
+	Nonce         []byte `json:"nonce"`                 // unique per-request nonce (for replay ledger)
+	NodePublicKey string `json:"nodePublicKey"`         // wire-encoded Ed25519 public key
+	Signature     []byte `json:"signature"`             // Ed25519 signature over canonical request (excluding signature field)
+	EphemeralID   string `json:"ephemeralId,omitempty"` // [A05] UUID for ephemeral tmpfs delivery (optional, phase 1)
 }
 
 // CanonicalRequest returns the canonical form of the request for signing/verification.
@@ -245,14 +245,14 @@ func (r *SecretRetrievalRequest) VerifySignature() error {
 // ConsumedAuthorization records a consumed authorization in the replay ledger.
 // Persisted to Raft FSM, survives leader change/restart/failover.
 type ConsumedAuthorization struct {
-	RequestDigest      string `json:"requestDigest"`      // SHA256(canonical request)
-	ConsumedNonce      []byte `json:"consumedNonce"`      // nonce from request (duplicate protection)
-	ConsumedAt         string `json:"consumedAt"`         // Unix ns when consumed as decimal string (FSM timestamp, JSON safe)
-	NodeID             string `json:"nodeId"`             // requesting node
-	SecretID           string `json:"secretId"`           // target secret
-	SecretVersion      int32  `json:"secretVersion"`      // target version
-	Outcome            string `json:"outcome"`            // "SUCCESS" | "DENIED" (audit)
-	DenyReason         string `json:"denyReason,omitempty"` // why denied (audit)
+	RequestDigest string `json:"requestDigest"`        // SHA256(canonical request)
+	ConsumedNonce []byte `json:"consumedNonce"`        // nonce from request (duplicate protection)
+	ConsumedAt    string `json:"consumedAt"`           // Unix ns when consumed as decimal string (FSM timestamp, JSON safe)
+	NodeID        string `json:"nodeId"`               // requesting node
+	SecretID      string `json:"secretId"`             // target secret
+	SecretVersion int32  `json:"secretVersion"`        // target version
+	Outcome       string `json:"outcome"`              // "SUCCESS" | "DENIED" (audit)
+	DenyReason    string `json:"denyReason,omitempty"` // why denied (audit)
 }
 
 // ReplayLedger holds all consumed authorizations, indexed by requestDigest.

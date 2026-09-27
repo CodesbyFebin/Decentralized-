@@ -1,6 +1,7 @@
 package control
 
 import (
+	"context"
 	"crypto/ed25519"
 	"encoding/base64"
 	"encoding/json"
@@ -20,6 +21,7 @@ import (
 	"decentralized.host/pkg/envelope"
 	"decentralized.host/pkg/identity"
 	"decentralized.host/pkg/manifest"
+	"decentralized.host/pkg/runtime"
 )
 
 // Command is one replicated log entry. TS and Actor are assigned by the
@@ -27,7 +29,7 @@ import (
 // computes the same state.
 type Command struct {
 	Type  string          `json:"type"`
-	TS    int64           `json:"-"`  // unix nanoseconds; not marshaled to JSON (use string in protobuf/wire if needed)
+	TS    int64           `json:"-"` // unix nanoseconds; not marshaled to JSON (use string in protobuf/wire if needed)
 	Actor string          `json:"actor"`
 	Data  json.RawMessage `json:"data"`
 }
@@ -56,6 +58,8 @@ type FSM struct {
 	onApply func(cmd *Command, res *Result)
 	// retrievalObserver instruments the authorization→decryption boundary for testing
 	retrievalObserver RetrievalQualificationObserver
+	// nlm is the node lifecycle manager for P0 qualification
+	nlm *runtime.NodeLifecycleManager
 }
 
 // NewFSM returns an empty state machine.
@@ -67,6 +71,15 @@ func (f *FSM) SetRetrievalObserver(obs RetrievalQualificationObserver) {
 	defer f.mu.Unlock()
 	if obs != nil {
 		f.retrievalObserver = obs
+	}
+}
+
+// SetNodeLifecycleManager sets the node lifecycle manager for P0 qualification.
+func (f *FSM) SetNodeLifecycleManager(nlm *runtime.NodeLifecycleManager) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if nlm != nil {
+		f.nlm = nlm
 	}
 }
 
@@ -195,10 +208,10 @@ func (f *FSM) apply(c *Command) (res *Result) {
 	if !found {
 		return fail("UNKNOWN", "unknown command %q", c.Type)
 	}
-	return h(s, c)
+	return h(f, s, c)
 }
 
-type handler func(s *State, c *Command) *Result
+type handler func(f *FSM, s *State, c *Command) *Result
 
 var handlers = map[string]handler{}
 
@@ -302,7 +315,7 @@ func verifyRoster(env *envelope.Envelope, root string) (api.Roster, error) {
 }
 
 func init() {
-	register("init", func(s *State, c *Command) *Result {
+	register("init", func(f *FSM, s *State, c *Command) *Result {
 		if s.Cluster != "" {
 			return fail("EXISTS", "cluster %s is already initialized", s.Cluster)
 		}
@@ -327,7 +340,7 @@ func init() {
 		return ok("cluster %s initialized", d.Cluster)
 	})
 
-	register("roster", func(s *State, c *Command) *Result {
+	register("roster", func(f *FSM, s *State, c *Command) *Result {
 		env, err := decode[*envelope.Envelope](c)
 		if err != nil {
 			return fail("DECODE", "%v", err)
@@ -365,7 +378,7 @@ func init() {
 	})
 
 	// root-rotate: old root signs the rotation; new root signs the new roster.
-	register("root-rotate", func(s *State, c *Command) *Result {
+	register("root-rotate", func(f *FSM, s *State, c *Command) *Result {
 		d, err := decode[struct {
 			Rotation *envelope.Envelope `json:"rotation"`
 			Roster   *envelope.Envelope `json:"roster"`
@@ -402,7 +415,7 @@ func init() {
 		return ok("root rotated")
 	})
 
-	register("freeze", func(s *State, c *Command) *Result {
+	register("freeze", func(f *FSM, s *State, c *Command) *Result {
 		d, err := decode[struct {
 			Frozen bool `json:"frozen"`
 		}](c)
@@ -422,7 +435,7 @@ func init() {
 		return ok("%s", detail)
 	})
 
-	register("local-ca", func(s *State, c *Command) *Result {
+	register("local-ca", func(f *FSM, s *State, c *Command) *Result {
 		d, err := decode[struct {
 			Cert string `json:"cert"`
 			Key  string `json:"key"`
@@ -438,7 +451,7 @@ func init() {
 		return ok("local CA stored")
 	})
 
-	register("checkpoint", func(s *State, c *Command) *Result {
+	register("checkpoint", func(f *FSM, s *State, c *Command) *Result {
 		env, err := decode[*envelope.Envelope](c)
 		if err != nil {
 			return fail("DECODE", "%v", err)
@@ -459,7 +472,7 @@ func init() {
 		return ok("checkpoint at seq %d", p.Seq)
 	})
 
-	register("publishers", func(s *State, c *Command) *Result {
+	register("publishers", func(f *FSM, s *State, c *Command) *Result {
 		d, err := decode[struct {
 			Keys []string `json:"keys"`
 		}](c)
@@ -476,7 +489,7 @@ func init() {
 		return ok("publishers updated")
 	})
 
-	register("attest", func(s *State, c *Command) *Result {
+	register("attest", func(f *FSM, s *State, c *Command) *Result {
 		env, err := decode[*envelope.Envelope](c)
 		if err != nil {
 			return fail("DECODE", "%v", err)
@@ -491,7 +504,7 @@ func init() {
 		return ok("attestation stored for %s", a.Digest)
 	})
 
-	register("artifact", func(s *State, c *Command) *Result {
+	register("artifact", func(f *FSM, s *State, c *Command) *Result {
 		d, err := decode[Artifact](c)
 		if err != nil {
 			return fail("DECODE", "%v", err)
@@ -512,7 +525,7 @@ func init() {
 		return ok("artifact holders updated")
 	})
 
-	register("chaos-report", func(s *State, c *Command) *Result {
+	register("chaos-report", func(f *FSM, s *State, c *Command) *Result {
 		env, err := decode[*envelope.Envelope](c)
 		if err != nil {
 			return fail("DECODE", "%v", err)
@@ -550,7 +563,7 @@ type enrollData struct {
 }
 
 func init() {
-	register("invite", func(s *State, c *Command) *Result {
+	register("invite", func(f *FSM, s *State, c *Command) *Result {
 		d, err := decode[inviteData](c)
 		if err != nil {
 			return fail("DECODE", "%v", err)
@@ -564,7 +577,7 @@ func init() {
 		return ok("invite recorded")
 	})
 
-	register("invite-revoke", func(s *State, c *Command) *Result {
+	register("invite-revoke", func(f *FSM, s *State, c *Command) *Result {
 		d, err := decode[struct {
 			Nonce string `json:"nonce"`
 		}](c)
@@ -586,7 +599,7 @@ func init() {
 		return ok("invite revoked")
 	})
 
-	register("enroll", func(s *State, c *Command) *Result {
+	register("enroll", func(f *FSM, s *State, c *Command) *Result {
 		d, err := decode[enrollData](c)
 		if err != nil {
 			return fail("DECODE", "%v", err)
@@ -654,6 +667,10 @@ func init() {
 		s.Nodes[e.ID] = n
 		s.audit(audit.Entry{TS: c.TS, Actor: e.ID, Source: audit.SourceHost, Action: "enroll", Resource: "node/" + e.ID,
 			Detail: fmt.Sprintf("%s requested admission from %s/%s (%s/%s)", e.Name, e.Region, e.Zone, e.OS, e.Arch), Evidence: d.Env.Digest()})
+		// Register with NodeLifecycleManager for P0 qualification
+		if f.nlm != nil {
+			f.nlm.RegisterNode(context.Background(), e.ID)
+		}
 		if inv.Auto {
 			approve(s, n, c.TS, "invite:"+inv.Nonce[:8])
 			return ok("%s enrolled and approved by invite", e.Name)
@@ -661,7 +678,7 @@ func init() {
 		return ok("%s enrolled; waiting for operator approval", e.Name)
 	})
 
-	register("approve", func(s *State, c *Command) *Result {
+	register("approve", func(f *FSM, s *State, c *Command) *Result {
 		d, err := decode[struct {
 			Node string `json:"node"`
 		}](c)
@@ -676,10 +693,15 @@ func init() {
 			return ok("%s is already approved", n.Name)
 		}
 		approve(s, n, c.TS, c.Actor)
+		// Transition node to ACTIVE state for P0 qualification
+		if f.nlm != nil {
+			ctx := context.Background()
+			f.nlm.TransitionToActive(ctx, d.Node)
+		}
 		return ok("%s approved; it may now admit work", n.Name)
 	})
 
-	register("revoke", func(s *State, c *Command) *Result {
+	register("revoke", func(f *FSM, s *State, c *Command) *Result {
 		d, err := decode[struct {
 			Node   string `json:"node"`
 			Reason string `json:"reason"`
@@ -697,10 +719,14 @@ func init() {
 		n.Status, n.RevokedAt = "revoked", c.TS
 		s.audit(audit.Entry{TS: c.TS, Actor: c.Actor, Source: audit.SourceOperator, Action: "node-revoke", Resource: "node/" + n.ID,
 			Detail: fmt.Sprintf("%s revoked (%s). New admission blocked; admitted processes are not killed by this record.", n.Name, d.Reason)})
+		// Update lifecycle manager for P0 qualification
+		if f.nlm != nil {
+			f.nlm.RevokeNode(context.Background(), d.Node)
+		}
 		return ok("%s revoked; it refuses new work, admitted work continues until a signed stop", n.Name)
 	})
 
-	register("drain", func(s *State, c *Command) *Result {
+	register("drain", func(f *FSM, s *State, c *Command) *Result {
 		d, err := decode[struct {
 			Node  string `json:"node"`
 			Drain bool   `json:"drain"`
@@ -715,6 +741,10 @@ func init() {
 		if d.Drain && n.Status == "ready" {
 			n.Status = "draining"
 			s.audit(audit.Entry{TS: c.TS, Actor: c.Actor, Source: audit.SourceOperator, Action: "node-drain", Resource: "node/" + n.ID, Detail: n.Name + " draining: replicas will be rescheduled"})
+			// Update lifecycle manager for P0 qualification
+			if f.nlm != nil {
+				f.nlm.DrainNode(context.Background(), d.Node, 0)
+			}
 			return ok("%s draining", n.Name)
 		}
 		if !d.Drain && n.Status == "draining" {
@@ -725,7 +755,7 @@ func init() {
 		return ok("no change")
 	})
 
-	register("node-health", func(s *State, c *Command) *Result {
+	register("node-health", func(f *FSM, s *State, c *Command) *Result {
 		d, err := decode[struct {
 			Node   string `json:"node"`
 			Health string `json:"health"`
@@ -743,7 +773,122 @@ func init() {
 		return ok("%s is %s", n.Name, d.Health)
 	})
 
-	register("wg-binding", func(s *State, c *Command) *Result {
+	register("approve-enrollment", func(f *FSM, s *State, c *Command) *Result {
+		d, err := decode[struct {
+			Node string `json:"node"`
+		}](c)
+		if err != nil {
+			return fail("DECODE", "%v", err)
+		}
+		n := s.Nodes[d.Node]
+		if n == nil {
+			return fail("NOT_FOUND", "no host %s", d.Node)
+		}
+		if n.Status == "ready" {
+			return ok("%s is already approved", n.Name)
+		}
+		approve(s, n, c.TS, c.Actor)
+		if f.nlm != nil {
+			ctx := context.Background()
+			f.nlm.TransitionToActive(ctx, d.Node)
+		}
+		return ok("%s approved; it may now admit work", n.Name)
+	})
+
+	register("cordon-node", func(f *FSM, s *State, c *Command) *Result {
+		d, err := decode[struct {
+			Node   string `json:"node"`
+			Reason string `json:"reason"`
+		}](c)
+		if err != nil {
+			return fail("DECODE", "%v", err)
+		}
+		n := s.Nodes[d.Node]
+		if n == nil {
+			return fail("NOT_FOUND", "no host %s", d.Node)
+		}
+		if n.Status == "cordoned" {
+			return ok("%s is already cordoned", n.Name)
+		}
+		n.Status = "cordoned"
+		s.audit(audit.Entry{TS: c.TS, Actor: c.Actor, Source: audit.SourceOperator, Action: "node-cordon", Resource: "node/" + n.ID,
+			Detail: fmt.Sprintf("%s cordoned (%s). No new work will be assigned.", n.Name, d.Reason)})
+		if f.nlm != nil {
+			f.nlm.CordonNode(context.Background(), d.Node)
+		}
+		return ok("%s cordoned; no new work will be assigned", n.Name)
+	})
+
+	register("drain-node", func(f *FSM, s *State, c *Command) *Result {
+		d, err := decode[struct {
+			Node        string `json:"node"`
+			DrainTarget int    `json:"drainTarget"`
+		}](c)
+		if err != nil {
+			return fail("DECODE", "%v", err)
+		}
+		n := s.Nodes[d.Node]
+		if n == nil {
+			return fail("NOT_FOUND", "no host %s", d.Node)
+		}
+		if n.Status == "draining" {
+			return ok("%s is already draining", n.Name)
+		}
+		n.Status = "draining"
+		s.audit(audit.Entry{TS: c.TS, Actor: c.Actor, Source: audit.SourceOperator, Action: "node-drain", Resource: "node/" + n.ID,
+			Detail: fmt.Sprintf("%s draining: replicas will be rescheduled", n.Name)})
+		if f.nlm != nil {
+			f.nlm.DrainNode(context.Background(), d.Node, d.DrainTarget)
+		}
+		return ok("%s draining", n.Name)
+	})
+
+	register("revoke-node", func(f *FSM, s *State, c *Command) *Result {
+		d, err := decode[struct {
+			Node   string `json:"node"`
+			Reason string `json:"reason"`
+		}](c)
+		if err != nil {
+			return fail("DECODE", "%v", err)
+		}
+		n := s.Nodes[d.Node]
+		if n == nil {
+			return fail("NOT_FOUND", "no host %s", d.Node)
+		}
+		if n.Status == "revoked" {
+			return ok("%s is already revoked", n.Name)
+		}
+		n.Status, n.RevokedAt = "revoked", c.TS
+		s.audit(audit.Entry{TS: c.TS, Actor: c.Actor, Source: audit.SourceOperator, Action: "node-revoke", Resource: "node/" + n.ID,
+			Detail: fmt.Sprintf("%s revoked (%s). New admission blocked; admitted processes are not killed by this record.", n.Name, d.Reason)})
+		if f.nlm != nil {
+			f.nlm.RevokeNode(context.Background(), d.Node)
+		}
+		return ok("%s revoked; it refuses new work, admitted work continues until a signed stop", n.Name)
+	})
+
+	register("node-observation", func(f *FSM, s *State, c *Command) *Result {
+		d, err := decode[struct {
+			Node            string `json:"node"`
+			Generation      int64  `json:"generation"`
+			DesiredState    string `json:"desiredState"`
+			ObservedHealth  string `json:"observedHealth"`
+			Workloads       []interface{} `json:"workloads"`
+		}](c)
+		if err != nil {
+			return fail("DECODE", "%v", err)
+		}
+		n := s.Nodes[d.Node]
+		if n == nil {
+			return fail("NOT_FOUND", "no host %s", d.Node)
+		}
+		// Record observation for audit trail
+		s.audit(audit.Entry{TS: c.TS, Actor: c.Actor, Source: audit.SourceHost, Action: "observation", Resource: "node/" + n.ID,
+			Detail: fmt.Sprintf("observed health: %s, generation: %d, desired: %s", d.ObservedHealth, d.Generation, d.DesiredState)})
+		return ok("observation recorded for %s", n.Name)
+	})
+
+	register("wg-binding", func(f *FSM, s *State, c *Command) *Result {
 		env, err := decode[*envelope.Envelope](c)
 		if err != nil {
 			return fail("DECODE", "%v", err)
@@ -796,7 +941,7 @@ func init() {
 		return fail("NOT_FOUND", "binding signer %s is unknown", env.Signer)
 	})
 
-	register("rotate-key", func(s *State, c *Command) *Result {
+	register("rotate-key", func(f *FSM, s *State, c *Command) *Result {
 		d, err := decode[struct {
 			Env    *envelope.Envelope `json:"env"`
 			OldSig string             `json:"oldSig"`
@@ -845,7 +990,7 @@ func init() {
 		return ok("%s rotated to a new key; old key accepted during grace", n.Name)
 	})
 
-	register("revoke-key", func(s *State, c *Command) *Result {
+	register("revoke-key", func(f *FSM, s *State, c *Command) *Result {
 		d, err := decode[struct {
 			Node   string `json:"node"`
 			Pub    string `json:"pub"`
@@ -887,7 +1032,7 @@ func templateHash(m api.Manifest) string {
 }
 
 func init() {
-	register("apply", func(s *State, c *Command) *Result {
+	register("apply", func(f *FSM, s *State, c *Command) *Result {
 		d, err := decode[struct {
 			Manifest   api.Manifest  `json:"manifest"`
 			Federation *FedPlacement `json:"federation"`
@@ -929,7 +1074,7 @@ func init() {
 		return &Result{OK: true, Message: fmt.Sprintf("%s: %s (generation %d)", app.Name, change, app.Generation), Data: app.Generation}
 	})
 
-	register("delete-app", func(s *State, c *Command) *Result {
+	register("delete-app", func(f *FSM, s *State, c *Command) *Result {
 		d, err := decode[struct {
 			App string `json:"app"`
 		}](c)
@@ -946,7 +1091,7 @@ func init() {
 		return ok("%s deleted; replicas will be stopped", d.App)
 	})
 
-	register("purge-app", func(s *State, c *Command) *Result {
+	register("purge-app", func(f *FSM, s *State, c *Command) *Result {
 		d, err := decode[struct {
 			App string `json:"app"`
 		}](c)
@@ -965,7 +1110,7 @@ func init() {
 	})
 
 	// assign upserts leader-signed assignments and removes finished ones.
-	register("assign", func(s *State, c *Command) *Result {
+	register("assign", func(f *FSM, s *State, c *Command) *Result {
 		d, err := decode[struct {
 			Upsert []*envelope.Envelope `json:"upsert"`
 			Remove []string             `json:"remove"`
@@ -1013,7 +1158,7 @@ func init() {
 		return ok("%d assignment change(s), %d removed", changed, len(d.Remove))
 	})
 
-	register("volume-plan", func(s *State, c *Command) *Result {
+	register("volume-plan", func(f *FSM, s *State, c *Command) *Result {
 		d, err := decode[struct {
 			Volumes []*Volume `json:"volumes"`
 		}](c)
@@ -1062,7 +1207,7 @@ func name(s *State, id string) string {
 // ------------------------------------------------------------ observations
 
 func init() {
-	register("observe", func(s *State, c *Command) *Result {
+	register("observe", func(f *FSM, s *State, c *Command) *Result {
 		env, err := decode[*envelope.Envelope](c)
 		if err != nil {
 			return fail("DECODE", "%v", err)
@@ -1070,7 +1215,7 @@ func init() {
 		return applyObservation(s, env, c.TS)
 	})
 
-	register("evidence", func(s *State, c *Command) *Result {
+	register("evidence", func(f *FSM, s *State, c *Command) *Result {
 		env, err := decode[*envelope.Envelope](c)
 		if err != nil {
 			return fail("DECODE", "%v", err)
@@ -1397,7 +1542,7 @@ type secretRetrievalAuthData struct {
 	ProposalTS string                  `json:"proposalTs"` // leader's observed time when proposing (as decimal string for JSON safety)
 }
 
-func secretRetrievalAuthorize(s *State, c *Command) *Result {
+func secretRetrievalAuthorize(f *FSM, s *State, c *Command) *Result {
 	// Decode wrapper payload containing proposal_ts and request
 	var payload map[string]interface{}
 	if err := json.Unmarshal(c.Data, &payload); err != nil {
@@ -1526,12 +1671,12 @@ func secretRetrievalAuthorize(s *State, c *Command) *Result {
 
 	// Audit
 	s.audit(audit.Entry{
-		TS:     c.TS / 1e6,  // convert nanoseconds to milliseconds
-		Actor:  req.NodeID,
-		Source: audit.SourceHost,
-		Action: "secret-retrieval-authorize",
+		TS:       c.TS / 1e6, // convert nanoseconds to milliseconds
+		Actor:    req.NodeID,
+		Source:   audit.SourceHost,
+		Action:   "secret-retrieval-authorize",
 		Resource: fmt.Sprintf("secret/%s/v%d", req.SecretID, req.SecretVersion),
-		Detail: fmt.Sprintf("workload %s deployment %s env %s", req.WorkloadID, req.DeploymentID, req.Environment),
+		Detail:   fmt.Sprintf("workload %s deployment %s env %s", req.WorkloadID, req.DeploymentID, req.Environment),
 		Evidence: requestDigest,
 	})
 
@@ -1540,7 +1685,7 @@ func secretRetrievalAuthorize(s *State, c *Command) *Result {
 
 // Secret command handlers
 
-func secretCreate(s *State, c *Command) *Result {
+func secretCreate(f *FSM, s *State, c *Command) *Result {
 	rec, err := decode[SecretRecord](c)
 	if err != nil {
 		return fail("DECODE", "secret-create: %v", err)
@@ -1560,7 +1705,7 @@ func secretCreate(s *State, c *Command) *Result {
 	return ok("secret %s version %d created", rec.SecretID, rec.Version)
 }
 
-func secretVersionAdd(s *State, c *Command) *Result {
+func secretVersionAdd(f *FSM, s *State, c *Command) *Result {
 	rec, err := decode[SecretRecord](c)
 	if err != nil {
 		return fail("DECODE", "secret-version-add: %v", err)

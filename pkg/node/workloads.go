@@ -84,6 +84,21 @@ func (a *Agent) reconcileWorkloads() {
 			}
 		}
 	}
+	// Graceful drain: when node is draining, stop workloads as control plane retracts assignments
+	a.mu.RLock()
+	desiredState := a.st.DesiredState
+	a.mu.RUnlock()
+	if desiredState == "DRAINING" {
+		// Stop workloads that are not in the current desired state (control plane has stopped assigning them)
+		for _, id := range ids {
+			a.mu.RLock()
+			ad := a.st.Admitted[id]
+			a.mu.RUnlock()
+			if ad != nil && !ad.Stopped && !seen[id] {
+				a.stopWorkload(ad, "node is draining; workload assignment retracted")
+			}
+		}
+	}
 }
 
 func (a *Agent) capabilityCheck(root string, as api.Assignment) (bool, string) {
@@ -157,6 +172,15 @@ func (a *Agent) handleAssignment(b *api.Bundle, env *envelope.Envelope, as api.A
 	a.mu.RUnlock()
 	if as.Runtime == "docker" && !a.dockerOK.Load() {
 		in.Policy.AllowRuntimes = without(in.Policy.AllowRuntimes, "docker")
+	}
+	// Enforce cordon: reject new workloads when node is cordoned or draining
+	a.mu.RLock()
+	desiredState := a.st.DesiredState
+	a.mu.RUnlock()
+	if prior == nil && (desiredState == "CORDONED" || desiredState == "DRAINING") {
+		d := policy.Decision{Code: "NODE_CORDONED", Reason: fmt.Sprintf("node is %s; new workloads rejected", desiredState)}
+		a.decide(as, d, prior)
+		return
 	}
 	d := policy.Admit(in)
 	a.decide(as, d, prior)

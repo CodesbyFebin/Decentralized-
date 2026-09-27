@@ -118,7 +118,7 @@ func verifyAgreement(env *envelope.Envelope) (FedAgreement, error) {
 
 func init() {
 	// fed-grant: this cluster (as grantor) records an agreement its own root signed.
-	register("fed-grant", func(s *State, c *Command) *Result {
+	register("fed-grant", func(f *FSM, s *State, c *Command) *Result {
 		env, err := decode[*envelope.Envelope](c)
 		if err != nil {
 			return fail("DECODE", "%v", err)
@@ -139,7 +139,7 @@ func init() {
 	})
 
 	// fed-hold: this cluster (as grantee) records an agreement a peer granted.
-	register("fed-hold", func(s *State, c *Command) *Result {
+	register("fed-hold", func(f *FSM, s *State, c *Command) *Result {
 		env, err := decode[*envelope.Envelope](c)
 		if err != nil {
 			return fail("DECODE", "%v", err)
@@ -158,7 +158,7 @@ func init() {
 		return &Result{OK: true, Message: "agreement from " + a.Grantor + " accepted", Data: d}
 	})
 
-	register("fed-revoke", func(s *State, c *Command) *Result {
+	register("fed-revoke", func(f *FSM, s *State, c *Command) *Result {
 		env, err := decode[*envelope.Envelope](c)
 		if err != nil {
 			return fail("DECODE", "%v", err)
@@ -192,7 +192,7 @@ func init() {
 		return ok("agreement revoked; %d inbound app(s) will receive signed stops", stopped)
 	})
 
-	register("fed-inbound", func(s *State, c *Command) *Result {
+	register("fed-inbound", func(f *FSM, s *State, c *Command) *Result {
 		d, err := decode[FedPlacement](c)
 		if err != nil {
 			return fail("DECODE", "%v", err)
@@ -202,7 +202,7 @@ func init() {
 		return ok("inbound placement recorded")
 	})
 
-	register("fed-withdraw", func(s *State, c *Command) *Result {
+	register("fed-withdraw", func(f *FSM, s *State, c *Command) *Result {
 		d, err := decode[struct {
 			App string `json:"app"`
 		}](c)
@@ -221,7 +221,7 @@ func init() {
 		return ok("withdrawn")
 	})
 
-	register("fed-outbound", func(s *State, c *Command) *Result {
+	register("fed-outbound", func(f *FSM, s *State, c *Command) *Result {
 		d, err := decode[FedOutbound](c)
 		if err != nil {
 			return fail("DECODE", "%v", err)
@@ -249,7 +249,7 @@ func init() {
 		return ok("outbound updated")
 	})
 
-	register("fed-outbound-delete", func(s *State, c *Command) *Result {
+	register("fed-outbound-delete", func(f *FSM, s *State, c *Command) *Result {
 		d, _ := decode[struct {
 			App string `json:"app"`
 		}](c)

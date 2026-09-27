@@ -31,5 +31,6 @@ bootstrap.fingerprint
 !/evidence/CC-W1-A01/
 !/evidence/SEC-P0-A01-A04/
 !/evidence/A05-P1-R1-A01-*/
+!/evidence/A05-P0-A01-*/
 !/evidence/*/**/*.key
 /chaos-reports/runner/

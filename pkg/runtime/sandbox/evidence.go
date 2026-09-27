@@ -38,25 +38,25 @@ type RuntimeEvidence struct {
 
 // RuntimeCapabilities describe what isolation mechanisms the host can enforce.
 type RuntimeCapabilities struct {
-	UserNamespace    bool   `json:"userNamespace"`
-	PIDNamespace     bool   `json:"pidNamespace"`
-	MountNamespace   bool   `json:"mountNamespace"`
-	NetworkNamespace bool   `json:"networkNamespace"`
-	IPCNamespace     bool   `json:"ipcNamespace"`
-	UTSNamespace     bool   `json:"utsNamespace"`
-	CgroupsV2        bool   `json:"cgroupsV2"`
-	Seccomp          bool   `json:"seccomp"`
-	ReadOnlyRoot     bool   `json:"readOnlyRoot"`
-	CapabilityDrop   bool   `json:"capabilityDrop"`
-	PortRelay        bool   `json:"portRelay"` // For RESTRICTED network isolation
+	UserNamespace    bool `json:"userNamespace"`
+	PIDNamespace     bool `json:"pidNamespace"`
+	MountNamespace   bool `json:"mountNamespace"`
+	NetworkNamespace bool `json:"networkNamespace"`
+	IPCNamespace     bool `json:"ipcNamespace"`
+	UTSNamespace     bool `json:"utsNamespace"`
+	CgroupsV2        bool `json:"cgroupsV2"`
+	Seccomp          bool `json:"seccomp"`
+	ReadOnlyRoot     bool `json:"readOnlyRoot"`
+	CapabilityDrop   bool `json:"capabilityDrop"`
+	PortRelay        bool `json:"portRelay"` // For RESTRICTED network isolation
 }
 
 // TestResult records the outcome of one test case.
 type TestResult struct {
 	Name     string `json:"name"`
-	Outcome  string `json:"outcome"`   // PASS or FAIL
-	Duration int64  `json:"duration"`  // milliseconds
-	Detail   string `json:"detail"`    // Error message if failed
+	Outcome  string `json:"outcome"`  // PASS or FAIL
+	Duration int64  `json:"duration"` // milliseconds
+	Detail   string `json:"detail"`   // Error message if failed
 }
 
 // NewRuntimeEvidence creates an evidence record for the current host.
@@ -90,17 +90,17 @@ func NewRuntimeEvidence() (*RuntimeEvidence, error) {
 // It returns true only if all required tests passed.
 func (e *RuntimeEvidence) Seal() bool {
 	mandatoryTests := map[string]bool{
-		"escape":                    false,
-		"memory_limit":              false,
-		"pid_limit":                 false,
-		"network_isolation":         false,
-		"filesystem_isolation":      false,
-		"readonly_root":             false,
-		"capability_dropping":       false,
-		"seccomp_enforcement":       false,
-		"mount_policy":              false,
-		"untrusted_refused":         false,
-		"cleanup_enforcement":       false,
+		"escape":               false,
+		"memory_limit":         false,
+		"pid_limit":            false,
+		"network_isolation":    false,
+		"filesystem_isolation": false,
+		"readonly_root":        false,
+		"capability_dropping":  false,
+		"seccomp_enforcement":  false,
+		"mount_policy":         false,
+		"untrusted_refused":    false,
+		"cleanup_enforcement":  false,
 	}
 
 	passed := 0
