@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Plus, Database, HardDrive, Server, Archive, ShieldCheck, Monitor, Terminal, Settings2, Box, Copy, Layers, Package, Trash2, RotateCcw, Zap } from 'lucide-react';
+import { Plus, Database, HardDrive, Server, Archive, ShieldCheck, Monitor, Terminal, Settings2, Box, Copy, Layers, Package, Trash2, RotateCcw, Zap, AlertCircle } from 'lucide-react';
 import type { ArtifactRec, Freshness, Metric, NodeHealth, NodeRec, VolumeRec } from '../../types/reality';
 import { useResource } from '../../lib/useResource';
 import { useSession } from '../../lib/session';
@@ -9,6 +9,7 @@ import { SurfaceLayout, SurfaceHero, Eyebrow, regionGroups, groupMarkers, meshAr
 import { Glass, KpiTile, PageTabs, RailPanel, RailItem, NetworkRow, PanelHeader, IconTile, StatusPill, Grad, PrimaryButton, GhostButton, Tone } from '../common/ui';
 import { Gate, fmtBytes, since, shortDigest, Unavailable, Empty, FreshnessPill, metricText, Note, ErrorState } from '../common/states';
 import { ConnectDialog, ConnectTarget } from '../common/ConnectDialog';
+import { TruthValue, type TruthEnvelope } from '../common/truthDisplay';
 
 type Tab = 'overview' | 'mine' | 'volumes' | 'objects' | 'replication' | 'contributions' | 'depin' | 'activity';
 
@@ -17,6 +18,27 @@ interface CreateVolumeForm {
   sizeBytes: string;
   durability: number;
   app: string;
+}
+
+interface VolumeReplica {
+  replicaId: string;
+  nodeId: string;
+  nodeName: string;
+  desired: TruthEnvelope<'COMMITTED' | 'REPLICATING' | 'REMOVED'>;
+  observed: TruthEnvelope<'COMMITTED' | 'REPLICATING' | 'SYNCING' | 'FAILED'>;
+  usedBytes: TruthEnvelope<number>;
+  verified: TruthEnvelope<boolean>;
+  lastVerified: number | null;
+  evidenceId: string | null;
+}
+
+interface VolumeReplicationState {
+  volumeId: string;
+  desiredReplicas: TruthEnvelope<number>;
+  observedReplicas: TruthEnvelope<number>;
+  replicas: VolumeReplica[];
+  commitSignature: string | null;
+  commitVerified: TruthEnvelope<boolean>;
 }
 
 const STORAGE_NOTE =
@@ -46,6 +68,7 @@ interface Payload {
   artifacts: ArtifactRec[];
   hosts: { id: string; name: string; region: string; health: NodeHealth; storage: NodeRec['storage']; freshness: Freshness; location: NodeRec['location'] }[];
   metrics: { used: Metric; capacity: Metric; volumes: Metric; degraded: Metric };
+  replicationStates: VolumeReplicationState[];
 }
 
 export default function StorageView() {
@@ -305,7 +328,8 @@ export default function StorageView() {
             if (tab === 'depin') return <div className="grid md:grid-cols-2 gap-3">{['Filecoin', 'Arweave', 'Storj', 'Sia', 'IPFS pinning', 'Crust'].map((n) => <Unavailable key={n} title={n} detail="No adapter exists. Nothing is installed and no storage is contributed to this network." />)}</div>;
             if (tab === 'contributions') return <Unavailable title="Storage contribution" state="PLANNED" detail="Hosts store replicas only for applications in their own cluster. Offering storage to other operators and metering it is not implemented." />;
             if (tab === 'mine') return hostTable;
-            if (tab === 'volumes' || tab === 'replication') return <>{volumeTable}{tab === 'replication' && <Note>{STORAGE_NOTE}</Note>}</>;
+            if (tab === 'replication') return <><VolumeReplicationSection res={res} />{<Note>{STORAGE_NOTE}</Note>}</>;
+            if (tab === 'volumes') return <>{volumeTable}</>;
             if (tab === 'objects')
               return d.artifacts.length ? (
                 <Glass className="overflow-x-auto">
@@ -343,6 +367,109 @@ export default function StorageView() {
       </SurfaceLayout>
       <ConnectDialog target={connect} onClose={() => { setConnect(null); if (params.get('add')) setParams((p) => (p.delete('add'), p), { replace: true }); }} />
     </>
+  );
+}
+
+function VolumeReplicationSection({ res }: { res: ReturnType<typeof useResource<Payload>> }) {
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  return (
+    <Gate res={res}>
+      {(d) => {
+        if (!d.replicationStates.length) return null;
+        return (
+          <Glass className="p-4">
+            <PanelHeader icon={<IconTile tone="emerald" size="sm"><Layers className="w-4 h-4" /></IconTile>} title="Volume replication (P1)" subtitle="Desired vs observed replica distribution with verification state." />
+            <div className="mt-4 space-y-3">
+              {d.replicationStates.map((replication) => (
+                <div key={replication.volumeId} className="p-3 rounded-lg bg-slate-800/30 border border-slate-700/20">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-[12px] font-semibold text-slate-100">{replication.volumeId}</div>
+                    <div className="flex gap-2">
+                      <TruthValue
+                        label="Desired"
+                        envelope={replication.desiredReplicas}
+                        format={(v) => v.toString()}
+                      />
+                      <TruthValue
+                        label="Observed"
+                        envelope={replication.observedReplicas}
+                        format={(v) => v.toString()}
+                      />
+                      <TruthValue
+                        label="Committed"
+                        envelope={replication.commitVerified}
+                        format={(v) => v ? 'verified' : 'unverified'}
+                      />
+                    </div>
+                  </div>
+
+                  {replication.observedReplicas.value !== replication.desiredReplicas.value && (
+                    <div className="mb-2 p-2 rounded bg-amber-500/10 border border-amber-500/20 flex items-center gap-2 text-[11px] text-amber-200">
+                      <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                      Replication in progress: {replication.observedReplicas.value} / {replication.desiredReplicas.value} replicas
+                    </div>
+                  )}
+
+                  <div className="space-y-1.5">
+                    {replication.replicas.map((replica) => (
+                      <div
+                        key={replica.replicaId}
+                        className="p-2 rounded bg-slate-900/40 cursor-pointer hover:bg-slate-900/60 transition-colors"
+                        onClick={() => setExpandedId(expandedId === replica.replicaId ? null : replica.replicaId)}
+                      >
+                        <div className="flex items-center justify-between text-[11.5px]">
+                          <div className="flex items-center gap-2">
+                            <span className="text-slate-100 font-semibold">{replica.nodeName}</span>
+                            <span className="text-slate-500 font-mono text-[10.5px]">{replica.replicaId.slice(0, 12)}…</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <StatusPill status={replica.observed.value || 'UNKNOWN'} tone={replica.observed.value === 'COMMITTED' ? 'emerald' : replica.observed.value === 'REPLICATING' ? 'blue' : 'slate'} />
+                            <span className={`text-[10px] font-mono ${replica.observed.freshness === 'LIVE' ? 'text-emerald-400' : 'text-slate-400'}`}>{replica.observed.freshness}</span>
+                          </div>
+                        </div>
+
+                        {expandedId === replica.replicaId && (
+                          <div className="mt-2 pt-2 border-t border-slate-700/30 space-y-1">
+                            <TruthValue
+                              label="Desired state"
+                              envelope={{ ...replica.desired, source: 'control-plane' }}
+                              format={(v) => v}
+                            />
+                            <TruthValue
+                              label="Observed state"
+                              envelope={{ ...replica.observed, source: 'node-observation' }}
+                              format={(v) => v}
+                            />
+                            <TruthValue
+                              label="Verified"
+                              envelope={replica.verified}
+                              format={(v) => v ? 'snapshot verified' : 'unverified'}
+                            />
+                            <TruthValue
+                              label="Used bytes"
+                              envelope={replica.usedBytes}
+                              format={(v) => fmtBytes(v)}
+                            />
+                            {replica.lastVerified && (
+                              <div className="text-[11px] text-slate-400 pt-1">Last verified {since(replica.lastVerified)}</div>
+                            )}
+                            {replica.evidenceId && (
+                              <div className="text-[10px] text-slate-500 font-mono pt-1">Evidence: {shortDigest(replica.evidenceId)}</div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <Note>Volume replicas show desired/observed replication state with verification status. LIVE indicates current observation; STALE or UNKNOWN indicates measurement is old or unavailable. Mismatch triggers replication repair.</Note>
+          </Glass>
+        );
+      }}
+    </Gate>
   );
 }
 
