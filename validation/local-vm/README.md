@@ -1,9 +1,16 @@
 # LOCAL-VM-P1-QUALIFICATION-KIT
 
-**P1-ENDTOEND-A01 Distributed Private Cloud Qualification on Your Own Hardware**
+**P1-LOCAL-VM-A01: Distributed Private Cloud Qualification on Single Physical Host**
 
-Zero-cost, card-free P1 qualification using local VMs on your machine or cheap cloud starter tiers (GitHub Actions, Hugging Face Spaces, Google Cloud Starter).
+Real P1 qualification proving distributed machine/VM/OS/node/network failure boundaries on your hardware.
 
+> **Precisely scoped qualification:** Three distinct Linux VMs on one physical host, demonstrating real failure detection and workload rescheduling. NOT a multi-physical-host or multi-operator qualification (those require additional physical domains for P2).
+>
+> **Verification surfaces (NOT P1 nodes):**
+> - GitHub Actions: Independent evidence verification from fresh environment
+> - Xcode Cloud (optional, Apple Developer members): Additional CI verification backend
+> - Hugging Face Spaces (optional): External portability/integration tests
+>
 > **Aligned with Decentralized Host's sovereign, local-first premise.** No cloud provider lock-in. No credit card required. Complete control over evidence collection and network topology.
 
 ## What's Inside
@@ -134,61 +141,150 @@ bash scripts/stop-cluster.sh
 bash scripts/destroy-cluster.sh
 ```
 
-## Topology
-
-### Option A: Local QEMU/UTM/VirtualBox
+## Locked Topology: P1-LOCAL-VM-A01
 
 ```
-Your Laptop/Desktop
-├── dh-local-01: 2 CPU, 4GB RAM
-├── dh-local-02: 2 CPU, 4GB RAM
-└── dh-local-03: 4 CPU, 8GB RAM (control plane)
+┌─────────────────────────────────────────────────┐
+│        Physical Host (Your Laptop/Mac/Linux)    │
+│                                                 │
+│  ┌──────────────────────────────────────────┐  │
+│  │  Hypervisor (QEMU/UTM/VirtualBox/KVM)    │  │
+│  │                                          │  │
+│  │  ┌─────────────┐  ┌─────────────┐       │  │
+│  │  │ dh-node-01  │  │ dh-node-02  │       │  │
+│  │  │ 2 CPU, 4GB  │  │ 2 CPU, 4GB  │       │  │
+│  │  └─────────────┘  └─────────────┘       │  │
+│  │         │              │                 │  │
+│  │  ┌──────┴──────────────┴────────┐       │  │
+│  │  │  192.168.200.0/24 (VM net)   │       │  │
+│  │  │  D.H. cluster network        │       │  │
+│  │  │  - Membership                │       │  │
+│  │  │  - Placement                 │       │  │
+│  │  │  - Workload runtime          │       │  │
+│  │  │  - Service discovery         │       │  │
+│  │  │  - Ingress                   │       │  │
+│  │  └──────┬──────────────┬────────┘       │  │
+│  │         │              │                 │  │
+│  │  ┌─────────────────────────────┐        │  │
+│  │  │  dh-node-03 (Control Plane) │        │  │
+│  │  │  4 CPU, 8GB, persistent disk│        │  │
+│  │  └─────────────────────────────┘        │  │
+│  └──────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────┘
 
-Network: 192.168.200.0/24 (host-only or WireGuard)
-Latency: <1ms (localhost) to ~50ms (WireGuard simulated)
+⬇ Evidence Collection (this host)
+
+┌─────────────────────────────────────────────────┐
+│  GitHub Actions (Independent Verifier)          │
+│  - Verify committed evidence bundle             │
+│  - Tamper-copy negative control                 │
+│  - Regression tests                             │
+│  - Fresh environment validation                 │
+│  NOT A P1 NODE                                  │
+└─────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────┐
+│  Xcode Cloud (Optional, Apple Developer members)│
+│  - 25 hours/month included CI compute           │
+│  - Build/test/verification workloads            │
+│  - Additional independent verifier              │
+│  NOT A P1 NODE                                  │
+└─────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────┐
+│  Hugging Face Spaces (Optional Portability)     │
+│  - External integration testing                 │
+│  - Shareable results                            │
+│  NOT A P1 NODE, NOT IN QUORUM                   │
+└─────────────────────────────────────────────────┘
 ```
 
-**Resource Requirements:**
-- Host: 8+ CPU cores, 16GB+ RAM, 150GB free disk
-- Per VM: 2-4 CPU, 4-8GB RAM, 50GB disk
-- Total: ~200GB disk, 20GB active RAM
+### Domain Classification
 
-**Time to Provision:** 10-15 minutes (download Ubuntu image + create VMs)
-
-### Option B: GitHub Actions (Free Tier)
-
-```
-GitHub Actions Runner
-├── 2 CPU, 7GB RAM
-├── 150GB disk
-└── 3 containers (via Docker)
-
-Network: GitHub's datacenter (<5ms inter-container)
-Cost: $0 (free tier 2000 minutes/month)
-```
-
-**Constraints:**
-- Only 60-minute max job runtime
-- Limited to sequential scenarios (no 2-hour baseline test)
-- Useful for quick regression testing, not full P1 qualification
-
-### Option C: Hugging Face Spaces (Free Tier + Docker)
-
-```
-Hugging Face Spaces
-└── 16GB CPU RAM container
-    ├── Orchestrate 3x Docker containers
-    ├── Collect evidence to HF dataset
-    └── Stream results to shared Space
-
-Cost: $0 (free tier)
-Runtime: 12-48 hours continuous
+```json
+{
+  "PHYSICAL_HOSTS": 1,
+  "VM_INSTANCES": 3,
+  "OS_INSTANCES": 3,
+  "NODE_IDENTITIES": 3,
+  
+  "P1_FAILURE_DOMAINS": {
+    "VM_DOMAIN": "DISTINCT",
+    "OS_DOMAIN": "DISTINCT",
+    "FILESYSTEM_DOMAIN": "DISTINCT",
+    "NODE_IDENTITY_DOMAIN": "DISTINCT"
+  },
+  
+  "SHARED_INFRASTRUCTURE": {
+    "PHYSICAL_HOST_DOMAIN": "SAME",
+    "OPERATOR_DOMAIN": "SAME",
+    "POWER_DOMAIN": "SAME",
+    "HYPERVISOR_DOMAIN": "SAME"
+  },
+  
+  "QUALIFICATION_SCOPE": {
+    "P1_LOCAL_VM_QUALIFICATION": "ELIGIBLE",
+    "P1_INDEPENDENT_PHYSICAL_HOST_QUALIFICATION": "NOT_ESTABLISHED",
+    "P2_INDEPENDENT_OPERATOR_QUALIFICATION": "NOT_ESTABLISHED"
+  }
+}
 ```
 
-**Advantages:**
-- Persistent storage (HF dataset integration)
+### Resource Requirements
+
+- **Host**: 8+ CPU cores, 16GB+ RAM, 150GB free disk
+- **Per VM**: 2-4 CPU, 4-8GB RAM, 50GB persistent disk
+- **Network**: Real hypervisor network isolation (not application-level)
+- **Total**: ~200GB disk, 20GB active RAM
+- **Time to Provision**: 10-15 minutes (download image + create VMs)
+
+### Verification Environments (NOT P1 nodes)
+
+**GitHub Actions (Free Tier):**
+- Independent evidence verification from fresh Linux environment
+- 2000 free minutes/month
+- Tamper-copy negative control (modifies one artifact, expects verification to fail)
+- Regression testing on each push
+
+**Xcode Cloud (Optional, Apple Developer Members):**
+- 25 included compute hours/month
+- Build/test/verification workloads
+- Apple's managed CI service
+- Separate execution environment from P1 cluster
+
+**Hugging Face Spaces (Optional):**
+- External portability and integration testing
 - Shareable results via Space UI
-- Natural Hugging Face integration for AI workloads
+- NOT counted in P1 failure domains or quorum
+
+## What P1-LOCAL-VM-A01 Establishes
+
+**Proven (✓):**
+- Real VM failure boundaries (3 distinct hypervisor instances)
+- Real OS failure boundaries (3 distinct Linux kernels)
+- Real node identity boundaries (3 distinct D.H. node IDs)
+- Real network failure boundaries (hypervisor-level partitioning)
+- Real failure detection (<30s, measured)
+- Real workload rescheduling (<120s, measured)
+- Evidence signature verification (Ed25519 validation)
+- Real recovery and reconciliation
+- ResourceLedger accuracy before/after failure
+- Service interruption and restoration latency
+
+**NOT Established (Requires P2):**
+- Multi-physical-host resilience (requires 3+ distinct physical machines)
+- Multi-operator resilience (requires 3+ independent operators)
+- Multi-provider resilience (requires AWS + Azure + Oracle + others)
+- Geographic/regional resilience (requires physically distant nodes)
+- Power domain independence (requires separate PDUs/power supplies)
+- Independent network operators
+
+**Qualification Progression:**
+1. **P1-LOCAL-VM-A01** (this kit): Distributed VM failure, detection, rescheduling
+   - Run campaign → Seal evidence → Document P1 properties established
+2. **Additional Physical Domains** (if master spec requires): Only for blocked P1 properties
+3. **P1-ENDTOEND-A01**: Multi-physical-host qualification (OCI kit or similar)
+   - Run campaign → Seal evidence → Signed metering
 
 ## File Structure
 

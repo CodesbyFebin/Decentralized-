@@ -1,61 +1,110 @@
 {
-  "test_phase": "P1-ENDTOEND-A01",
-  "topology": "local-vm",
-  "domain_classification": {
-    "machineDomain": {
-      "value": "distinct",
-      "evidence": "3 separate processes or containers",
-      "testable": true
-    },
-    "vmDomain": {
-      "value": "distinct",
-      "evidence": "3 separate VM instances (QEMU/UTM/VirtualBox/Docker)",
-      "testable": true
-    },
-    "operatorDomain": {
-      "value": "SAME/self",
-      "evidence": "Single operator (local machine owner)",
-      "testable": false
-    },
-    "cloudDomain": {
-      "value": "NONE/local",
-      "evidence": "No cloud provider",
-      "testable": false
-    },
-    "regionDomain": {
-      "value": "SAME/localhost",
-      "evidence": "Single geographic location (your machine)",
-      "testable": false
-    },
-    "availabilityDomain": {
-      "value": "SAME/localhost",
-      "evidence": "Single availability zone",
-      "testable": false
-    },
-    "networkDomain": {
-      "value": "measured",
-      "evidence": "Latency: <1ms (local) to ~50ms (WireGuard)",
-      "testable": true
-    },
-    "powerDomain": {
-      "value": "SAME/local",
-      "evidence": "Single power supply",
-      "testable": false
-    }
+  "test_phase": "P1-LOCAL-VM-A01",
+  "test_name": "P1-LOCAL-VM-A01: Distributed Private Cloud Qualification on Single Physical Host",
+
+  "environment_declaration": {
+    "PHYSICAL_HOSTS": 1,
+    "VM_INSTANCES": 3,
+    "OS_INSTANCES": 3,
+    "NODE_IDENTITIES": 3,
+    "VM_DOMAIN": "DISTINCT",
+    "OS_DOMAIN": "DISTINCT",
+    "FILESYSTEM_DOMAIN": "DISTINCT",
+    "NODE_IDENTITY_DOMAIN": "DISTINCT",
+    "PHYSICAL_HOST_DOMAIN": "SAME",
+    "OPERATOR_DOMAIN": "SAME",
+    "POWER_DOMAIN": "SAME",
+    "HYPERVISOR_DOMAIN": "SAME",
+    "P1_DISTRIBUTED_VM_QUALIFICATION": "ELIGIBLE",
+    "P1_INDEPENDENT_PHYSICAL_HOST_QUALIFICATION": "NOT_ESTABLISHED",
+    "P2_INDEPENDENT_OPERATOR_QUALIFICATION": "NOT_ESTABLISHED"
   },
-  "qualification_scope": {
-    "tests_for_p1": [
-      "machine_failure_boundaries (distinct VMs)",
-      "failure_detection_timing (<30s)",
-      "workload_rescheduling (<120s)",
-      "evidence_signature_verification",
-      "network_partition_detection"
+
+  "failure_domains": {
+    "distinct": [
+      {
+        "name": "VM",
+        "count": 3,
+        "evidence": "3 separate hypervisor instances with unique VM IDs",
+        "testable": true
+      },
+      {
+        "name": "OS",
+        "count": 3,
+        "evidence": "3 distinct Linux kernels with separate process namespaces",
+        "testable": true
+      },
+      {
+        "name": "FileSystem",
+        "count": 3,
+        "evidence": "3 persistent disks with unique block device IDs",
+        "testable": true
+      },
+      {
+        "name": "NodeIdentity",
+        "count": 3,
+        "evidence": "3 unique D.H. node IDs in roster with distinct enrollment",
+        "testable": true
+      },
+      {
+        "name": "Network",
+        "count": 3,
+        "evidence": "Hypervisor-level network isolation with real packet filtering",
+        "testable": true
+      }
     ],
-    "not_tested_for_p2": [
-      "multi_provider_diversity",
-      "multi_region_failures",
-      "multi_operator_resilience",
-      "power_domain_failures"
+    "shared": [
+      {
+        "name": "PhysicalHost",
+        "value": "SAME",
+        "evidence": "All VMs on single physical machine",
+        "testable": false
+      },
+      {
+        "name": "Operator",
+        "value": "SAME",
+        "evidence": "Single machine owner/operator",
+        "testable": false
+      },
+      {
+        "name": "Power",
+        "value": "SAME",
+        "evidence": "Single power supply for physical host",
+        "testable": false
+      },
+      {
+        "name": "Hypervisor",
+        "value": "SAME",
+        "evidence": "Single hypervisor instance managing all 3 VMs",
+        "testable": false
+      }
     ]
+  },
+
+  "qualification_scope": {
+    "p1_properties_established": [
+      "VM_FAILURE_BOUNDARIES: 3 distinct VMs",
+      "OS_FAILURE_BOUNDARIES: 3 distinct kernels",
+      "NODE_FAILURE_DETECTION: <30s measured",
+      "WORKLOAD_RESCHEDULING: <120s measured",
+      "NETWORK_PARTITION_DETECTION: Hypervisor-level isolation",
+      "EVIDENCE_SIGNATURE_VERIFICATION: Ed25519 validation",
+      "RECOVERY_AND_RECONCILIATION: Real process restart",
+      "RESOURCELEDGER_ACCURACY: Before/after failure measurement"
+    ],
+    "p1_properties_not_established": [
+      "MULTI_PHYSICAL_HOST_RESILIENCE: Requires 3+ physical machines",
+      "MULTI_OPERATOR_RESILIENCE: Requires 3+ operators",
+      "MULTI_PROVIDER_RESILIENCE: Requires AWS+Azure+Oracle or similar",
+      "GEOGRAPHIC_RESILIENCE: Requires physically distant nodes",
+      "POWER_DOMAIN_INDEPENDENCE: Requires separate PDUs",
+      "INDEPENDENT_NETWORK_OPERATORS: Requires ISP diversity"
+    ],
+    "progression": {
+      "step_1": "P1-LOCAL-VM-A01: Run campaign, seal evidence, document properties",
+      "step_2": "Additional physical domains (if master spec requires for blocked properties)",
+      "step_3": "P1-ENDTOEND-A01: Multi-physical-host qualification (OCI, AWS, or similar)",
+      "step_4": "P1-ENDTOEND-A01: Signed metering and release"
+    }
   }
 }
