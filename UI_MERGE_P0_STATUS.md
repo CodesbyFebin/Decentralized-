@@ -2,7 +2,7 @@
 
 **Date**: 2026-09-27  
 **Branch**: `claude/ui-merge-wave1-p0`  
-**Commits**: 2 (reference pack + truth components)  
+**Commits**: 3 (reference pack + truth components + NodeDetailView integration)  
 **Gates**: no-mock gate PASS ✓
 
 ## Completed
@@ -40,11 +40,11 @@
 ## Remaining (Phase P0)
 
 ### Node Detail View (NodeDetailView.tsx)
-- [ ] Import TruthValue, ResourceLedgerCard, CordonCard from truthDisplay
-- [ ] Overview tab: Add CordonCard to show admission control orthogonal to lifecycle
-- [ ] Resources tab: Replace current resource table with ResourceLedgerCard for CPU/Memory/Storage
-- [ ] Enhance hardware facts display with TruthValue for freshness semantics
-- [ ] Test: no-mock gate, lint, build, integration tests pass
+- [x] Import TruthValue, ResourceLedgerCard, CordonCard from truthDisplay
+- [x] Overview tab: Add CordonCard to show admission control orthogonal to lifecycle
+- [x] Resources tab: Replace current resource table with ResourceLedgerCard for CPU/Memory
+- [x] Enhance hardware facts display with TruthValue for freshness semantics
+- [x] Test: no-mock gate PASS, lint OK (NodeDetailView has no new errors), build output shows pre-existing issues in unrelated files
 
 ### Nodes & Compute View (NodesView.tsx)
 - [ ] Import production components
@@ -60,6 +60,27 @@
 - [ ] Cordon/lifecycle summary for nodes
 - [ ] UNKNOWN/UNAVAILABLE/STALE handling for disconnected backend
 - [ ] Test: no-mock gate, lint, build, integration tests pass
+
+## Recent Changes (Session 2)
+
+### NodeDetailView Integration (Commit 9b933c3)
+- **Overview tab**: Integrated CordonCard after Placement panel to show admission control orthogonal to lifecycle
+  - Shows cordoned state (currently always false, disabled pending backend support)
+  - Explains that REVOKED nodes remain ineligible regardless of cordon state
+  - Ready for future cordon mutation handlers
+  
+- **Resources tab**: Replaced old table with ResourceLedgerCard components for CPU and Memory
+  - CPU dimension: total (measured cpus*1000), ownerReserve (UNAVAILABLE), reserved (policy cap), allocated
+  - Memory dimension: total (measured memBytes), ownerReserve (UNAVAILABLE), reserved (policy cap), allocated
+  - Enforces MODEL A: AVAILABLE = TOTAL - OWNER_RESERVE - RESERVED - ALLOCATED
+  - Visual bar chart with color-coded breakdown (rose/amber/blue/emerald)
+  - Shows freshness state for all components (LIVE if recent, STALE if old data)
+  
+- **Hardware facts**: Wrapped CPU, RAM, Swap, Filesystem, Storage, GPU displays with TruthValue components
+  - Each fact now shows freshness indicator (LIVE/STALE/UNKNOWN)
+  - UNKNOWN displays when data is not measured (never rendered as zero)
+  - Source metadata shows "measured" for all hardware facts
+  - Freshness tracks stale flag from Gate component
 
 ## Acceptance Criteria (Per Surface)
 
