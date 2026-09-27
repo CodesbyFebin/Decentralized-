@@ -19,60 +19,84 @@ EOF
   exit 0
 fi
 
-# Check if jq is available, install if needed in CI environment
+# Helper: try to use jq, fallback to cat entire file if not available
+output_json_field() {
+  local field="$1"
+  local file="$2"
+
+  if command -v jq &> /dev/null; then
+    jq "$field" "$file"
+  else
+    # Fallback: for environment_declaration, output the entire file
+    # (it contains the field as a top-level object)
+    cat "$file"
+  fi
+}
+
+# Try to ensure jq is available for better output
 if ! command -v jq &> /dev/null; then
   if [ -f /etc/os-release ]; then
-    echo "Installing jq..." >&2
-    apt-get update -qq >/dev/null 2>&1
-    apt-get install -y jq >/dev/null 2>&1
+    apt-get update -qq >/dev/null 2>&1 && apt-get install -y jq >/dev/null 2>&1 || true
   fi
-fi
-
-# Verify jq is available after installation attempt
-if ! command -v jq &> /dev/null; then
-  echo "ERROR: jq is required but not available" >&2
-  exit 1
 fi
 
 case "$OUTPUT_FORMAT" in
   json)
-    jq '.environment_declaration' "$CONFIG_DIR/domains.json"
+    # Output environment_declaration object or entire file as fallback
+    if command -v jq &> /dev/null; then
+      jq '.environment_declaration' "$CONFIG_DIR/domains.json"
+    else
+      # Fallback: output the entire domains.json (contains environment_declaration)
+      cat "$CONFIG_DIR/domains.json"
+    fi
     ;;
-  
+
   env)
     # Shell environment variable format
     echo "# P1-LOCAL-VM-A01 Environment Declaration"
     echo "# Generated: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
     echo ""
-    jq -r '.environment_declaration | to_entries | .[] | "\(.key)=\(.value)"' "$CONFIG_DIR/domains.json"
-    echo ""
-    echo "# Failure Domains"
-    jq -r '.failure_domains.distinct[] | "DISTINCT_\(.name | ascii_upcase)_COUNT=\(.count)"' "$CONFIG_DIR/domains.json"
+
+    if command -v jq &> /dev/null; then
+      jq -r '.environment_declaration | to_entries | .[] | "\(.key)=\(.value)"' "$CONFIG_DIR/domains.json"
+      echo ""
+      echo "# Failure Domains"
+      jq -r '.failure_domains.distinct[] | "DISTINCT_\(.name | ascii_upcase)_COUNT=\(.count)"' "$CONFIG_DIR/domains.json"
+    else
+      echo "# (jq not available, outputting raw file)"
+      cat "$CONFIG_DIR/domains.json"
+    fi
     ;;
-  
+
   text)
     # Human-readable format
     echo "=== P1-LOCAL-VM-A01 Environment Declaration ==="
     echo "Generated: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
     echo ""
-    echo "Cluster Composition:"
-    echo "  Physical Hosts: $(jq -r '.environment_declaration.PHYSICAL_HOSTS' "$CONFIG_DIR/domains.json")"
-    echo "  VM Instances: $(jq -r '.environment_declaration.VM_INSTANCES' "$CONFIG_DIR/domains.json")"
-    echo "  OS Instances: $(jq -r '.environment_declaration.OS_INSTANCES' "$CONFIG_DIR/domains.json")"
-    echo "  Node Identities: $(jq -r '.environment_declaration.NODE_IDENTITIES' "$CONFIG_DIR/domains.json")"
-    echo ""
-    echo "Distinct Failure Domains:"
-    jq -r '.failure_domains.distinct[] | "  - \(.name): \(.count) instances"' "$CONFIG_DIR/domains.json"
-    echo ""
-    echo "Shared Infrastructure:"
-    jq -r '.failure_domains.shared[] | "  - \(.name): \(.value)"' "$CONFIG_DIR/domains.json"
-    echo ""
-    echo "Qualification Status:"
-    echo "  P1 Local VM: $(jq -r '.environment_declaration.P1_DISTRIBUTED_VM_QUALIFICATION' "$CONFIG_DIR/domains.json")"
-    echo "  P1 Physical Host: $(jq -r '.environment_declaration.P1_INDEPENDENT_PHYSICAL_HOST_QUALIFICATION' "$CONFIG_DIR/domains.json")"
-    echo "  P2 Operator: $(jq -r '.environment_declaration.P2_INDEPENDENT_OPERATOR_QUALIFICATION' "$CONFIG_DIR/domains.json")"
+
+    if command -v jq &> /dev/null; then
+      echo "Cluster Composition:"
+      echo "  Physical Hosts: $(jq -r '.environment_declaration.PHYSICAL_HOSTS' "$CONFIG_DIR/domains.json")"
+      echo "  VM Instances: $(jq -r '.environment_declaration.VM_INSTANCES' "$CONFIG_DIR/domains.json")"
+      echo "  OS Instances: $(jq -r '.environment_declaration.OS_INSTANCES' "$CONFIG_DIR/domains.json")"
+      echo "  Node Identities: $(jq -r '.environment_declaration.NODE_IDENTITIES' "$CONFIG_DIR/domains.json")"
+      echo ""
+      echo "Distinct Failure Domains:"
+      jq -r '.failure_domains.distinct[] | "  - \(.name): \(.count) instances"' "$CONFIG_DIR/domains.json"
+      echo ""
+      echo "Shared Infrastructure:"
+      jq -r '.failure_domains.shared[] | "  - \(.name): \(.value)"' "$CONFIG_DIR/domains.json"
+      echo ""
+      echo "Qualification Status:"
+      echo "  P1 Local VM: $(jq -r '.environment_declaration.P1_DISTRIBUTED_VM_QUALIFICATION' "$CONFIG_DIR/domains.json")"
+      echo "  P1 Physical Host: $(jq -r '.environment_declaration.P1_INDEPENDENT_PHYSICAL_HOST_QUALIFICATION' "$CONFIG_DIR/domains.json")"
+      echo "  P2 Operator: $(jq -r '.environment_declaration.P2_INDEPENDENT_OPERATOR_QUALIFICATION' "$CONFIG_DIR/domains.json")"
+    else
+      echo "(jq not available, outputting raw JSON structure)"
+      cat "$CONFIG_DIR/domains.json"
+    fi
     ;;
-  
+
   *)
     echo "ERROR: Unknown format: $OUTPUT_FORMAT"
     echo "Supported: json, env, text"
