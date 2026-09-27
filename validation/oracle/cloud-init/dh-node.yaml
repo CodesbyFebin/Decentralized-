@@ -1,0 +1,134 @@
+#cloud-config
+# Decentralized Host P1 Qualification - Node Bootstrap
+# Runs on each OCI compute instance during first boot
+
+hostname: decentralized-node
+preserve_hostname: true
+
+# Update system packages
+package_update: true
+package_upgrade: true
+
+# Install required packages
+packages:
+  - curl
+  - wget
+  - git
+  - jq
+  - htop
+  - iotop
+  - sysstat
+  - net-tools
+  - dnsutils
+  - telnet
+  - ntp
+  - ntpstat
+  - build-essential
+  - golang-go
+  - containerd.io
+  - nftables
+
+# Run commands
+runcmd:
+  # Wait for network to be fully ready
+  - sleep 30
+
+  # Sync time
+  - ntpd -s -x
+
+  # Enable containerd
+  - systemctl enable containerd
+  - systemctl start containerd
+
+  # Create decentralized-host directories
+  - mkdir -p /opt/decentralized-host
+  - mkdir -p /var/lib/decentralized-host
+  - mkdir -p /var/log/decentralized-host
+
+  # Collect baseline evidence
+  - |
+    cat > /var/log/decentralized-host/baseline-evidence.json << 'EOF'
+    {
+      "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+      "hostname": "$(hostname)",
+      "kernel": "$(uname -r)",
+      "arch": "$(uname -m)",
+      "cpus": "$(nproc)",
+      "memory_total_bytes": "$(grep MemTotal /proc/meminfo | awk '{print $2*1024}')",
+      "memory_available_bytes": "$(grep MemAvailable /proc/meminfo | awk '{print $2*1024}')",
+      "uptime_seconds": "$(awk '{print int($1)}' /proc/uptime)",
+      "cloud_provider": "oracle",
+      "instance_metadata": {
+        "region": "$(curl -s http://169.254.169.254/opc/v1/instance/ 2>/dev/null | jq '.metadata.region // "unknown"')",
+        "availability_domain": "$(curl -s http://169.254.169.254/opc/v1/instance/ 2>/dev/null | jq '.metadata.availabilityDomain // "unknown"')",
+        "compute_shape": "$(curl -s http://169.254.169.254/opc/v1/instance/ 2>/dev/null | jq '.shape // "unknown"')"
+      }
+    }
+    EOF
+
+  # Network evidence
+  - |
+    cat > /var/log/decentralized-host/network-evidence.json << 'EOF'
+    {
+      "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+      "interfaces": $(ip -j addr | jq .),
+      "routes": $(ip -j route | jq .),
+      "dns_servers": $(cat /etc/resolv.conf | grep nameserver | jq -R -s -c 'split("\n") | map(select(length > 0) | split(" ")[1]) | map(select(length > 0))')
+    }
+    EOF
+
+  # Mark node ready
+  - echo "P1-QUALIFICATION-READY" > /var/lib/decentralized-host/status.txt
+  - date -u +%Y-%m-%dT%H:%M:%SZ >> /var/lib/decentralized-host/status.txt
+
+# Write files
+write_files:
+  - path: /etc/systemd/system/decentralized-host-agent.service
+    owner: root:root
+    permissions: '0644'
+    content: |
+      [Unit]
+      Description=Decentralized Host Agent (P1 Qualification)
+      Documentation=https://github.com/codesbyfebin/decentralized-
+      After=network-online.target
+      Wants=network-online.target
+
+      [Service]
+      Type=simple
+      User=ubuntu
+      ExecStart=/opt/decentralized-host/dhp-node
+      StandardOutput=journal
+      StandardError=journal
+      Restart=on-failure
+      RestartSec=10
+
+      [Install]
+      WantedBy=multi-user.target
+
+  - path: /opt/decentralized-host/README.md
+    owner: root:root
+    permissions: '0644'
+    content: |
+      # Decentralized Host P1 Qualification Node
+
+      This node is part of the P1-ENDTOEND-A01 qualification test.
+
+      ## Status
+      - Bootstrap completed at: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+      - Baseline evidence: `/var/log/decentralized-host/baseline-evidence.json`
+      - Network evidence: `/var/log/decentralized-host/network-evidence.json`
+      - Status file: `/var/lib/decentralized-host/status.txt`
+
+      ## Next Steps (manual)
+      1. Copy DHP binaries to `/opt/decentralized-host/`
+      2. Run: `systemctl enable decentralized-host-agent`
+      3. Run: `systemctl start decentralized-host-agent`
+
+      ## Evidence Collection
+      ```bash
+      curl http://localhost:8080/evidence | jq .
+      ```
+
+# Final message
+final_message: "Decentralized Host P1 Qualification Node Bootstrap Complete"
+final_message_modules: [phooting, canonical-com]
