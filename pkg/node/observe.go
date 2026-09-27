@@ -104,7 +104,16 @@ func (a *Agent) buildObservation(buffered bool) api.Observation {
 	a.saveState() // persist the sequence high-water mark before it is signed
 	a.mu.RLock()
 	defer a.mu.RUnlock()
-	o := api.Observation{Node: a.st.NodeID, Seq: seq, TS: a.now(), Mode: a.mode, ModeDetail: a.modeDetail, Buffered: buffered, Workloads: []api.WorkloadObs{}}
+	// Determine observed health based on connection to control plane
+	observedHealth := "healthy"
+	if !a.fresh {
+		observedHealth = "offline"
+	}
+	o := api.Observation{
+		Node: a.st.NodeID, Seq: seq, TS: a.now(), Mode: a.mode, ModeDetail: a.modeDetail, Buffered: buffered,
+		DesiredState: a.st.DesiredState, Generation: a.st.Generation, ObservedHealth: observedHealth,
+		Workloads: []api.WorkloadObs{},
+	}
 	if a.bundle != nil {
 		o.BundleIndex, o.BundleIssued, o.BundleIssuer = a.bundle.StateIndex, a.bundle.Issued, short(a.bundleEnv.Signer)
 	}
