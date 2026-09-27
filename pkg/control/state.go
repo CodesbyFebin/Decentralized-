@@ -39,12 +39,13 @@ type State struct {
 	MeshNext     int64                         `json:"meshNext"`
 	LocalCACert  string                        `json:"localCaCert"`
 	LocalCAKey   string                        `json:"localCaKey"`   // secret: never exported without --include-secrets
-	Secrets      SecretsStore                  `json:"secrets"`      // encrypted secrets (never persisted plaintext)
-	ReplayLedger ReplayLedger                  `json:"replayLedger"` // consumed authorizations (replay protection, survives failover)
-	Index        int64                         `json:"index"`
-	IndexBase    int64                         `json:"indexBase"` // added to raft indexes after a restore so bundles never go backwards
-	Rejections   []Rejection                   `json:"rejections"`
-	Mirror       MirrorState                   `json:"mirror"`
+	Secrets        SecretsStore                  `json:"secrets"`        // encrypted secrets (never persisted plaintext)
+	ReplayLedger   ReplayLedger                  `json:"replayLedger"`   // consumed authorizations (replay protection, survives failover)
+	ResourceLedger *ResourceLedger               `json:"resourceLedger"` // resource capacity ledger (Gate 3-4)
+	Index          int64                         `json:"index"`
+	IndexBase      int64                         `json:"indexBase"` // added to raft indexes after a restore so bundles never go backwards
+	Rejections     []Rejection                   `json:"rejections"`
+	Mirror         MirrorState                   `json:"mirror"`
 }
 
 // Node is a host as the control plane knows it.
@@ -220,8 +221,6 @@ type MirrorState struct {
 	Enabled bool `json:"enabled"`
 }
 
-<<<<<<< HEAD
-=======
 // ResourceReservation represents a committed CPU/memory reservation on a node.
 type ResourceReservation struct {
 	ID          string `json:"id"`          // unique reservation identifier (idempotency key)
@@ -279,7 +278,6 @@ type ResourceLedger struct {
 	Generation int64 `json:"generation"`
 }
 
->>>>>>> 54604fd (Gate 2: Remove temporal idempotency assumption, implement durable terminal operations)
 func newState() *State {
 	return &State{
 		Nodes:        map[string]*Node{},
@@ -294,8 +292,6 @@ func newState() *State {
 		Federation:   newFederation(),
 		Secrets:      NewSecretsStore(),
 		ReplayLedger: NewReplayLedger(),
-<<<<<<< HEAD
-=======
 		ResourceLedger: &ResourceLedger{
 			CapacityByNode:   make(map[string]*NodeCapacityModel),
 			Reservations:     make(map[string]*ResourceReservation),
@@ -303,7 +299,6 @@ func newState() *State {
 			TerminalOperations: make(map[string]string),
 			Generation:       0,
 		},
->>>>>>> 54604fd (Gate 2: Remove temporal idempotency assumption, implement durable terminal operations)
 	}
 }
 
@@ -342,8 +337,6 @@ func (s *State) ensure() {
 	if s.ReplayLedger == nil {
 		s.ReplayLedger = NewReplayLedger()
 	}
-<<<<<<< HEAD
-=======
 	if s.ResourceLedger == nil {
 		s.ResourceLedger = &ResourceLedger{
 			CapacityByNode:   make(map[string]*NodeCapacityModel),
@@ -353,7 +346,6 @@ func (s *State) ensure() {
 			Generation:       0,
 		}
 	}
->>>>>>> 54604fd (Gate 2: Remove temporal idempotency assumption, implement durable terminal operations)
 	s.Federation.ensure()
 }
 

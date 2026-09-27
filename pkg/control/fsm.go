@@ -135,6 +135,106 @@ func (f *FSM) AuthorizeSecretRetrievalCommand(req *SecretRetrievalRequest) (*Com
 	return cmd, nil
 }
 
+// SetNodeCapacityCommand constructs a set-node-capacity command (Gate 3/4)
+// Leader calls this to propose through Raft
+func (f *FSM) SetNodeCapacityCommandData(nodeID string, totalCPU, ownerCPU, totalMem, ownerMem, totalDisk, ownerDisk int64) (*Command, error) {
+	cmd := SetNodeCapacityCommand{
+		NodeID:    nodeID,
+		TotalCPU:  totalCPU,
+		OwnerCPU:  ownerCPU,
+		TotalMem:  totalMem,
+		OwnerMem:  ownerMem,
+		TotalDisk: totalDisk,
+		OwnerDisk: ownerDisk,
+	}
+	dataJSON, err := json.Marshal(cmd)
+	if err != nil {
+		return nil, fmt.Errorf("encode set-node-capacity: %w", err)
+	}
+	return &Command{
+		Type:  "set-node-capacity",
+		TS:    time.Now().UnixNano(),
+		Actor: "scheduler",
+		Data:  json.RawMessage(dataJSON),
+	}, nil
+}
+
+// ReserveCapacityCommandData constructs a reserve-capacity command (Gate 3/4)
+func (f *FSM) ReserveCapacityCommandData(reservationID, nodeID string, cpuMilli, memBytes int64) (*Command, error) {
+	cmd := ReserveCapacityCommand{
+		ReservationID: reservationID,
+		NodeID:        nodeID,
+		CPUMilli:      cpuMilli,
+		MemBytes:      memBytes,
+		CreatedAt:     time.Now().UnixNano(),
+	}
+	dataJSON, err := json.Marshal(cmd)
+	if err != nil {
+		return nil, fmt.Errorf("encode reserve-capacity: %w", err)
+	}
+	return &Command{
+		Type:  "reserve-capacity",
+		TS:    time.Now().UnixNano(),
+		Actor: "scheduler",
+		Data:  json.RawMessage(dataJSON),
+	}, nil
+}
+
+// ReleaseReservationCommandData constructs a release-reservation command (Gate 3/4)
+func (f *FSM) ReleaseReservationCommandData(reservationID string) (*Command, error) {
+	cmd := ReleaseReservationCommand{
+		ReservationID: reservationID,
+	}
+	dataJSON, err := json.Marshal(cmd)
+	if err != nil {
+		return nil, fmt.Errorf("encode release-reservation: %w", err)
+	}
+	return &Command{
+		Type:  "release-reservation",
+		TS:    time.Now().UnixNano(),
+		Actor: "scheduler",
+		Data:  json.RawMessage(dataJSON),
+	}, nil
+}
+
+// AllocateCapacityCommandData constructs an allocate-capacity command (Gate 3/4)
+func (f *FSM) AllocateCapacityCommandData(allocationID, reservationID string, cpuMilli, memBytes int64) (*Command, error) {
+	cmd := AllocateCapacityCommand{
+		AllocationID:  allocationID,
+		ReservationID: reservationID,
+		CPUMilli:      cpuMilli,
+		MemBytes:      memBytes,
+		CreatedAt:     time.Now().UnixNano(),
+	}
+	dataJSON, err := json.Marshal(cmd)
+	if err != nil {
+		return nil, fmt.Errorf("encode allocate-capacity: %w", err)
+	}
+	return &Command{
+		Type:  "allocate-capacity",
+		TS:    time.Now().UnixNano(),
+		Actor: "scheduler",
+		Data:  json.RawMessage(dataJSON),
+	}, nil
+}
+
+// ReleaseAllocationCommandData constructs a release-allocation command (Gate 3/4)
+func (f *FSM) ReleaseAllocationCommandData(allocationID string) (*Command, error) {
+	cmd := ReleaseAllocationCommand{
+		AllocationID: allocationID,
+	}
+	dataJSON, err := json.Marshal(cmd)
+	if err != nil {
+		return nil, fmt.Errorf("encode release-allocation: %w", err)
+	}
+	return &Command{
+		Type:  "release-allocation",
+		TS:    time.Now().UnixNano(),
+		Actor: "scheduler",
+		Data:  json.RawMessage(dataJSON),
+	}, nil
+}
+
 // Apply implements raft.FSM.
 func (f *FSM) Apply(l *raft.Log) any {
 	var cmd Command
@@ -1728,8 +1828,145 @@ func secretVersionAdd(f *FSM, s *State, c *Command) *Result {
 	return ok("secret %s version %d added", rec.SecretID, rec.Version)
 }
 
+// ------------------------------------------------------------ resource ledger (Raft commands)
+// Gate 3-4: Command-based atomicity for resource ledger operations
+// Each operation flows through Raft FSM Apply for deterministic consensus
+
+// SetNodeCapacityCommand sets total capacity and owner reserve for a node (Gate 3/4)
+type SetNodeCapacityCommand struct {
+	NodeID    string `json:"nodeId"`
+	TotalCPU  int64  `json:"totalCpu"`
+	OwnerCPU  int64  `json:"ownerCpu"`
+	TotalMem  int64  `json:"totalMem"`
+	OwnerMem  int64  `json:"ownerMem"`
+	TotalDisk int64  `json:"totalDisk"`
+	OwnerDisk int64  `json:"ownerDisk"`
+}
+
+// ReserveCapacityCommand atomically reserves capacity on a node (Gate 3/4)
+type ReserveCapacityCommand struct {
+	ReservationID string `json:"reservationId"` // idempotency key
+	NodeID        string `json:"nodeId"`
+	CPUMilli      int64  `json:"cpuMilli"`
+	MemBytes      int64  `json:"memBytes"`
+	CreatedAt     int64  `json:"createdAt"` // from command TS
+}
+
+// ReleaseReservationCommand releases a reservation (Gate 3/4)
+type ReleaseReservationCommand struct {
+	ReservationID string `json:"reservationId"`
+}
+
+// AllocateCapacityCommand allocates from a reservation (Gate 3/4)
+type AllocateCapacityCommand struct {
+	AllocationID  string `json:"allocationId"` // idempotency key
+	ReservationID string `json:"reservationId"`
+	CPUMilli      int64  `json:"cpuMilli"`
+	MemBytes      int64  `json:"memBytes"`
+	CreatedAt     int64  `json:"createdAt"` // from command TS
+}
+
+// ReleaseAllocationCommand releases an allocation (Gate 3/4)
+type ReleaseAllocationCommand struct {
+	AllocationID string `json:"allocationId"`
+}
+
+func setNodeCapacityHandler(f *FSM, s *State, c *Command) *Result {
+	cmd, err := decode[SetNodeCapacityCommand](c)
+	if err != nil {
+		return fail("DECODE", "set-node-capacity: %v", err)
+	}
+	if cmd.NodeID == "" {
+		return fail("INVALID", "set-node-capacity: empty nodeId")
+	}
+	// Call state method; TS comes from command
+	if err := s.SetNodeCapacity(cmd.NodeID, cmd.TotalCPU, cmd.OwnerCPU, cmd.TotalMem, cmd.OwnerMem, cmd.TotalDisk, cmd.OwnerDisk); err != nil {
+		return fail("CAPACITY", "set-node-capacity: %v", err)
+	}
+	return ok("node %s capacity set: %dC/%dM/%dD, owner %dC/%dM/%dD",
+		cmd.NodeID, cmd.TotalCPU, cmd.TotalMem, cmd.TotalDisk, cmd.OwnerCPU, cmd.OwnerMem, cmd.OwnerDisk)
+}
+
+func reserveCapacityHandler(f *FSM, s *State, c *Command) *Result {
+	cmd, err := decode[ReserveCapacityCommand](c)
+	if err != nil {
+		return fail("DECODE", "reserve-capacity: %v", err)
+	}
+	if cmd.ReservationID == "" {
+		return fail("INVALID", "reserve-capacity: empty reservationId")
+	}
+	if cmd.NodeID == "" {
+		return fail("INVALID", "reserve-capacity: empty nodeId")
+	}
+	// Ensure TS is set (comes from command, not derived in Apply)
+	if cmd.CreatedAt == 0 {
+		cmd.CreatedAt = c.TS
+	}
+	// Call state method
+	if err := s.Reserve(cmd.ReservationID, cmd.NodeID, cmd.CPUMilli, cmd.MemBytes); err != nil {
+		return fail("RESERVE", "reserve-capacity: %v", err)
+	}
+	return ok("reservation %s created: node=%s, cpu=%d, mem=%d", cmd.ReservationID, cmd.NodeID, cmd.CPUMilli, cmd.MemBytes)
+}
+
+func releaseReservationHandler(f *FSM, s *State, c *Command) *Result {
+	cmd, err := decode[ReleaseReservationCommand](c)
+	if err != nil {
+		return fail("DECODE", "release-reservation: %v", err)
+	}
+	if cmd.ReservationID == "" {
+		return fail("INVALID", "release-reservation: empty reservationId")
+	}
+	if err := s.ReleaseReservation(cmd.ReservationID); err != nil {
+		return fail("RELEASE", "release-reservation: %v", err)
+	}
+	return ok("reservation %s released", cmd.ReservationID)
+}
+
+func allocateCapacityHandler(f *FSM, s *State, c *Command) *Result {
+	cmd, err := decode[AllocateCapacityCommand](c)
+	if err != nil {
+		return fail("DECODE", "allocate-capacity: %v", err)
+	}
+	if cmd.AllocationID == "" {
+		return fail("INVALID", "allocate-capacity: empty allocationId")
+	}
+	if cmd.ReservationID == "" {
+		return fail("INVALID", "allocate-capacity: empty reservationId")
+	}
+	// Ensure TS is set
+	if cmd.CreatedAt == 0 {
+		cmd.CreatedAt = c.TS
+	}
+	// Call state method
+	if err := s.Allocate(cmd.AllocationID, cmd.ReservationID, cmd.CPUMilli, cmd.MemBytes); err != nil {
+		return fail("ALLOCATE", "allocate-capacity: %v", err)
+	}
+	return ok("allocation %s created: reservation=%s, cpu=%d, mem=%d", cmd.AllocationID, cmd.ReservationID, cmd.CPUMilli, cmd.MemBytes)
+}
+
+func releaseAllocationHandler(f *FSM, s *State, c *Command) *Result {
+	cmd, err := decode[ReleaseAllocationCommand](c)
+	if err != nil {
+		return fail("DECODE", "release-allocation: %v", err)
+	}
+	if cmd.AllocationID == "" {
+		return fail("INVALID", "release-allocation: empty allocationId")
+	}
+	if err := s.ReleaseAllocation(cmd.AllocationID); err != nil {
+		return fail("RELEASE", "release-allocation: %v", err)
+	}
+	return ok("allocation %s released", cmd.AllocationID)
+}
+
 func init() {
 	register("secret-retrieval-authorize", secretRetrievalAuthorize)
 	register("secret-create", secretCreate)
 	register("secret-version-add", secretVersionAdd)
+	// Resource ledger commands (Gate 3-4)
+	register("set-node-capacity", setNodeCapacityHandler)
+	register("reserve-capacity", reserveCapacityHandler)
+	register("release-reservation", releaseReservationHandler)
+	register("allocate-capacity", allocateCapacityHandler)
+	register("release-allocation", releaseAllocationHandler)
 }
