@@ -1,0 +1,71 @@
+{
+  "test_phase": "P1-ENDTOEND-A01",
+  "hypervisor": "docker",
+  "cluster_dir": "/tmp/p1-local-vm",
+  "network_mode": "bridge",
+  "nodes": [
+    {
+      "node_id": 1,
+      "name": "dh-local-01",
+      "role": "data-node",
+      "cpu": 2,
+      "memory_mb": 4096,
+      "disk_gb": 50,
+      "ssh_port": 2221,
+      "http_port": 8081,
+      "private_ip": "192.168.200.1"
+    },
+    {
+      "node_id": 2,
+      "name": "dh-local-02",
+      "role": "data-node",
+      "cpu": 2,
+      "memory_mb": 4096,
+      "disk_gb": 50,
+      "ssh_port": 2222,
+      "http_port": 8082,
+      "private_ip": "192.168.200.2"
+    },
+    {
+      "node_id": 3,
+      "name": "dh-local-03",
+      "role": "control-plane",
+      "cpu": 4,
+      "memory_mb": 8192,
+      "disk_gb": 50,
+      "ssh_port": 2223,
+      "http_port": 8083,
+      "private_ip": "192.168.200.3"
+    }
+  ],
+  "network": {
+    "type": "host-only",
+    "subnet": "192.168.200.0/24",
+    "gateway": "192.168.200.254",
+    "dns_servers": ["1.1.1.1", "8.8.8.8"]
+  },
+  "wireguard": {
+    "enabled": false,
+    "subnet": "10.200.0.0/24",
+    "listen_port": 51820
+  },
+  "ssh": {
+    "key_path": "~/.ssh/p1-local-vm",
+    "user": "ubuntu",
+    "auth_method": "publickey"
+  },
+  "timeouts": {
+    "node_boot_seconds": 60,
+    "ssh_connect_seconds": 30,
+    "scenario_baseline_minutes": 30,
+    "scenario_failure_minutes": 60,
+    "scenario_recovery_minutes": 30
+  },
+  "evidence": {
+    "output_dir": "../evidence",
+    "collect_baseline": true,
+    "collect_network": true,
+    "collect_dhp": true,
+    "collect_logs": true
+  }
+}

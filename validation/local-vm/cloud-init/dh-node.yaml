@@ -1,0 +1,269 @@
+#cloud-config
+# P1-ENDTOEND-A01: Decentralized Host Node Bootstrap
+# Local VM variant (QEMU/UTM/VirtualBox)
+
+hostname: dh-local-${NODE_ID}
+fqdn: dh-local-${NODE_ID}.local
+
+users:
+  - name: ubuntu
+    gecos: Ubuntu User
+    sudo: ['ALL=(ALL) NOPASSWD:ALL']
+    shell: /bin/bash
+    ssh_authorized_keys:
+      - ${SSH_PUBLIC_KEY}
+
+packages:
+  - curl
+  - wget
+  - git
+  - jq
+  - htop
+  - iotop
+  - sysstat
+  - net-tools
+  - dnsutils
+  - telnet
+  - ntp
+  - ntpstat
+  - ntp-doc
+  - build-essential
+  - golang-go
+  - containerd.io
+  - nftables
+  - wireguard
+  - wireguard-tools
+  - linux-headers-generic
+
+package_update: true
+package_upgrade: true
+
+apt:
+  sources:
+    docker:
+      source: 'deb [arch=amd64] https://download.docker.com/linux/ubuntu $RELEASE stable'
+      keyid: '0EBFCD88'
+
+bootcmd:
+  - timedatectl set-timezone UTC
+  - sed -i 's/^#net.ipv4.ip_forward=1/net.ipv4.ip_forward=1/' /etc/sysctl.conf
+  - sysctl -p
+
+runcmd:
+  # System baseline
+  - systemctl set-default multi-user.target
+  - systemctl restart systemd-timesyncd
+
+  # Create Decentralized Host directories
+  - mkdir -p /opt/decentralized-host
+  - mkdir -p /var/lib/decentralized-host
+  - mkdir -p /var/log/decentralized-host
+  - chown ubuntu:ubuntu /opt/decentralized-host
+  - chown ubuntu:ubuntu /var/lib/decentralized-host
+  - chown ubuntu:ubuntu /var/log/decentralized-host
+
+  # Enable containerd
+  - systemctl enable containerd
+  - systemctl start containerd
+
+  # Collect baseline evidence
+  - |
+    cat > /var/log/decentralized-host/baseline-evidence.json << 'EOF'
+    {
+      "node_id": "${NODE_ID}",
+      "hostname": "dh-local-${NODE_ID}",
+      "collection_timestamp_utc": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+      "cloud_provider": "local",
+      "region": "localhost",
+      "availability_domain": "localhost",
+      "instance_type": "qemu",
+      "instance_shape": "custom",
+      "system": {
+        "kernel_release": "$(uname -r)",
+        "kernel_version": "$(uname -v)",
+        "arch": "$(uname -m)",
+        "cpus": $(nproc),
+        "memory_total_bytes": $(grep MemTotal /proc/meminfo | awk '{print $2*1024}'),
+        "memory_available_bytes": $(grep MemAvailable /proc/meminfo | awk '{print $2*1024}'),
+        "uptime_seconds": $(cut -d. -f1 /proc/uptime),
+        "hostname": "$(hostname)",
+        "domainname": "$(domainname)"
+      },
+      "network": {
+        "interfaces": $(ip -j link show),
+        "addresses": $(ip -j addr show),
+        "routes": $(ip -j route show)
+      },
+      "ntp": {
+        "synchronized": $(timedatectl | grep synchronized | awk '{print $NF}'),
+        "status": "$(ntpstat 2>/dev/null || echo 'unsynchronized')",
+        "offset_ms": $(ntpstat 2>/dev/null | grep 'System time' | awk '{print $NF}' || echo '0')
+      }
+    }
+    EOF
+    chown ubuntu:ubuntu /var/log/decentralized-host/baseline-evidence.json
+    chmod 644 /var/log/decentralized-host/baseline-evidence.json
+
+  # Collect network evidence
+  - |
+    cat > /var/log/decentralized-host/network-evidence.json << 'EOF'
+    {
+      "collection_timestamp_utc": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+      "node_id": "${NODE_ID}",
+      "dns": {
+        "servers": $(jq -n '[inputs]' < /etc/resolv.conf | grep nameserver || echo '[]'),
+        "search_domains": $(grep search /etc/resolv.conf | awk '{print $2}' || echo '')
+      },
+      "interfaces": $(ip -j link show | jq -c),
+      "addresses": $(ip -j addr show | jq -c),
+      "routes": $(ip -j route show | jq -c),
+      "neighbors": $(ip -j neigh show | jq -c),
+      "connectivity_check": {
+        "dns_latency_ms": $(dig +stats +short google.com 2>&1 | grep 'Query time' | awk '{print $4}' || echo '0'),
+        "icmp_connectivity": "$(ping -c 1 8.8.8.8 2>&1 | grep '1 received' && echo 'ok' || echo 'failed')"
+      }
+    }
+    EOF
+    chown ubuntu:ubuntu /var/log/decentralized-host/network-evidence.json
+    chmod 644 /var/log/decentralized-host/network-evidence.json
+
+  # Create systemd service for Decentralized Host agent
+  - |
+    cat > /etc/systemd/system/decentralized-host-agent.service << 'EOF'
+    [Unit]
+    Description=Decentralized Host Agent
+    After=network-online.target
+    Wants=network-online.target
+
+    [Service]
+    Type=simple
+    User=ubuntu
+    WorkingDirectory=/opt/decentralized-host
+    ExecStart=/opt/decentralized-host/dhp-node
+    Restart=on-failure
+    RestartSec=5
+
+    StandardOutput=journal
+    StandardError=journal
+    SyslogIdentifier=dhp-agent
+
+    Environment="DHP_NODE_ID=${NODE_ID}"
+    Environment="DHP_LOG_LEVEL=info"
+    Environment="DHP_EVIDENCE_DIR=/var/log/decentralized-host"
+
+    [Install]
+    WantedBy=multi-user.target
+    EOF
+    systemctl daemon-reload
+
+  # Create WireGuard configuration (placeholder)
+  - |
+    cat > /etc/wireguard/wg0.conf.template << 'EOF'
+    [Interface]
+    PrivateKey = ${WIREGUARD_PRIVATE_KEY}
+    Address = 192.168.200.${NODE_ID}/24
+    ListenPort = 51820
+    DNS = 1.1.1.1
+
+    # Peer 1
+    [Peer]
+    PublicKey = ${PEER_1_PUBLIC_KEY}
+    AllowedIPs = 192.168.200.1/32
+    Endpoint = ${PEER_1_IP}:51820
+    PersistentKeepalive = 25
+
+    # Peer 2
+    [Peer]
+    PublicKey = ${PEER_2_PUBLIC_KEY}
+    AllowedIPs = 192.168.200.2/32
+    Endpoint = ${PEER_2_IP}:51820
+    PersistentKeepalive = 25
+    EOF
+    chmod 600 /etc/wireguard/wg0.conf.template
+
+  # Create status file
+  - |
+    cat > /var/log/decentralized-host/status.txt << 'EOF'
+    node_id=${NODE_ID}
+    status=ready
+    ready_timestamp_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+    baseline_evidence_collected=true
+    network_evidence_collected=true
+    wireguard_configured=false
+    decentralized_host_ready=false
+    EOF
+    chown ubuntu:ubuntu /var/log/decentralized-host/status.txt
+
+  # Create node README
+  - |
+    cat > /opt/decentralized-host/README.md << 'EOF'
+    # Decentralized Host - Local VM Node ${NODE_ID}
+
+    ## Quick Start
+
+    1. **Check baseline evidence**
+       \`\`\`bash
+       cat /var/log/decentralized-host/baseline-evidence.json | jq .
+       \`\`\`
+
+    2. **Deploy DHP binaries**
+       \`\`\`bash
+       # Copy from host
+       scp -r path/to/dhp-node .
+       scp -r path/to/dhp-control-plane .
+       \`\`\`
+
+    3. **Start agent**
+       \`\`\`bash
+       sudo systemctl start decentralized-host-agent
+       sudo systemctl status decentralized-host-agent
+       \`\`\`
+
+    4. **View logs**
+       \`\`\`bash
+       sudo journalctl -u decentralized-host-agent -f
+       tail -f /var/log/decentralized-host/agent.log
+       \`\`\`
+
+    ## Files
+
+    - `/opt/decentralized-host/` - Binary location
+    - `/var/lib/decentralized-host/` - Persistent state
+    - `/var/log/decentralized-host/` - Evidence and logs
+    - `/etc/wireguard/wg0.conf.template` - Network config (template)
+    - `/etc/systemd/system/decentralized-host-agent.service` - Systemd unit
+
+    ## Node ID
+
+    **Node ID: ${NODE_ID}**
+
+    This is a local VM running on QEMU/UTM/VirtualBox.
+
+    - Hostname: dh-local-${NODE_ID}
+    - Private IP: 192.168.200.${NODE_ID} (when WireGuard configured)
+    - Evidence: /var/log/decentralized-host/
+
+    EOF
+    chown -R ubuntu:ubuntu /opt/decentralized-host
+
+write_files:
+  - path: /etc/limits.d/decentralized-host.conf
+    permissions: '0644'
+    content: |
+      # Decentralized Host resource limits
+      * soft nofile 65536
+      * hard nofile 65536
+      * soft nproc 4096
+      * hard nproc 4096
+
+final_message: |
+  #
+  # P1-ENDTOEND-A01: Local VM Bootstrap Complete
+  #
+  # Node ID: ${NODE_ID}
+  # Hostname: dh-local-${NODE_ID}
+  # Status: Ready for Decentralized Host deployment
+  #
+  # Baseline evidence: /var/log/decentralized-host/baseline-evidence.json
+  # Network evidence: /var/log/decentralized-host/network-evidence.json
+  #

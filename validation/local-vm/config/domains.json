@@ -1,0 +1,61 @@
+{
+  "test_phase": "P1-ENDTOEND-A01",
+  "topology": "local-vm",
+  "domain_classification": {
+    "machineDomain": {
+      "value": "distinct",
+      "evidence": "3 separate processes or containers",
+      "testable": true
+    },
+    "vmDomain": {
+      "value": "distinct",
+      "evidence": "3 separate VM instances (QEMU/UTM/VirtualBox/Docker)",
+      "testable": true
+    },
+    "operatorDomain": {
+      "value": "SAME/self",
+      "evidence": "Single operator (local machine owner)",
+      "testable": false
+    },
+    "cloudDomain": {
+      "value": "NONE/local",
+      "evidence": "No cloud provider",
+      "testable": false
+    },
+    "regionDomain": {
+      "value": "SAME/localhost",
+      "evidence": "Single geographic location (your machine)",
+      "testable": false
+    },
+    "availabilityDomain": {
+      "value": "SAME/localhost",
+      "evidence": "Single availability zone",
+      "testable": false
+    },
+    "networkDomain": {
+      "value": "measured",
+      "evidence": "Latency: <1ms (local) to ~50ms (WireGuard)",
+      "testable": true
+    },
+    "powerDomain": {
+      "value": "SAME/local",
+      "evidence": "Single power supply",
+      "testable": false
+    }
+  },
+  "qualification_scope": {
+    "tests_for_p1": [
+      "machine_failure_boundaries (distinct VMs)",
+      "failure_detection_timing (<30s)",
+      "workload_rescheduling (<120s)",
+      "evidence_signature_verification",
+      "network_partition_detection"
+    ],
+    "not_tested_for_p2": [
+      "multi_provider_diversity",
+      "multi_region_failures",
+      "multi_operator_resilience",
+      "power_domain_failures"
+    ]
+  }
+}
