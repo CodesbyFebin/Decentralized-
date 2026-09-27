@@ -23,8 +23,15 @@ fi
 if ! command -v jq &> /dev/null; then
   if [ -f /etc/os-release ]; then
     echo "Installing jq..." >&2
-    apt-get update -qq >/dev/null 2>&1 && apt-get install -y jq >/dev/null 2>&1 || true
+    apt-get update -qq >/dev/null 2>&1
+    apt-get install -y jq >/dev/null 2>&1
   fi
+fi
+
+# Verify jq is available after installation attempt
+if ! command -v jq &> /dev/null; then
+  echo "ERROR: jq is required but not available" >&2
+  exit 1
 fi
 
 case "$OUTPUT_FORMAT" in
