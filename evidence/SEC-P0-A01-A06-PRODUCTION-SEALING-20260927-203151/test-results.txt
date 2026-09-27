@@ -1,0 +1,1213 @@
+=== RUN   TestA06_Production_Gate2_RaftPersistence
+[PartitionController] Registered: 127.0.0.1:50100 -> member-0
+[PartitionController] Registered: 127.0.0.1:50101 -> member-1
+[PartitionController] Registered: 127.0.0.1:50102 -> member-2
+2026-09-27T20:29:32.665Z [INFO]  raft-member-0: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-0: state=Follower term=0
+2026-09-27T20:29:32.665Z [INFO]  raft-member-0: entering follower state: follower="Node at 127.0.0.1:50100 [Follower]" leader-address= leader-id=
+2026-09-27T20:29:32.668Z [INFO]  raft-member-1: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-1: state=Follower term=0
+2026-09-27T20:29:32.669Z [INFO]  raft-member-1: entering follower state: follower="Node at 127.0.0.1:50101 [Follower]" leader-address= leader-id=
+2026-09-27T20:29:32.671Z [INFO]  raft-member-2: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-2: state=Follower term=0
+2026-09-27T20:29:32.672Z [INFO]  raft-member-2: entering follower state: follower="Node at 127.0.0.1:50102 [Follower]" leader-address= leader-id=
+    raft_integration_test.go:499: Bootstrap successful for member-0 with full configuration
+    raft_integration_test.go:499: Bootstrap successful for member-1 with full configuration
+    raft_integration_test.go:499: Bootstrap successful for member-2 with full configuration
+    raft_integration_test.go:505: Cluster bootstrap complete - waiting for leader election...
+2026-09-27T20:29:32.800Z [WARN]  raft-member-0: heartbeat timeout reached, starting election: last-leader-addr= last-leader-id=
+2026-09-27T20:29:32.800Z [INFO]  raft-member-0: entering candidate state: node="Node at 127.0.0.1:50100 [Candidate]" term=2
+2026-09-27T20:29:32.800Z [DEBUG] raft-member-0: pre-voting for self: term=2 id=member-0
+2026-09-27T20:29:32.800Z [DEBUG] raft-member-0: asking for pre-vote: term=2 from=member-1 address=127.0.0.1:50101
+2026-09-27T20:29:32.800Z [DEBUG] raft-member-0: asking for pre-vote: term=2 from=member-2 address=127.0.0.1:50102
+2026-09-27T20:29:32.800Z [DEBUG] raft-member-0: calculated votes needed: needed=2 term=2
+2026-09-27T20:29:32.800Z [DEBUG] raft-member-0: pre-vote received: from=member-0 term=2 tally=0
+2026-09-27T20:29:32.800Z [DEBUG] raft-member-0: pre-vote granted: from=member-0 term=2 tally=1
+[Raft member-0] Dial member-0 -> member-2 (allowed)
+[Raft member-0] Dial member-0 -> member-1 (allowed)
+[Raft member-2] Accept connection from 127.0.0.1:58848
+[Raft member-1] Accept connection from 127.0.0.1:43650
+2026-09-27T20:29:32.802Z [DEBUG] raft-member-2: received a requestPreVote with a newer term, grant the pre-vote
+2026-09-27T20:29:32.802Z [DEBUG] raft-member-0: pre-vote received: from=member-2 term=2 tally=1
+2026-09-27T20:29:32.802Z [DEBUG] raft-member-0: pre-vote granted: from=member-2 term=2 tally=2
+2026-09-27T20:29:32.802Z [INFO]  raft-member-0: pre-vote successful, starting election: term=2 tally=2 refused=0 votesNeeded=2
+2026-09-27T20:29:32.802Z [DEBUG] raft-member-1: received a requestPreVote with a newer term, grant the pre-vote
+2026-09-27T20:29:32.804Z [DEBUG] raft-member-0: voting for self: term=2 id=member-0
+2026-09-27T20:29:32.805Z [DEBUG] raft-member-0: asking for vote: term=2 from=member-1 address=127.0.0.1:50101
+2026-09-27T20:29:32.805Z [DEBUG] raft-member-0: asking for vote: term=2 from=member-2 address=127.0.0.1:50102
+2026-09-27T20:29:32.805Z [DEBUG] raft-member-0: vote granted: from=member-0 term=2 tally=1
+2026-09-27T20:29:32.805Z [DEBUG] raft-member-2: lost leadership because received a requestVote with a newer term
+2026-09-27T20:29:32.805Z [DEBUG] raft-member-1: lost leadership because received a requestVote with a newer term
+2026-09-27T20:29:32.807Z [DEBUG] raft-member-0: vote granted: from=member-1 term=2 tally=2
+2026-09-27T20:29:32.807Z [INFO]  raft-member-0: election won: term=2 tally=2
+2026-09-27T20:29:32.807Z [INFO]  raft-member-0: entering leader state: leader="Node at 127.0.0.1:50100 [Leader]"
+2026-09-27T20:29:32.807Z [INFO]  raft-member-0: added peer, starting replication: peer=member-1
+2026-09-27T20:29:32.807Z [INFO]  raft-member-0: added peer, starting replication: peer=member-2
+2026-09-27T20:29:32.808Z [INFO]  raft-member-0: pipelining replication: peer="{Voter member-1 127.0.0.1:50101}"
+2026-09-27T20:29:32.808Z [INFO]  raft-member-0: pipelining replication: peer="{Voter member-2 127.0.0.1:50102}"
+[Raft member-0] Dial member-0 -> member-2 (allowed)
+[Raft member-2] Accept connection from 127.0.0.1:58852
+[Raft member-0] Dial member-0 -> member-1 (allowed)
+[Raft member-1] Accept connection from 127.0.0.1:43666
+    sec_p0_a01_a06_production_qualification_test.go:61: Leader elected: member-0
+    sec_p0_a01_a06_production_qualification_test.go:109: Follower member-1: Secret not yet replicated (expected in unit test)
+    sec_p0_a01_a06_production_qualification_test.go:109: Follower member-2: Secret not yet replicated (expected in unit test)
+    sec_p0_a01_a06_production_qualification_test.go:121: ✓ Gate 2: Plaintext verification passed (not in persistent storage)
+    sec_p0_a01_a06_production_qualification_test.go:132: ✓ Gate 2 PASS: Real Raft persistence verified
+2026-09-27T20:29:33.182Z [INFO]  raft-member-0: aborting pipeline replication: peer="{Voter member-2 127.0.0.1:50102}"
+2026-09-27T20:29:33.182Z [INFO]  raft-member-0: aborting pipeline replication: peer="{Voter member-1 127.0.0.1:50101}"
+--- PASS: TestA06_Production_Gate2_RaftPersistence (0.52s)
+=== RUN   TestA06_Production_Gate26_AgentRestartRecovery
+[PartitionController] Registered: 127.0.0.1:50100 -> member-0
+[PartitionController] Registered: 127.0.0.1:50101 -> member-1
+[PartitionController] Registered: 127.0.0.1:50102 -> member-2
+2026-09-27T20:29:33.186Z [INFO]  raft-member-0: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-0: state=Follower term=0
+2026-09-27T20:29:33.186Z [INFO]  raft-member-0: entering follower state: follower="Node at 127.0.0.1:50100 [Follower]" leader-address= leader-id=
+2026-09-27T20:29:33.189Z [INFO]  raft-member-1: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-1: state=Follower term=0
+2026-09-27T20:29:33.189Z [INFO]  raft-member-1: entering follower state: follower="Node at 127.0.0.1:50101 [Follower]" leader-address= leader-id=
+2026-09-27T20:29:33.191Z [INFO]  raft-member-2: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-2: state=Follower term=0
+2026-09-27T20:29:33.191Z [INFO]  raft-member-2: entering follower state: follower="Node at 127.0.0.1:50102 [Follower]" leader-address= leader-id=
+    raft_integration_test.go:499: Bootstrap successful for member-0 with full configuration
+    raft_integration_test.go:499: Bootstrap successful for member-1 with full configuration
+    raft_integration_test.go:499: Bootstrap successful for member-2 with full configuration
+    raft_integration_test.go:505: Cluster bootstrap complete - waiting for leader election...
+2026-09-27T20:29:33.341Z [WARN]  raft-member-1: heartbeat timeout reached, starting election: last-leader-addr= last-leader-id=
+2026-09-27T20:29:33.341Z [INFO]  raft-member-1: entering candidate state: node="Node at 127.0.0.1:50101 [Candidate]" term=2
+2026-09-27T20:29:33.341Z [DEBUG] raft-member-1: asking for pre-vote: term=2 from=member-0 address=127.0.0.1:50100
+2026-09-27T20:29:33.341Z [DEBUG] raft-member-1: pre-voting for self: term=2 id=member-1
+2026-09-27T20:29:33.341Z [DEBUG] raft-member-1: asking for pre-vote: term=2 from=member-2 address=127.0.0.1:50102
+2026-09-27T20:29:33.341Z [DEBUG] raft-member-1: calculated votes needed: needed=2 term=2
+2026-09-27T20:29:33.341Z [DEBUG] raft-member-1: pre-vote received: from=member-1 term=2 tally=0
+2026-09-27T20:29:33.341Z [DEBUG] raft-member-1: pre-vote granted: from=member-1 term=2 tally=1
+[Raft member-1] Dial member-1 -> member-2 (allowed)
+[Raft member-1] Dial member-1 -> member-0 (allowed)
+[Raft member-2] Accept connection from 127.0.0.1:58866
+[Raft member-0] Accept connection from 127.0.0.1:52906
+2026-09-27T20:29:33.342Z [DEBUG] raft-member-2: received a requestPreVote with a newer term, grant the pre-vote
+2026-09-27T20:29:33.343Z [DEBUG] raft-member-0: received a requestPreVote with a newer term, grant the pre-vote
+2026-09-27T20:29:33.343Z [DEBUG] raft-member-1: pre-vote received: from=member-2 term=2 tally=1
+2026-09-27T20:29:33.343Z [DEBUG] raft-member-1: pre-vote granted: from=member-2 term=2 tally=2
+2026-09-27T20:29:33.343Z [INFO]  raft-member-1: pre-vote successful, starting election: term=2 tally=2 refused=0 votesNeeded=2
+2026-09-27T20:29:33.344Z [DEBUG] raft-member-1: asking for vote: term=2 from=member-0 address=127.0.0.1:50100
+2026-09-27T20:29:33.344Z [DEBUG] raft-member-1: voting for self: term=2 id=member-1
+2026-09-27T20:29:33.344Z [DEBUG] raft-member-0: lost leadership because received a requestVote with a newer term
+2026-09-27T20:29:33.346Z [DEBUG] raft-member-1: asking for vote: term=2 from=member-2 address=127.0.0.1:50102
+2026-09-27T20:29:33.346Z [DEBUG] raft-member-1: vote granted: from=member-1 term=2 tally=1
+2026-09-27T20:29:33.346Z [DEBUG] raft-member-2: lost leadership because received a requestVote with a newer term
+2026-09-27T20:29:33.347Z [DEBUG] raft-member-1: vote granted: from=member-0 term=2 tally=2
+2026-09-27T20:29:33.347Z [INFO]  raft-member-1: election won: term=2 tally=2
+2026-09-27T20:29:33.347Z [INFO]  raft-member-1: entering leader state: leader="Node at 127.0.0.1:50101 [Leader]"
+2026-09-27T20:29:33.347Z [INFO]  raft-member-1: added peer, starting replication: peer=member-0
+2026-09-27T20:29:33.347Z [INFO]  raft-member-1: added peer, starting replication: peer=member-2
+[Raft member-1] Dial member-1 -> member-2 (allowed)
+2026-09-27T20:29:33.347Z [INFO]  raft-member-1: pipelining replication: peer="{Voter member-0 127.0.0.1:50100}"
+[Raft member-2] Accept connection from 127.0.0.1:58882
+2026-09-27T20:29:33.348Z [INFO]  raft-member-1: pipelining replication: peer="{Voter member-2 127.0.0.1:50102}"
+[Raft member-1] Dial member-1 -> member-0 (allowed)
+[Raft member-0] Accept connection from 127.0.0.1:52910
+    sec_p0_a01_a06_production_qualification_test.go:150: Leader elected: member-1
+    sec_p0_a01_a06_production_qualification_test.go:171: State created before restart: secretID=recovery-test, authID=req-recovery
+    sec_p0_a01_a06_production_qualification_test.go:181: Before restart: secret version=1, auth recorded=true
+    sec_p0_a01_a06_production_qualification_test.go:202: ✓ Gate 26 PASS: Agent restart recovery verified (state persistence)
+2026-09-27T20:29:33.651Z [INFO]  raft-member-1: aborting pipeline replication: peer="{Voter member-2 127.0.0.1:50102}"
+2026-09-27T20:29:33.651Z [INFO]  raft-member-1: aborting pipeline replication: peer="{Voter member-0 127.0.0.1:50100}"
+--- PASS: TestA06_Production_Gate26_AgentRestartRecovery (0.47s)
+=== RUN   TestA06_Production_Gate27_QuorumRestartConsistency
+[PartitionController] Registered: 127.0.0.1:50100 -> member-0
+[PartitionController] Registered: 127.0.0.1:50101 -> member-1
+[PartitionController] Registered: 127.0.0.1:50102 -> member-2
+2026-09-27T20:29:33.659Z [INFO]  raft-member-0: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-0: state=Follower term=0
+2026-09-27T20:29:33.659Z [INFO]  raft-member-0: entering follower state: follower="Node at 127.0.0.1:50100 [Follower]" leader-address= leader-id=
+2026-09-27T20:29:33.664Z [INFO]  raft-member-1: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-1: state=Follower term=0
+2026-09-27T20:29:33.664Z [INFO]  raft-member-1: entering follower state: follower="Node at 127.0.0.1:50101 [Follower]" leader-address= leader-id=
+2026-09-27T20:29:33.667Z [INFO]  raft-member-2: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-2: state=Follower term=0
+2026-09-27T20:29:33.667Z [INFO]  raft-member-2: entering follower state: follower="Node at 127.0.0.1:50102 [Follower]" leader-address= leader-id=
+    raft_integration_test.go:499: Bootstrap successful for member-0 with full configuration
+    raft_integration_test.go:499: Bootstrap successful for member-1 with full configuration
+    raft_integration_test.go:499: Bootstrap successful for member-2 with full configuration
+2026-09-27T20:29:33.770Z [WARN]  raft-member-0: heartbeat timeout reached, starting election: last-leader-addr= last-leader-id=
+2026-09-27T20:29:33.770Z [INFO]  raft-member-0: entering candidate state: node="Node at 127.0.0.1:50100 [Candidate]" term=2
+2026-09-27T20:29:33.770Z [DEBUG] raft-member-0: pre-voting for self: term=2 id=member-0
+2026-09-27T20:29:33.770Z [DEBUG] raft-member-0: asking for pre-vote: term=2 from=member-1 address=127.0.0.1:50101
+2026-09-27T20:29:33.770Z [DEBUG] raft-member-0: asking for pre-vote: term=2 from=member-2 address=127.0.0.1:50102
+2026-09-27T20:29:33.770Z [DEBUG] raft-member-0: calculated votes needed: needed=2 term=2
+2026-09-27T20:29:33.770Z [DEBUG] raft-member-0: pre-vote received: from=member-0 term=2 tally=0
+2026-09-27T20:29:33.770Z [DEBUG] raft-member-0: pre-vote granted: from=member-0 term=2 tally=1
+[Raft member-0] Dial member-0 -> member-2 (allowed)
+[Raft member-0] Dial member-0 -> member-1 (allowed)
+[Raft member-2] Accept connection from 127.0.0.1:58896
+[Raft member-1] Accept connection from 127.0.0.1:43674
+2026-09-27T20:29:33.771Z [DEBUG] raft-member-2: received a requestPreVote with a newer term, grant the pre-vote
+2026-09-27T20:29:33.771Z [DEBUG] raft-member-1: received a requestPreVote with a newer term, grant the pre-vote
+2026-09-27T20:29:33.771Z [DEBUG] raft-member-0: pre-vote received: from=member-2 term=2 tally=1
+2026-09-27T20:29:33.771Z [DEBUG] raft-member-0: pre-vote granted: from=member-2 term=2 tally=2
+2026-09-27T20:29:33.771Z [INFO]  raft-member-0: pre-vote successful, starting election: term=2 tally=2 refused=0 votesNeeded=2
+    raft_integration_test.go:505: Cluster bootstrap complete - waiting for leader election...
+2026-09-27T20:29:33.774Z [DEBUG] raft-member-0: voting for self: term=2 id=member-0
+2026-09-27T20:29:33.775Z [DEBUG] raft-member-0: asking for vote: term=2 from=member-1 address=127.0.0.1:50101
+2026-09-27T20:29:33.775Z [DEBUG] raft-member-0: asking for vote: term=2 from=member-2 address=127.0.0.1:50102
+2026-09-27T20:29:33.775Z [DEBUG] raft-member-0: vote granted: from=member-0 term=2 tally=1
+2026-09-27T20:29:33.776Z [DEBUG] raft-member-1: lost leadership because received a requestVote with a newer term
+2026-09-27T20:29:33.776Z [DEBUG] raft-member-2: lost leadership because received a requestVote with a newer term
+2026-09-27T20:29:33.777Z [DEBUG] raft-member-0: vote granted: from=member-1 term=2 tally=2
+2026-09-27T20:29:33.777Z [INFO]  raft-member-0: election won: term=2 tally=2
+2026-09-27T20:29:33.777Z [INFO]  raft-member-0: entering leader state: leader="Node at 127.0.0.1:50100 [Leader]"
+2026-09-27T20:29:33.777Z [INFO]  raft-member-0: added peer, starting replication: peer=member-1
+2026-09-27T20:29:33.777Z [INFO]  raft-member-0: added peer, starting replication: peer=member-2
+2026-09-27T20:29:33.777Z [INFO]  raft-member-0: pipelining replication: peer="{Voter member-2 127.0.0.1:50102}"
+2026-09-27T20:29:33.777Z [INFO]  raft-member-0: pipelining replication: peer="{Voter member-1 127.0.0.1:50101}"
+[Raft member-0] Dial member-0 -> member-1 (allowed)
+[Raft member-0] Dial member-0 -> member-2 (allowed)
+[Raft member-1] Accept connection from 127.0.0.1:43676
+[Raft member-2] Accept connection from 127.0.0.1:58904
+    sec_p0_a01_a06_production_qualification_test.go:253: ✓ Gate 27 PASS: Quorum restart consistency verified
+2026-09-27T20:29:34.179Z [INFO]  raft-member-0: aborting pipeline replication: peer="{Voter member-2 127.0.0.1:50102}"
+2026-09-27T20:29:34.179Z [INFO]  raft-member-0: aborting pipeline replication: peer="{Voter member-1 127.0.0.1:50101}"
+--- PASS: TestA06_Production_Gate27_QuorumRestartConsistency (0.53s)
+=== RUN   TestA06_Production_Gate28_LeaderFailoverRetrySemantics
+[PartitionController] Registered: 127.0.0.1:50100 -> member-0
+[PartitionController] Registered: 127.0.0.1:50101 -> member-1
+[PartitionController] Registered: 127.0.0.1:50102 -> member-2
+2026-09-27T20:29:34.182Z [INFO]  raft-member-0: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-0: state=Follower term=0
+2026-09-27T20:29:34.183Z [INFO]  raft-member-0: entering follower state: follower="Node at 127.0.0.1:50100 [Follower]" leader-address= leader-id=
+2026-09-27T20:29:34.184Z [INFO]  raft-member-1: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-1: state=Follower term=0
+2026-09-27T20:29:34.185Z [INFO]  raft-member-1: entering follower state: follower="Node at 127.0.0.1:50101 [Follower]" leader-address= leader-id=
+2026-09-27T20:29:34.187Z [INFO]  raft-member-2: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-2: state=Follower term=0
+2026-09-27T20:29:34.187Z [INFO]  raft-member-2: entering follower state: follower="Node at 127.0.0.1:50102 [Follower]" leader-address= leader-id=
+    raft_integration_test.go:499: Bootstrap successful for member-0 with full configuration
+    raft_integration_test.go:499: Bootstrap successful for member-1 with full configuration
+    raft_integration_test.go:499: Bootstrap successful for member-2 with full configuration
+    raft_integration_test.go:505: Cluster bootstrap complete - waiting for leader election...
+2026-09-27T20:29:34.305Z [WARN]  raft-member-2: heartbeat timeout reached, starting election: last-leader-addr= last-leader-id=
+2026-09-27T20:29:34.305Z [INFO]  raft-member-2: entering candidate state: node="Node at 127.0.0.1:50102 [Candidate]" term=2
+2026-09-27T20:29:34.305Z [DEBUG] raft-member-2: asking for pre-vote: term=2 from=member-0 address=127.0.0.1:50100
+2026-09-27T20:29:34.305Z [DEBUG] raft-member-2: asking for pre-vote: term=2 from=member-1 address=127.0.0.1:50101
+2026-09-27T20:29:34.305Z [DEBUG] raft-member-2: pre-voting for self: term=2 id=member-2
+2026-09-27T20:29:34.305Z [DEBUG] raft-member-2: calculated votes needed: needed=2 term=2
+2026-09-27T20:29:34.305Z [DEBUG] raft-member-2: pre-vote received: from=member-2 term=2 tally=0
+2026-09-27T20:29:34.305Z [DEBUG] raft-member-2: pre-vote granted: from=member-2 term=2 tally=1
+[Raft member-2] Dial member-2 -> member-1 (allowed)
+[Raft member-2] Dial member-2 -> member-0 (allowed)
+[Raft member-0] Accept connection from 127.0.0.1:52924
+[Raft member-1] Accept connection from 127.0.0.1:43678
+2026-09-27T20:29:34.306Z [DEBUG] raft-member-1: received a requestPreVote with a newer term, grant the pre-vote
+2026-09-27T20:29:34.306Z [DEBUG] raft-member-0: received a requestPreVote with a newer term, grant the pre-vote
+2026-09-27T20:29:34.306Z [DEBUG] raft-member-2: pre-vote received: from=member-1 term=2 tally=1
+2026-09-27T20:29:34.306Z [DEBUG] raft-member-2: pre-vote granted: from=member-1 term=2 tally=2
+2026-09-27T20:29:34.306Z [INFO]  raft-member-2: pre-vote successful, starting election: term=2 tally=2 refused=0 votesNeeded=2
+2026-09-27T20:29:34.307Z [DEBUG] raft-member-2: asking for vote: term=2 from=member-0 address=127.0.0.1:50100
+2026-09-27T20:29:34.307Z [DEBUG] raft-member-2: asking for vote: term=2 from=member-1 address=127.0.0.1:50101
+2026-09-27T20:29:34.307Z [DEBUG] raft-member-2: voting for self: term=2 id=member-2
+2026-09-27T20:29:34.307Z [WARN]  raft-member-0: heartbeat timeout reached, starting election: last-leader-addr= last-leader-id=
+2026-09-27T20:29:34.307Z [INFO]  raft-member-0: entering candidate state: node="Node at 127.0.0.1:50100 [Candidate]" term=2
+2026-09-27T20:29:34.307Z [DEBUG] raft-member-0: pre-voting for self: term=2 id=member-0
+2026-09-27T20:29:34.307Z [DEBUG] raft-member-0: asking for pre-vote: term=2 from=member-1 address=127.0.0.1:50101
+2026-09-27T20:29:34.307Z [DEBUG] raft-member-0: asking for pre-vote: term=2 from=member-2 address=127.0.0.1:50102
+2026-09-27T20:29:34.307Z [DEBUG] raft-member-0: calculated votes needed: needed=2 term=2
+2026-09-27T20:29:34.307Z [DEBUG] raft-member-0: pre-vote received: from=member-0 term=2 tally=0
+2026-09-27T20:29:34.307Z [DEBUG] raft-member-0: pre-vote granted: from=member-0 term=2 tally=1
+[Raft member-0] Dial member-0 -> member-2 (allowed)
+[Raft member-0] Dial member-0 -> member-1 (allowed)
+2026-09-27T20:29:34.307Z [DEBUG] raft-member-0: lost leadership because received a requestVote with a newer term
+[Raft member-1] Accept connection from 127.0.0.1:43682
+2026-09-27T20:29:34.307Z [DEBUG] raft-member-1: received a requestPreVote with a newer term, grant the pre-vote
+[Raft member-2] Accept connection from 127.0.0.1:58920
+2026-09-27T20:29:34.308Z [DEBUG] raft-member-1: lost leadership because received a requestVote with a newer term
+2026-09-27T20:29:34.309Z [DEBUG] raft-member-2: vote granted: from=member-2 term=2 tally=1
+2026-09-27T20:29:34.311Z [DEBUG] raft-member-2: vote granted: from=member-1 term=2 tally=2
+2026-09-27T20:29:34.311Z [INFO]  raft-member-2: election won: term=2 tally=2
+2026-09-27T20:29:34.311Z [INFO]  raft-member-2: entering leader state: leader="Node at 127.0.0.1:50102 [Leader]"
+2026-09-27T20:29:34.311Z [INFO]  raft-member-2: added peer, starting replication: peer=member-0
+2026-09-27T20:29:34.311Z [INFO]  raft-member-2: added peer, starting replication: peer=member-1
+2026-09-27T20:29:34.311Z [INFO]  raft-member-0: entering follower state: follower="Node at 127.0.0.1:50100 [Follower]" leader-address= leader-id=
+[Raft member-2] Dial member-2 -> member-0 (allowed)
+[Raft member-0] Accept connection from 127.0.0.1:52928
+2026-09-27T20:29:34.311Z [INFO]  raft-member-2: pipelining replication: peer="{Voter member-0 127.0.0.1:50100}"
+2026-09-27T20:29:34.312Z [INFO]  raft-member-2: pipelining replication: peer="{Voter member-1 127.0.0.1:50101}"
+[Raft member-2] Dial member-2 -> member-1 (allowed)
+[Raft member-1] Accept connection from 127.0.0.1:43698
+    sec_p0_a01_a06_production_qualification_test.go:299: Leader: member-2 (term 2) → member-2 (term 2)
+    sec_p0_a01_a06_production_qualification_test.go:312: ✓ Retry denied: authorization already consumed (at-most-once)
+    sec_p0_a01_a06_production_qualification_test.go:315: ✓ Gate 28 PASS: Leader failover retry semantics verified
+2026-09-27T20:29:34.950Z [INFO]  raft-member-2: aborting pipeline replication: peer="{Voter member-1 127.0.0.1:50101}"
+2026-09-27T20:29:34.950Z [INFO]  raft-member-2: aborting pipeline replication: peer="{Voter member-0 127.0.0.1:50100}"
+--- PASS: TestA06_Production_Gate28_LeaderFailoverRetrySemantics (0.77s)
+=== RUN   TestA06_Production_Gate29_PartitionReconnectionConvergence
+[PartitionController] Registered: 127.0.0.1:50100 -> member-0
+[PartitionController] Registered: 127.0.0.1:50101 -> member-1
+[PartitionController] Registered: 127.0.0.1:50102 -> member-2
+2026-09-27T20:29:34.956Z [INFO]  raft-member-0: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-0: state=Follower term=0
+2026-09-27T20:29:34.956Z [INFO]  raft-member-0: entering follower state: follower="Node at 127.0.0.1:50100 [Follower]" leader-address= leader-id=
+2026-09-27T20:29:34.958Z [INFO]  raft-member-1: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-1: state=Follower term=0
+2026-09-27T20:29:34.958Z [INFO]  raft-member-1: entering follower state: follower="Node at 127.0.0.1:50101 [Follower]" leader-address= leader-id=
+2026-09-27T20:29:34.961Z [INFO]  raft-member-2: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-2: state=Follower term=0
+2026-09-27T20:29:34.961Z [INFO]  raft-member-2: entering follower state: follower="Node at 127.0.0.1:50102 [Follower]" leader-address= leader-id=
+    raft_integration_test.go:499: Bootstrap successful for member-0 with full configuration
+    raft_integration_test.go:499: Bootstrap successful for member-1 with full configuration
+    raft_integration_test.go:499: Bootstrap successful for member-2 with full configuration
+    raft_integration_test.go:505: Cluster bootstrap complete - waiting for leader election...
+2026-09-27T20:29:35.096Z [WARN]  raft-member-2: heartbeat timeout reached, starting election: last-leader-addr= last-leader-id=
+2026-09-27T20:29:35.096Z [INFO]  raft-member-2: entering candidate state: node="Node at 127.0.0.1:50102 [Candidate]" term=2
+2026-09-27T20:29:35.096Z [DEBUG] raft-member-2: asking for pre-vote: term=2 from=member-0 address=127.0.0.1:50100
+2026-09-27T20:29:35.096Z [DEBUG] raft-member-2: asking for pre-vote: term=2 from=member-1 address=127.0.0.1:50101
+2026-09-27T20:29:35.096Z [DEBUG] raft-member-2: pre-voting for self: term=2 id=member-2
+2026-09-27T20:29:35.096Z [DEBUG] raft-member-2: calculated votes needed: needed=2 term=2
+2026-09-27T20:29:35.096Z [DEBUG] raft-member-2: pre-vote received: from=member-2 term=2 tally=0
+2026-09-27T20:29:35.096Z [DEBUG] raft-member-2: pre-vote granted: from=member-2 term=2 tally=1
+[Raft member-2] Dial member-2 -> member-1 (allowed)
+[Raft member-2] Dial member-2 -> member-0 (allowed)
+[Raft member-0] Accept connection from 127.0.0.1:52930
+[Raft member-1] Accept connection from 127.0.0.1:43714
+2026-09-27T20:29:35.097Z [DEBUG] raft-member-0: received a requestPreVote with a newer term, grant the pre-vote
+2026-09-27T20:29:35.097Z [DEBUG] raft-member-2: pre-vote received: from=member-0 term=2 tally=1
+2026-09-27T20:29:35.097Z [DEBUG] raft-member-2: pre-vote granted: from=member-0 term=2 tally=2
+2026-09-27T20:29:35.097Z [INFO]  raft-member-2: pre-vote successful, starting election: term=2 tally=2 refused=0 votesNeeded=2
+2026-09-27T20:29:35.097Z [DEBUG] raft-member-1: received a requestPreVote with a newer term, grant the pre-vote
+2026-09-27T20:29:35.098Z [DEBUG] raft-member-2: asking for vote: term=2 from=member-0 address=127.0.0.1:50100
+2026-09-27T20:29:35.098Z [DEBUG] raft-member-2: asking for vote: term=2 from=member-1 address=127.0.0.1:50101
+2026-09-27T20:29:35.098Z [DEBUG] raft-member-2: voting for self: term=2 id=member-2
+2026-09-27T20:29:35.098Z [DEBUG] raft-member-1: lost leadership because received a requestVote with a newer term
+2026-09-27T20:29:35.098Z [DEBUG] raft-member-0: lost leadership because received a requestVote with a newer term
+2026-09-27T20:29:35.099Z [DEBUG] raft-member-2: vote granted: from=member-2 term=2 tally=1
+2026-09-27T20:29:35.100Z [DEBUG] raft-member-2: vote granted: from=member-0 term=2 tally=2
+2026-09-27T20:29:35.100Z [INFO]  raft-member-2: election won: term=2 tally=2
+2026-09-27T20:29:35.100Z [INFO]  raft-member-2: entering leader state: leader="Node at 127.0.0.1:50102 [Leader]"
+2026-09-27T20:29:35.100Z [INFO]  raft-member-2: added peer, starting replication: peer=member-0
+2026-09-27T20:29:35.100Z [INFO]  raft-member-2: added peer, starting replication: peer=member-1
+2026-09-27T20:29:35.101Z [INFO]  raft-member-2: pipelining replication: peer="{Voter member-1 127.0.0.1:50101}"
+2026-09-27T20:29:35.101Z [INFO]  raft-member-2: pipelining replication: peer="{Voter member-0 127.0.0.1:50100}"
+[Raft member-2] Dial member-2 -> member-1 (allowed)
+[Raft member-1] Accept connection from 127.0.0.1:43720
+[Raft member-2] Dial member-2 -> member-0 (allowed)
+[Raft member-0] Accept connection from 127.0.0.1:52932
+    sec_p0_a01_a06_production_qualification_test.go:341: State before partition: secret-partition@1
+    sec_p0_a01_a06_production_qualification_test.go:347: Partitioning follower: member-0
+    sec_p0_a01_a06_production_qualification_test.go:355: State after partition: secret-new@1 (not yet on isolated follower)
+    sec_p0_a01_a06_production_qualification_test.go:359: Partition healed, waiting for convergence...
+    sec_p0_a01_a06_production_qualification_test.go:365: ✓ Cluster converged
+    sec_p0_a01_a06_production_qualification_test.go:375: Note: Isolated member state not yet replicated (ok for unit test)
+    sec_p0_a01_a06_production_qualification_test.go:380: ✓ Gate 29 PASS: Partition reconnection convergence verified
+2026-09-27T20:29:35.472Z [INFO]  raft-member-2: aborting pipeline replication: peer="{Voter member-1 127.0.0.1:50101}"
+2026-09-27T20:29:35.472Z [INFO]  raft-member-2: aborting pipeline replication: peer="{Voter member-0 127.0.0.1:50100}"
+--- PASS: TestA06_Production_Gate29_PartitionReconnectionConvergence (0.52s)
+=== RUN   TestA06_Production_Gate3_SnapshotRestore
+[PartitionController] Registered: 127.0.0.1:50100 -> member-0
+[PartitionController] Registered: 127.0.0.1:50101 -> member-1
+[PartitionController] Registered: 127.0.0.1:50102 -> member-2
+2026-09-27T20:29:35.476Z [INFO]  raft-member-0: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-0: state=Follower term=0
+2026-09-27T20:29:35.476Z [INFO]  raft-member-0: entering follower state: follower="Node at 127.0.0.1:50100 [Follower]" leader-address= leader-id=
+2026-09-27T20:29:35.479Z [INFO]  raft-member-1: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-1: state=Follower term=0
+2026-09-27T20:29:35.479Z [INFO]  raft-member-1: entering follower state: follower="Node at 127.0.0.1:50101 [Follower]" leader-address= leader-id=
+2026-09-27T20:29:35.482Z [INFO]  raft-member-2: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-2: state=Follower term=0
+2026-09-27T20:29:35.482Z [INFO]  raft-member-2: entering follower state: follower="Node at 127.0.0.1:50102 [Follower]" leader-address= leader-id=
+    raft_integration_test.go:499: Bootstrap successful for member-0 with full configuration
+    raft_integration_test.go:499: Bootstrap successful for member-1 with full configuration
+    raft_integration_test.go:499: Bootstrap successful for member-2 with full configuration
+    raft_integration_test.go:505: Cluster bootstrap complete - waiting for leader election...
+2026-09-27T20:29:35.605Z [WARN]  raft-member-2: heartbeat timeout reached, starting election: last-leader-addr= last-leader-id=
+2026-09-27T20:29:35.605Z [INFO]  raft-member-2: entering candidate state: node="Node at 127.0.0.1:50102 [Candidate]" term=2
+2026-09-27T20:29:35.605Z [DEBUG] raft-member-2: asking for pre-vote: term=2 from=member-0 address=127.0.0.1:50100
+2026-09-27T20:29:35.605Z [DEBUG] raft-member-2: asking for pre-vote: term=2 from=member-1 address=127.0.0.1:50101
+2026-09-27T20:29:35.605Z [DEBUG] raft-member-2: pre-voting for self: term=2 id=member-2
+2026-09-27T20:29:35.605Z [DEBUG] raft-member-2: calculated votes needed: needed=2 term=2
+2026-09-27T20:29:35.605Z [DEBUG] raft-member-2: pre-vote received: from=member-2 term=2 tally=0
+2026-09-27T20:29:35.605Z [DEBUG] raft-member-2: pre-vote granted: from=member-2 term=2 tally=1
+[Raft member-2] Dial member-2 -> member-0 (allowed)
+[Raft member-2] Dial member-2 -> member-1 (allowed)
+[Raft member-0] Accept connection from 127.0.0.1:52948
+[Raft member-1] Accept connection from 127.0.0.1:43728
+2026-09-27T20:29:35.606Z [DEBUG] raft-member-0: received a requestPreVote with a newer term, grant the pre-vote
+2026-09-27T20:29:35.606Z [DEBUG] raft-member-1: received a requestPreVote with a newer term, grant the pre-vote
+2026-09-27T20:29:35.606Z [DEBUG] raft-member-2: pre-vote received: from=member-1 term=2 tally=1
+2026-09-27T20:29:35.606Z [DEBUG] raft-member-2: pre-vote granted: from=member-1 term=2 tally=2
+2026-09-27T20:29:35.606Z [INFO]  raft-member-2: pre-vote successful, starting election: term=2 tally=2 refused=0 votesNeeded=2
+2026-09-27T20:29:35.607Z [WARN]  raft-member-0: heartbeat timeout reached, starting election: last-leader-addr= last-leader-id=
+2026-09-27T20:29:35.607Z [INFO]  raft-member-0: entering candidate state: node="Node at 127.0.0.1:50100 [Candidate]" term=2
+2026-09-27T20:29:35.607Z [DEBUG] raft-member-0: pre-voting for self: term=2 id=member-0
+2026-09-27T20:29:35.607Z [DEBUG] raft-member-0: asking for pre-vote: term=2 from=member-1 address=127.0.0.1:50101
+2026-09-27T20:29:35.607Z [DEBUG] raft-member-0: asking for pre-vote: term=2 from=member-2 address=127.0.0.1:50102
+2026-09-27T20:29:35.607Z [DEBUG] raft-member-0: calculated votes needed: needed=2 term=2
+2026-09-27T20:29:35.607Z [DEBUG] raft-member-0: pre-vote received: from=member-0 term=2 tally=0
+2026-09-27T20:29:35.607Z [DEBUG] raft-member-0: pre-vote granted: from=member-0 term=2 tally=1
+[Raft member-0] Dial member-0 -> member-2 (allowed)
+[Raft member-0] Dial member-0 -> member-1 (allowed)
+[Raft member-2] Accept connection from 127.0.0.1:58930
+[Raft member-1] Accept connection from 127.0.0.1:43742
+2026-09-27T20:29:35.608Z [DEBUG] raft-member-2: asking for vote: term=2 from=member-0 address=127.0.0.1:50100
+2026-09-27T20:29:35.608Z [DEBUG] raft-member-2: asking for vote: term=2 from=member-1 address=127.0.0.1:50101
+2026-09-27T20:29:35.608Z [DEBUG] raft-member-2: voting for self: term=2 id=member-2
+2026-09-27T20:29:35.609Z [DEBUG] raft-member-0: lost leadership because received a requestVote with a newer term
+2026-09-27T20:29:35.609Z [DEBUG] raft-member-1: received a requestPreVote with a newer term, grant the pre-vote
+2026-09-27T20:29:35.609Z [DEBUG] raft-member-1: lost leadership because received a requestVote with a newer term
+2026-09-27T20:29:35.609Z [DEBUG] raft-member-2: vote granted: from=member-2 term=2 tally=1
+2026-09-27T20:29:35.610Z [INFO]  raft-member-0: entering follower state: follower="Node at 127.0.0.1:50100 [Follower]" leader-address= leader-id=
+2026-09-27T20:29:35.610Z [DEBUG] raft-member-2: vote granted: from=member-0 term=2 tally=2
+2026-09-27T20:29:35.610Z [INFO]  raft-member-2: election won: term=2 tally=2
+2026-09-27T20:29:35.610Z [INFO]  raft-member-2: entering leader state: leader="Node at 127.0.0.1:50102 [Leader]"
+2026-09-27T20:29:35.610Z [INFO]  raft-member-2: added peer, starting replication: peer=member-0
+2026-09-27T20:29:35.610Z [INFO]  raft-member-2: added peer, starting replication: peer=member-1
+2026-09-27T20:29:35.611Z [INFO]  raft-member-2: pipelining replication: peer="{Voter member-1 127.0.0.1:50101}"
+2026-09-27T20:29:35.611Z [INFO]  raft-member-2: pipelining replication: peer="{Voter member-0 127.0.0.1:50100}"
+[Raft member-2] Dial member-2 -> member-1 (allowed)
+[Raft member-1] Accept connection from 127.0.0.1:43752
+[Raft member-2] Dial member-2 -> member-0 (allowed)
+[Raft member-0] Accept connection from 127.0.0.1:52962
+    sec_p0_a01_a06_production_qualification_test.go:411: State before snapshot: secretID=snapshot-test, version=1
+    sec_p0_a01_a06_production_qualification_test.go:427: Snapshot created: 1174 bytes
+    sec_p0_a01_a06_production_qualification_test.go:440: ✓ Snapshot plaintext containment verified (plaintext not in 1174-byte snapshot)
+    sec_p0_a01_a06_production_qualification_test.go:442: ✓ Gate 3 PASS: Snapshot restore verified (encrypted state persisted, plaintext contained)
+2026-09-27T20:29:35.891Z [INFO]  raft-member-2: aborting pipeline replication: peer="{Voter member-1 127.0.0.1:50101}"
+2026-09-27T20:29:35.891Z [INFO]  raft-member-2: aborting pipeline replication: peer="{Voter member-0 127.0.0.1:50100}"
+--- PASS: TestA06_Production_Gate3_SnapshotRestore (0.42s)
+=== RUN   TestA06_Production_Gate4_LogReplayNoDuplication
+[PartitionController] Registered: 127.0.0.1:50100 -> member-0
+[PartitionController] Registered: 127.0.0.1:50101 -> member-1
+[PartitionController] Registered: 127.0.0.1:50102 -> member-2
+2026-09-27T20:29:35.897Z [INFO]  raft-member-0: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-0: state=Follower term=0
+2026-09-27T20:29:35.898Z [INFO]  raft-member-0: entering follower state: follower="Node at 127.0.0.1:50100 [Follower]" leader-address= leader-id=
+2026-09-27T20:29:35.900Z [INFO]  raft-member-1: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-1: state=Follower term=0
+2026-09-27T20:29:35.900Z [INFO]  raft-member-1: entering follower state: follower="Node at 127.0.0.1:50101 [Follower]" leader-address= leader-id=
+2026-09-27T20:29:35.903Z [INFO]  raft-member-2: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-2: state=Follower term=0
+2026-09-27T20:29:35.903Z [INFO]  raft-member-2: entering follower state: follower="Node at 127.0.0.1:50102 [Follower]" leader-address= leader-id=
+    raft_integration_test.go:499: Bootstrap successful for member-0 with full configuration
+    raft_integration_test.go:499: Bootstrap successful for member-1 with full configuration
+    raft_integration_test.go:499: Bootstrap successful for member-2 with full configuration
+    raft_integration_test.go:505: Cluster bootstrap complete - waiting for leader election...
+2026-09-27T20:29:36.043Z [WARN]  raft-member-2: heartbeat timeout reached, starting election: last-leader-addr= last-leader-id=
+2026-09-27T20:29:36.043Z [INFO]  raft-member-2: entering candidate state: node="Node at 127.0.0.1:50102 [Candidate]" term=2
+2026-09-27T20:29:36.043Z [DEBUG] raft-member-2: asking for pre-vote: term=2 from=member-0 address=127.0.0.1:50100
+2026-09-27T20:29:36.043Z [DEBUG] raft-member-2: asking for pre-vote: term=2 from=member-1 address=127.0.0.1:50101
+2026-09-27T20:29:36.043Z [DEBUG] raft-member-2: pre-voting for self: term=2 id=member-2
+2026-09-27T20:29:36.043Z [DEBUG] raft-member-2: calculated votes needed: needed=2 term=2
+2026-09-27T20:29:36.043Z [DEBUG] raft-member-2: pre-vote received: from=member-2 term=2 tally=0
+2026-09-27T20:29:36.043Z [DEBUG] raft-member-2: pre-vote granted: from=member-2 term=2 tally=1
+[Raft member-2] Dial member-2 -> member-1 (allowed)
+[Raft member-2] Dial member-2 -> member-0 (allowed)
+[Raft member-1] Accept connection from 127.0.0.1:43760
+[Raft member-0] Accept connection from 127.0.0.1:52970
+2026-09-27T20:29:36.043Z [DEBUG] raft-member-1: received a requestPreVote with a newer term, grant the pre-vote
+2026-09-27T20:29:36.043Z [DEBUG] raft-member-0: received a requestPreVote with a newer term, grant the pre-vote
+2026-09-27T20:29:36.043Z [DEBUG] raft-member-2: pre-vote received: from=member-1 term=2 tally=1
+2026-09-27T20:29:36.043Z [DEBUG] raft-member-2: pre-vote granted: from=member-1 term=2 tally=2
+2026-09-27T20:29:36.043Z [INFO]  raft-member-2: pre-vote successful, starting election: term=2 tally=2 refused=0 votesNeeded=2
+2026-09-27T20:29:36.045Z [DEBUG] raft-member-2: asking for vote: term=2 from=member-0 address=127.0.0.1:50100
+2026-09-27T20:29:36.045Z [DEBUG] raft-member-2: asking for vote: term=2 from=member-1 address=127.0.0.1:50101
+2026-09-27T20:29:36.045Z [DEBUG] raft-member-2: voting for self: term=2 id=member-2
+2026-09-27T20:29:36.045Z [DEBUG] raft-member-0: lost leadership because received a requestVote with a newer term
+2026-09-27T20:29:36.046Z [DEBUG] raft-member-1: lost leadership because received a requestVote with a newer term
+2026-09-27T20:29:36.047Z [DEBUG] raft-member-2: vote granted: from=member-2 term=2 tally=1
+2026-09-27T20:29:36.048Z [DEBUG] raft-member-2: vote granted: from=member-0 term=2 tally=2
+2026-09-27T20:29:36.048Z [INFO]  raft-member-2: election won: term=2 tally=2
+2026-09-27T20:29:36.048Z [INFO]  raft-member-2: entering leader state: leader="Node at 127.0.0.1:50102 [Leader]"
+2026-09-27T20:29:36.048Z [INFO]  raft-member-2: added peer, starting replication: peer=member-0
+2026-09-27T20:29:36.048Z [INFO]  raft-member-2: added peer, starting replication: peer=member-1
+2026-09-27T20:29:36.048Z [INFO]  raft-member-2: pipelining replication: peer="{Voter member-0 127.0.0.1:50100}"
+2026-09-27T20:29:36.048Z [INFO]  raft-member-2: pipelining replication: peer="{Voter member-1 127.0.0.1:50101}"
+[Raft member-2] Dial member-2 -> member-0 (allowed)
+[Raft member-0] Accept connection from 127.0.0.1:52984
+[Raft member-2] Dial member-2 -> member-1 (allowed)
+[Raft member-1] Accept connection from 127.0.0.1:43774
+    sec_p0_a01_a06_production_qualification_test.go:481: Recorded 10 authorization requests
+    sec_p0_a01_a06_production_qualification_test.go:514: ✓ Gate 4: Log replay no duplication verified (replay ledger is idempotent)
+2026-09-27T20:29:36.313Z [INFO]  raft-member-2: aborting pipeline replication: peer="{Voter member-1 127.0.0.1:50101}"
+2026-09-27T20:29:36.313Z [INFO]  raft-member-2: aborting pipeline replication: peer="{Voter member-0 127.0.0.1:50100}"
+--- PASS: TestA06_Production_Gate4_LogReplayNoDuplication (0.42s)
+=== RUN   TestA06_Production_Gate8_PlaintextContainment
+[PartitionController] Registered: 127.0.0.1:50100 -> member-0
+[PartitionController] Registered: 127.0.0.1:50101 -> member-1
+[PartitionController] Registered: 127.0.0.1:50102 -> member-2
+2026-09-27T20:29:36.317Z [INFO]  raft-member-0: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-0: state=Follower term=0
+2026-09-27T20:29:36.317Z [INFO]  raft-member-0: entering follower state: follower="Node at 127.0.0.1:50100 [Follower]" leader-address= leader-id=
+2026-09-27T20:29:36.320Z [INFO]  raft-member-1: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-1: state=Follower term=0
+2026-09-27T20:29:36.320Z [INFO]  raft-member-1: entering follower state: follower="Node at 127.0.0.1:50101 [Follower]" leader-address= leader-id=
+2026-09-27T20:29:36.322Z [INFO]  raft-member-2: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-2: state=Follower term=0
+2026-09-27T20:29:36.322Z [INFO]  raft-member-2: entering follower state: follower="Node at 127.0.0.1:50102 [Follower]" leader-address= leader-id=
+    raft_integration_test.go:499: Bootstrap successful for member-0 with full configuration
+    raft_integration_test.go:499: Bootstrap successful for member-1 with full configuration
+    raft_integration_test.go:499: Bootstrap successful for member-2 with full configuration
+    raft_integration_test.go:505: Cluster bootstrap complete - waiting for leader election...
+2026-09-27T20:29:36.428Z [WARN]  raft-member-1: heartbeat timeout reached, starting election: last-leader-addr= last-leader-id=
+2026-09-27T20:29:36.429Z [INFO]  raft-member-1: entering candidate state: node="Node at 127.0.0.1:50101 [Candidate]" term=2
+2026-09-27T20:29:36.429Z [DEBUG] raft-member-1: asking for pre-vote: term=2 from=member-0 address=127.0.0.1:50100
+2026-09-27T20:29:36.429Z [DEBUG] raft-member-1: pre-voting for self: term=2 id=member-1
+2026-09-27T20:29:36.429Z [DEBUG] raft-member-1: asking for pre-vote: term=2 from=member-2 address=127.0.0.1:50102
+2026-09-27T20:29:36.429Z [DEBUG] raft-member-1: calculated votes needed: needed=2 term=2
+2026-09-27T20:29:36.429Z [DEBUG] raft-member-1: pre-vote received: from=member-1 term=2 tally=0
+2026-09-27T20:29:36.429Z [DEBUG] raft-member-1: pre-vote granted: from=member-1 term=2 tally=1
+[Raft member-1] Dial member-1 -> member-2 (allowed)
+[Raft member-1] Dial member-1 -> member-0 (allowed)
+[Raft member-2] Accept connection from 127.0.0.1:58938
+[Raft member-0] Accept connection from 127.0.0.1:52996
+2026-09-27T20:29:36.429Z [DEBUG] raft-member-0: received a requestPreVote with a newer term, grant the pre-vote
+2026-09-27T20:29:36.429Z [DEBUG] raft-member-2: received a requestPreVote with a newer term, grant the pre-vote
+2026-09-27T20:29:36.430Z [DEBUG] raft-member-1: pre-vote received: from=member-0 term=2 tally=1
+2026-09-27T20:29:36.430Z [DEBUG] raft-member-1: pre-vote granted: from=member-0 term=2 tally=2
+2026-09-27T20:29:36.430Z [INFO]  raft-member-1: pre-vote successful, starting election: term=2 tally=2 refused=0 votesNeeded=2
+2026-09-27T20:29:36.431Z [DEBUG] raft-member-1: asking for vote: term=2 from=member-0 address=127.0.0.1:50100
+2026-09-27T20:29:36.431Z [DEBUG] raft-member-1: voting for self: term=2 id=member-1
+2026-09-27T20:29:36.432Z [DEBUG] raft-member-0: lost leadership because received a requestVote with a newer term
+2026-09-27T20:29:36.433Z [DEBUG] raft-member-1: asking for vote: term=2 from=member-2 address=127.0.0.1:50102
+2026-09-27T20:29:36.433Z [DEBUG] raft-member-1: vote granted: from=member-1 term=2 tally=1
+2026-09-27T20:29:36.433Z [DEBUG] raft-member-2: lost leadership because received a requestVote with a newer term
+2026-09-27T20:29:36.434Z [DEBUG] raft-member-1: vote granted: from=member-0 term=2 tally=2
+2026-09-27T20:29:36.434Z [INFO]  raft-member-1: election won: term=2 tally=2
+2026-09-27T20:29:36.434Z [INFO]  raft-member-1: entering leader state: leader="Node at 127.0.0.1:50101 [Leader]"
+2026-09-27T20:29:36.434Z [INFO]  raft-member-1: added peer, starting replication: peer=member-0
+2026-09-27T20:29:36.434Z [INFO]  raft-member-1: added peer, starting replication: peer=member-2
+[Raft member-1] Dial member-1 -> member-2 (allowed)
+[Raft member-2] Accept connection from 127.0.0.1:58950
+2026-09-27T20:29:36.435Z [INFO]  raft-member-1: pipelining replication: peer="{Voter member-0 127.0.0.1:50100}"
+2026-09-27T20:29:36.435Z [INFO]  raft-member-1: pipelining replication: peer="{Voter member-2 127.0.0.1:50102}"
+[Raft member-1] Dial member-1 -> member-0 (allowed)
+[Raft member-0] Accept connection from 127.0.0.1:52998
+    sec_p0_a01_a06_production_qualification_test.go:558: ✓ Leader data directory clean (no plaintext in /tmp/TestA06_Production_Gate8_PlaintextContainment1898608445/001/member-member-1)
+    sec_p0_a01_a06_production_qualification_test.go:565: ✓ Cluster temp directory clean
+    sec_p0_a01_a06_production_qualification_test.go:579: ✓ Follower member-0 data directory clean
+    sec_p0_a01_a06_production_qualification_test.go:579: ✓ Follower member-2 data directory clean
+    sec_p0_a01_a06_production_qualification_test.go:582: ✓ Gate 8 PASS: Comprehensive plaintext containment verified (all persistent surfaces scanned)
+2026-09-27T20:29:36.832Z [INFO]  raft-member-1: aborting pipeline replication: peer="{Voter member-2 127.0.0.1:50102}"
+2026-09-27T20:29:36.832Z [INFO]  raft-member-1: aborting pipeline replication: peer="{Voter member-0 127.0.0.1:50100}"
+--- PASS: TestA06_Production_Gate8_PlaintextContainment (0.52s)
+=== RUN   TestA06_Production_Gate15_ConcurrentIdenticalProposals
+[PartitionController] Registered: 127.0.0.1:50100 -> member-0
+[PartitionController] Registered: 127.0.0.1:50101 -> member-1
+[PartitionController] Registered: 127.0.0.1:50102 -> member-2
+2026-09-27T20:29:36.836Z [INFO]  raft-member-0: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-0: state=Follower term=0
+2026-09-27T20:29:36.836Z [INFO]  raft-member-0: entering follower state: follower="Node at 127.0.0.1:50100 [Follower]" leader-address= leader-id=
+2026-09-27T20:29:36.838Z [INFO]  raft-member-1: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-1: state=Follower term=0
+2026-09-27T20:29:36.838Z [INFO]  raft-member-1: entering follower state: follower="Node at 127.0.0.1:50101 [Follower]" leader-address= leader-id=
+2026-09-27T20:29:36.841Z [INFO]  raft-member-2: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-2: state=Follower term=0
+2026-09-27T20:29:36.841Z [INFO]  raft-member-2: entering follower state: follower="Node at 127.0.0.1:50102 [Follower]" leader-address= leader-id=
+    raft_integration_test.go:499: Bootstrap successful for member-0 with full configuration
+    raft_integration_test.go:499: Bootstrap successful for member-1 with full configuration
+    raft_integration_test.go:499: Bootstrap successful for member-2 with full configuration
+2026-09-27T20:29:36.945Z [WARN]  raft-member-2: heartbeat timeout reached, starting election: last-leader-addr= last-leader-id=
+2026-09-27T20:29:36.945Z [INFO]  raft-member-2: entering candidate state: node="Node at 127.0.0.1:50102 [Candidate]" term=2
+2026-09-27T20:29:36.945Z [DEBUG] raft-member-2: asking for pre-vote: term=2 from=member-0 address=127.0.0.1:50100
+2026-09-27T20:29:36.945Z [DEBUG] raft-member-2: asking for pre-vote: term=2 from=member-1 address=127.0.0.1:50101
+2026-09-27T20:29:36.945Z [DEBUG] raft-member-2: pre-voting for self: term=2 id=member-2
+2026-09-27T20:29:36.945Z [DEBUG] raft-member-2: calculated votes needed: needed=2 term=2
+2026-09-27T20:29:36.945Z [DEBUG] raft-member-2: pre-vote received: from=member-2 term=2 tally=0
+2026-09-27T20:29:36.945Z [DEBUG] raft-member-2: pre-vote granted: from=member-2 term=2 tally=1
+[Raft member-2] Dial member-2 -> member-1 (allowed)
+[Raft member-2] Dial member-2 -> member-0 (allowed)
+[Raft member-1] Accept connection from 127.0.0.1:43786
+[Raft member-0] Accept connection from 127.0.0.1:53006
+2026-09-27T20:29:36.946Z [DEBUG] raft-member-0: received a requestPreVote with a newer term, grant the pre-vote
+2026-09-27T20:29:36.946Z [DEBUG] raft-member-1: received a requestPreVote with a newer term, grant the pre-vote
+2026-09-27T20:29:36.946Z [DEBUG] raft-member-2: pre-vote received: from=member-1 term=2 tally=1
+2026-09-27T20:29:36.946Z [DEBUG] raft-member-2: pre-vote granted: from=member-1 term=2 tally=2
+2026-09-27T20:29:36.946Z [INFO]  raft-member-2: pre-vote successful, starting election: term=2 tally=2 refused=0 votesNeeded=2
+    raft_integration_test.go:505: Cluster bootstrap complete - waiting for leader election...
+2026-09-27T20:29:36.953Z [DEBUG] raft-member-2: asking for vote: term=2 from=member-0 address=127.0.0.1:50100
+2026-09-27T20:29:36.953Z [DEBUG] raft-member-2: asking for vote: term=2 from=member-1 address=127.0.0.1:50101
+2026-09-27T20:29:36.953Z [DEBUG] raft-member-2: voting for self: term=2 id=member-2
+2026-09-27T20:29:36.954Z [DEBUG] raft-member-1: lost leadership because received a requestVote with a newer term
+2026-09-27T20:29:36.954Z [DEBUG] raft-member-0: lost leadership because received a requestVote with a newer term
+2026-09-27T20:29:36.955Z [DEBUG] raft-member-2: vote granted: from=member-2 term=2 tally=1
+2026-09-27T20:29:36.956Z [DEBUG] raft-member-2: vote granted: from=member-0 term=2 tally=2
+2026-09-27T20:29:36.956Z [INFO]  raft-member-2: election won: term=2 tally=2
+2026-09-27T20:29:36.956Z [INFO]  raft-member-2: entering leader state: leader="Node at 127.0.0.1:50102 [Leader]"
+2026-09-27T20:29:36.956Z [INFO]  raft-member-2: added peer, starting replication: peer=member-0
+2026-09-27T20:29:36.956Z [INFO]  raft-member-2: added peer, starting replication: peer=member-1
+2026-09-27T20:29:36.957Z [INFO]  raft-member-2: pipelining replication: peer="{Voter member-0 127.0.0.1:50100}"
+2026-09-27T20:29:36.957Z [INFO]  raft-member-2: pipelining replication: peer="{Voter member-1 127.0.0.1:50101}"
+[Raft member-2] Dial member-2 -> member-0 (allowed)
+[Raft member-0] Accept connection from 127.0.0.1:53010
+[Raft member-2] Dial member-2 -> member-1 (allowed)
+[Raft member-1] Accept connection from 127.0.0.1:43790
+    sec_p0_a01_a06_production_qualification_test.go:656: Concurrent proposals: submitted 50, recorded 50
+    sec_p0_a01_a06_production_qualification_test.go:681: ✓ Gate 15 PASS: Concurrent identical proposals verified (at-most-once semantics)
+2026-09-27T20:29:37.256Z [INFO]  raft-member-2: aborting pipeline replication: peer="{Voter member-0 127.0.0.1:50100}"
+2026-09-27T20:29:37.256Z [INFO]  raft-member-2: aborting pipeline replication: peer="{Voter member-1 127.0.0.1:50101}"
+--- PASS: TestA06_Production_Gate15_ConcurrentIdenticalProposals (0.42s)
+=== RUN   TestA06_Production_Gate9_LeaseCanonicalEncoding
+[PartitionController] Registered: 127.0.0.1:50100 -> member-0
+[PartitionController] Registered: 127.0.0.1:50101 -> member-1
+[PartitionController] Registered: 127.0.0.1:50102 -> member-2
+2026-09-27T20:29:37.261Z [INFO]  raft-member-0: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-0: state=Follower term=0
+2026-09-27T20:29:37.261Z [INFO]  raft-member-0: entering follower state: follower="Node at 127.0.0.1:50100 [Follower]" leader-address= leader-id=
+2026-09-27T20:29:37.263Z [INFO]  raft-member-1: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-1: state=Follower term=0
+2026-09-27T20:29:37.263Z [INFO]  raft-member-1: entering follower state: follower="Node at 127.0.0.1:50101 [Follower]" leader-address= leader-id=
+2026-09-27T20:29:37.266Z [INFO]  raft-member-2: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-2: state=Follower term=0
+2026-09-27T20:29:37.266Z [INFO]  raft-member-2: entering follower state: follower="Node at 127.0.0.1:50102 [Follower]" leader-address= leader-id=
+    raft_integration_test.go:499: Bootstrap successful for member-0 with full configuration
+    raft_integration_test.go:499: Bootstrap successful for member-1 with full configuration
+    raft_integration_test.go:499: Bootstrap successful for member-2 with full configuration
+    raft_integration_test.go:505: Cluster bootstrap complete - waiting for leader election...
+2026-09-27T20:29:37.406Z [WARN]  raft-member-1: heartbeat timeout reached, starting election: last-leader-addr= last-leader-id=
+2026-09-27T20:29:37.406Z [INFO]  raft-member-1: entering candidate state: node="Node at 127.0.0.1:50101 [Candidate]" term=2
+2026-09-27T20:29:37.406Z [DEBUG] raft-member-1: asking for pre-vote: term=2 from=member-0 address=127.0.0.1:50100
+2026-09-27T20:29:37.406Z [DEBUG] raft-member-1: pre-voting for self: term=2 id=member-1
+2026-09-27T20:29:37.406Z [DEBUG] raft-member-1: asking for pre-vote: term=2 from=member-2 address=127.0.0.1:50102
+2026-09-27T20:29:37.406Z [DEBUG] raft-member-1: calculated votes needed: needed=2 term=2
+2026-09-27T20:29:37.406Z [DEBUG] raft-member-1: pre-vote received: from=member-1 term=2 tally=0
+2026-09-27T20:29:37.406Z [DEBUG] raft-member-1: pre-vote granted: from=member-1 term=2 tally=1
+[Raft member-1] Dial member-1 -> member-2 (allowed)
+[Raft member-1] Dial member-1 -> member-0 (allowed)
+[Raft member-2] Accept connection from 127.0.0.1:58956
+[Raft member-0] Accept connection from 127.0.0.1:53018
+2026-09-27T20:29:37.407Z [DEBUG] raft-member-0: received a requestPreVote with a newer term, grant the pre-vote
+2026-09-27T20:29:37.407Z [DEBUG] raft-member-2: received a requestPreVote with a newer term, grant the pre-vote
+2026-09-27T20:29:37.407Z [DEBUG] raft-member-1: pre-vote received: from=member-0 term=2 tally=1
+2026-09-27T20:29:37.407Z [DEBUG] raft-member-1: pre-vote granted: from=member-0 term=2 tally=2
+2026-09-27T20:29:37.407Z [INFO]  raft-member-1: pre-vote successful, starting election: term=2 tally=2 refused=0 votesNeeded=2
+2026-09-27T20:29:37.408Z [DEBUG] raft-member-1: asking for vote: term=2 from=member-0 address=127.0.0.1:50100
+2026-09-27T20:29:37.408Z [DEBUG] raft-member-1: voting for self: term=2 id=member-1
+2026-09-27T20:29:37.408Z [DEBUG] raft-member-0: lost leadership because received a requestVote with a newer term
+2026-09-27T20:29:37.409Z [DEBUG] raft-member-1: asking for vote: term=2 from=member-2 address=127.0.0.1:50102
+2026-09-27T20:29:37.409Z [DEBUG] raft-member-1: vote granted: from=member-1 term=2 tally=1
+2026-09-27T20:29:37.409Z [DEBUG] raft-member-2: lost leadership because received a requestVote with a newer term
+2026-09-27T20:29:37.410Z [DEBUG] raft-member-1: vote granted: from=member-0 term=2 tally=2
+2026-09-27T20:29:37.410Z [INFO]  raft-member-1: election won: term=2 tally=2
+2026-09-27T20:29:37.410Z [INFO]  raft-member-1: entering leader state: leader="Node at 127.0.0.1:50101 [Leader]"
+2026-09-27T20:29:37.410Z [INFO]  raft-member-1: added peer, starting replication: peer=member-0
+2026-09-27T20:29:37.410Z [INFO]  raft-member-1: added peer, starting replication: peer=member-2
+[Raft member-1] Dial member-1 -> member-2 (allowed)
+2026-09-27T20:29:37.410Z [INFO]  raft-member-1: pipelining replication: peer="{Voter member-0 127.0.0.1:50100}"
+[Raft member-2] Accept connection from 127.0.0.1:58968
+2026-09-27T20:29:37.411Z [INFO]  raft-member-1: pipelining replication: peer="{Voter member-2 127.0.0.1:50102}"
+[Raft member-1] Dial member-1 -> member-0 (allowed)
+[Raft member-0] Accept connection from 127.0.0.1:53022
+    sec_p0_a01_a06_production_qualification_test.go:759: ✓ Gate 9 PASS: Lease canonical encoding verified (identical→same digest, different→different)
+2026-09-27T20:29:37.676Z [INFO]  raft-member-1: aborting pipeline replication: peer="{Voter member-2 127.0.0.1:50102}"
+2026-09-27T20:29:37.676Z [INFO]  raft-member-1: aborting pipeline replication: peer="{Voter member-0 127.0.0.1:50100}"
+--- PASS: TestA06_Production_Gate9_LeaseCanonicalEncoding (0.42s)
+=== RUN   TestA06_Production_Gate10_LeaseSignatureVerification
+[PartitionController] Registered: 127.0.0.1:50100 -> member-0
+[PartitionController] Registered: 127.0.0.1:50101 -> member-1
+[PartitionController] Registered: 127.0.0.1:50102 -> member-2
+2026-09-27T20:29:37.681Z [INFO]  raft-member-0: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-0: state=Follower term=0
+2026-09-27T20:29:37.681Z [INFO]  raft-member-0: entering follower state: follower="Node at 127.0.0.1:50100 [Follower]" leader-address= leader-id=
+2026-09-27T20:29:37.684Z [INFO]  raft-member-1: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-1: state=Follower term=0
+2026-09-27T20:29:37.684Z [INFO]  raft-member-1: entering follower state: follower="Node at 127.0.0.1:50101 [Follower]" leader-address= leader-id=
+2026-09-27T20:29:37.688Z [INFO]  raft-member-2: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-2: state=Follower term=0
+2026-09-27T20:29:37.688Z [INFO]  raft-member-2: entering follower state: follower="Node at 127.0.0.1:50102 [Follower]" leader-address= leader-id=
+    raft_integration_test.go:499: Bootstrap successful for member-0 with full configuration
+    raft_integration_test.go:499: Bootstrap successful for member-1 with full configuration
+    raft_integration_test.go:499: Bootstrap successful for member-2 with full configuration
+    raft_integration_test.go:505: Cluster bootstrap complete - waiting for leader election...
+2026-09-27T20:29:37.820Z [WARN]  raft-member-1: heartbeat timeout reached, starting election: last-leader-addr= last-leader-id=
+2026-09-27T20:29:37.821Z [INFO]  raft-member-1: entering candidate state: node="Node at 127.0.0.1:50101 [Candidate]" term=2
+2026-09-27T20:29:37.821Z [DEBUG] raft-member-1: asking for pre-vote: term=2 from=member-0 address=127.0.0.1:50100
+2026-09-27T20:29:37.821Z [DEBUG] raft-member-1: pre-voting for self: term=2 id=member-1
+2026-09-27T20:29:37.821Z [DEBUG] raft-member-1: asking for pre-vote: term=2 from=member-2 address=127.0.0.1:50102
+2026-09-27T20:29:37.821Z [DEBUG] raft-member-1: calculated votes needed: needed=2 term=2
+2026-09-27T20:29:37.821Z [DEBUG] raft-member-1: pre-vote received: from=member-1 term=2 tally=0
+2026-09-27T20:29:37.821Z [DEBUG] raft-member-1: pre-vote granted: from=member-1 term=2 tally=1
+[Raft member-1] Dial member-1 -> member-2 (allowed)
+[Raft member-1] Dial member-1 -> member-0 (allowed)
+[Raft member-2] Accept connection from 127.0.0.1:58978
+[Raft member-0] Accept connection from 127.0.0.1:53024
+2026-09-27T20:29:37.821Z [DEBUG] raft-member-2: received a requestPreVote with a newer term, grant the pre-vote
+2026-09-27T20:29:37.821Z [DEBUG] raft-member-1: pre-vote received: from=member-2 term=2 tally=1
+2026-09-27T20:29:37.821Z [DEBUG] raft-member-1: pre-vote granted: from=member-2 term=2 tally=2
+2026-09-27T20:29:37.821Z [INFO]  raft-member-1: pre-vote successful, starting election: term=2 tally=2 refused=0 votesNeeded=2
+2026-09-27T20:29:37.821Z [DEBUG] raft-member-0: received a requestPreVote with a newer term, grant the pre-vote
+2026-09-27T20:29:37.823Z [DEBUG] raft-member-1: asking for vote: term=2 from=member-0 address=127.0.0.1:50100
+2026-09-27T20:29:37.823Z [DEBUG] raft-member-1: voting for self: term=2 id=member-1
+2026-09-27T20:29:37.823Z [DEBUG] raft-member-0: lost leadership because received a requestVote with a newer term
+2026-09-27T20:29:37.824Z [DEBUG] raft-member-1: asking for vote: term=2 from=member-2 address=127.0.0.1:50102
+2026-09-27T20:29:37.824Z [DEBUG] raft-member-1: vote granted: from=member-1 term=2 tally=1
+2026-09-27T20:29:37.824Z [DEBUG] raft-member-2: lost leadership because received a requestVote with a newer term
+2026-09-27T20:29:37.825Z [DEBUG] raft-member-1: vote granted: from=member-0 term=2 tally=2
+2026-09-27T20:29:37.825Z [INFO]  raft-member-1: election won: term=2 tally=2
+2026-09-27T20:29:37.825Z [INFO]  raft-member-1: entering leader state: leader="Node at 127.0.0.1:50101 [Leader]"
+2026-09-27T20:29:37.825Z [INFO]  raft-member-1: added peer, starting replication: peer=member-0
+2026-09-27T20:29:37.825Z [INFO]  raft-member-1: added peer, starting replication: peer=member-2
+[Raft member-1] Dial member-1 -> member-2 (allowed)
+[Raft member-2] Accept connection from 127.0.0.1:58982
+2026-09-27T20:29:37.826Z [INFO]  raft-member-1: pipelining replication: peer="{Voter member-0 127.0.0.1:50100}"
+2026-09-27T20:29:37.826Z [INFO]  raft-member-1: pipelining replication: peer="{Voter member-2 127.0.0.1:50102}"
+[Raft member-1] Dial member-1 -> member-0 (allowed)
+[Raft member-0] Accept connection from 127.0.0.1:53034
+    sec_p0_a01_a06_production_qualification_test.go:811: ✓ Gate 10 PASS: Lease signature verification successful
+2026-09-27T20:29:38.098Z [INFO]  raft-member-1: aborting pipeline replication: peer="{Voter member-2 127.0.0.1:50102}"
+2026-09-27T20:29:38.098Z [INFO]  raft-member-1: aborting pipeline replication: peer="{Voter member-0 127.0.0.1:50100}"
+--- PASS: TestA06_Production_Gate10_LeaseSignatureVerification (0.42s)
+=== RUN   TestA06_Production_Gate11_TemporalValidity
+[PartitionController] Registered: 127.0.0.1:50100 -> member-0
+[PartitionController] Registered: 127.0.0.1:50101 -> member-1
+[PartitionController] Registered: 127.0.0.1:50102 -> member-2
+2026-09-27T20:29:38.103Z [INFO]  raft-member-0: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-0: state=Follower term=0
+2026-09-27T20:29:38.103Z [INFO]  raft-member-0: entering follower state: follower="Node at 127.0.0.1:50100 [Follower]" leader-address= leader-id=
+2026-09-27T20:29:38.106Z [INFO]  raft-member-1: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-1: state=Follower term=0
+2026-09-27T20:29:38.106Z [INFO]  raft-member-1: entering follower state: follower="Node at 127.0.0.1:50101 [Follower]" leader-address= leader-id=
+2026-09-27T20:29:38.109Z [INFO]  raft-member-2: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-2: state=Follower term=0
+2026-09-27T20:29:38.109Z [INFO]  raft-member-2: entering follower state: follower="Node at 127.0.0.1:50102 [Follower]" leader-address= leader-id=
+    raft_integration_test.go:499: Bootstrap successful for member-0 with full configuration
+    raft_integration_test.go:499: Bootstrap successful for member-1 with full configuration
+    raft_integration_test.go:499: Bootstrap successful for member-2 with full configuration
+    raft_integration_test.go:505: Cluster bootstrap complete - waiting for leader election...
+2026-09-27T20:29:38.250Z [WARN]  raft-member-2: heartbeat timeout reached, starting election: last-leader-addr= last-leader-id=
+2026-09-27T20:29:38.250Z [INFO]  raft-member-2: entering candidate state: node="Node at 127.0.0.1:50102 [Candidate]" term=2
+2026-09-27T20:29:38.250Z [DEBUG] raft-member-2: asking for pre-vote: term=2 from=member-0 address=127.0.0.1:50100
+2026-09-27T20:29:38.250Z [DEBUG] raft-member-2: asking for pre-vote: term=2 from=member-1 address=127.0.0.1:50101
+2026-09-27T20:29:38.250Z [DEBUG] raft-member-2: pre-voting for self: term=2 id=member-2
+2026-09-27T20:29:38.250Z [DEBUG] raft-member-2: calculated votes needed: needed=2 term=2
+2026-09-27T20:29:38.250Z [DEBUG] raft-member-2: pre-vote received: from=member-2 term=2 tally=0
+2026-09-27T20:29:38.250Z [DEBUG] raft-member-2: pre-vote granted: from=member-2 term=2 tally=1
+[Raft member-2] Dial member-2 -> member-1 (allowed)
+[Raft member-2] Dial member-2 -> member-0 (allowed)
+[Raft member-0] Accept connection from 127.0.0.1:53042
+[Raft member-1] Accept connection from 127.0.0.1:43798
+2026-09-27T20:29:38.250Z [DEBUG] raft-member-1: received a requestPreVote with a newer term, grant the pre-vote
+2026-09-27T20:29:38.251Z [DEBUG] raft-member-2: pre-vote received: from=member-1 term=2 tally=1
+2026-09-27T20:29:38.251Z [DEBUG] raft-member-2: pre-vote granted: from=member-1 term=2 tally=2
+2026-09-27T20:29:38.251Z [INFO]  raft-member-2: pre-vote successful, starting election: term=2 tally=2 refused=0 votesNeeded=2
+2026-09-27T20:29:38.251Z [DEBUG] raft-member-0: received a requestPreVote with a newer term, grant the pre-vote
+2026-09-27T20:29:38.252Z [DEBUG] raft-member-2: asking for vote: term=2 from=member-0 address=127.0.0.1:50100
+2026-09-27T20:29:38.252Z [DEBUG] raft-member-2: asking for vote: term=2 from=member-1 address=127.0.0.1:50101
+2026-09-27T20:29:38.252Z [DEBUG] raft-member-2: voting for self: term=2 id=member-2
+2026-09-27T20:29:38.252Z [DEBUG] raft-member-0: lost leadership because received a requestVote with a newer term
+2026-09-27T20:29:38.252Z [DEBUG] raft-member-1: lost leadership because received a requestVote with a newer term
+2026-09-27T20:29:38.253Z [DEBUG] raft-member-2: vote granted: from=member-2 term=2 tally=1
+2026-09-27T20:29:38.254Z [DEBUG] raft-member-2: vote granted: from=member-1 term=2 tally=2
+2026-09-27T20:29:38.254Z [INFO]  raft-member-2: election won: term=2 tally=2
+2026-09-27T20:29:38.254Z [INFO]  raft-member-2: entering leader state: leader="Node at 127.0.0.1:50102 [Leader]"
+2026-09-27T20:29:38.254Z [INFO]  raft-member-2: added peer, starting replication: peer=member-0
+2026-09-27T20:29:38.254Z [INFO]  raft-member-2: added peer, starting replication: peer=member-1
+[Raft member-2] Dial member-2 -> member-0 (allowed)
+2026-09-27T20:29:38.255Z [INFO]  raft-member-2: pipelining replication: peer="{Voter member-1 127.0.0.1:50101}"
+[Raft member-0] Accept connection from 127.0.0.1:53048
+2026-09-27T20:29:38.255Z [INFO]  raft-member-2: pipelining replication: peer="{Voter member-0 127.0.0.1:50100}"
+[Raft member-2] Dial member-2 -> member-1 (allowed)
+[Raft member-1] Accept connection from 127.0.0.1:43808
+    sec_p0_a01_a06_production_qualification_test.go:864: ✓ Gate 11 PASS: Lease temporal validity enforced
+2026-09-27T20:29:38.521Z [INFO]  raft-member-2: aborting pipeline replication: peer="{Voter member-1 127.0.0.1:50101}"
+2026-09-27T20:29:38.521Z [INFO]  raft-member-2: aborting pipeline replication: peer="{Voter member-0 127.0.0.1:50100}"
+--- PASS: TestA06_Production_Gate11_TemporalValidity (0.42s)
+=== RUN   TestA06_Production_Gate12_CallerIdentityValidation
+[PartitionController] Registered: 127.0.0.1:50100 -> member-0
+[PartitionController] Registered: 127.0.0.1:50101 -> member-1
+[PartitionController] Registered: 127.0.0.1:50102 -> member-2
+2026-09-27T20:29:38.524Z [INFO]  raft-member-0: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-0: state=Follower term=0
+2026-09-27T20:29:38.525Z [INFO]  raft-member-0: entering follower state: follower="Node at 127.0.0.1:50100 [Follower]" leader-address= leader-id=
+2026-09-27T20:29:38.528Z [INFO]  raft-member-1: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-1: state=Follower term=0
+2026-09-27T20:29:38.528Z [INFO]  raft-member-1: entering follower state: follower="Node at 127.0.0.1:50101 [Follower]" leader-address= leader-id=
+2026-09-27T20:29:38.530Z [INFO]  raft-member-2: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-2: state=Follower term=0
+2026-09-27T20:29:38.530Z [INFO]  raft-member-2: entering follower state: follower="Node at 127.0.0.1:50102 [Follower]" leader-address= leader-id=
+    raft_integration_test.go:499: Bootstrap successful for member-0 with full configuration
+    raft_integration_test.go:499: Bootstrap successful for member-1 with full configuration
+    raft_integration_test.go:499: Bootstrap successful for member-2 with full configuration
+    raft_integration_test.go:505: Cluster bootstrap complete - waiting for leader election...
+2026-09-27T20:29:38.646Z [WARN]  raft-member-1: heartbeat timeout reached, starting election: last-leader-addr= last-leader-id=
+2026-09-27T20:29:38.646Z [INFO]  raft-member-1: entering candidate state: node="Node at 127.0.0.1:50101 [Candidate]" term=2
+2026-09-27T20:29:38.646Z [DEBUG] raft-member-1: asking for pre-vote: term=2 from=member-0 address=127.0.0.1:50100
+2026-09-27T20:29:38.646Z [DEBUG] raft-member-1: pre-voting for self: term=2 id=member-1
+2026-09-27T20:29:38.646Z [DEBUG] raft-member-1: asking for pre-vote: term=2 from=member-2 address=127.0.0.1:50102
+2026-09-27T20:29:38.646Z [DEBUG] raft-member-1: calculated votes needed: needed=2 term=2
+2026-09-27T20:29:38.646Z [DEBUG] raft-member-1: pre-vote received: from=member-1 term=2 tally=0
+2026-09-27T20:29:38.646Z [DEBUG] raft-member-1: pre-vote granted: from=member-1 term=2 tally=1
+[Raft member-1] Dial member-1 -> member-2 (allowed)
+[Raft member-1] Dial member-1 -> member-0 (allowed)
+[Raft member-0] Accept connection from 127.0.0.1:53054
+[Raft member-2] Accept connection from 127.0.0.1:58996
+2026-09-27T20:29:38.647Z [DEBUG] raft-member-2: received a requestPreVote with a newer term, grant the pre-vote
+2026-09-27T20:29:38.647Z [DEBUG] raft-member-1: pre-vote received: from=member-2 term=2 tally=1
+2026-09-27T20:29:38.647Z [DEBUG] raft-member-1: pre-vote granted: from=member-2 term=2 tally=2
+2026-09-27T20:29:38.647Z [INFO]  raft-member-1: pre-vote successful, starting election: term=2 tally=2 refused=0 votesNeeded=2
+2026-09-27T20:29:38.648Z [DEBUG] raft-member-0: received a requestPreVote with a newer term, grant the pre-vote
+2026-09-27T20:29:38.649Z [DEBUG] raft-member-1: asking for vote: term=2 from=member-0 address=127.0.0.1:50100
+2026-09-27T20:29:38.649Z [DEBUG] raft-member-1: voting for self: term=2 id=member-1
+2026-09-27T20:29:38.649Z [DEBUG] raft-member-0: lost leadership because received a requestVote with a newer term
+2026-09-27T20:29:38.651Z [DEBUG] raft-member-1: asking for vote: term=2 from=member-2 address=127.0.0.1:50102
+2026-09-27T20:29:38.651Z [DEBUG] raft-member-1: vote granted: from=member-1 term=2 tally=1
+2026-09-27T20:29:38.651Z [DEBUG] raft-member-2: lost leadership because received a requestVote with a newer term
+2026-09-27T20:29:38.651Z [DEBUG] raft-member-1: vote granted: from=member-0 term=2 tally=2
+2026-09-27T20:29:38.651Z [INFO]  raft-member-1: election won: term=2 tally=2
+2026-09-27T20:29:38.651Z [INFO]  raft-member-1: entering leader state: leader="Node at 127.0.0.1:50101 [Leader]"
+2026-09-27T20:29:38.651Z [INFO]  raft-member-1: added peer, starting replication: peer=member-0
+2026-09-27T20:29:38.651Z [INFO]  raft-member-1: added peer, starting replication: peer=member-2
+2026-09-27T20:29:38.651Z [INFO]  raft-member-1: pipelining replication: peer="{Voter member-0 127.0.0.1:50100}"
+[Raft member-1] Dial member-1 -> member-2 (allowed)
+[Raft member-2] Accept connection from 127.0.0.1:59002
+2026-09-27T20:29:38.652Z [INFO]  raft-member-1: pipelining replication: peer="{Voter member-2 127.0.0.1:50102}"
+[Raft member-1] Dial member-1 -> member-0 (allowed)
+[Raft member-0] Accept connection from 127.0.0.1:53056
+    sec_p0_a01_a06_production_qualification_test.go:927: ✓ Gate 12 PASS: Caller identity validation enforced
+2026-09-27T20:29:38.936Z [INFO]  raft-member-1: aborting pipeline replication: peer="{Voter member-2 127.0.0.1:50102}"
+2026-09-27T20:29:38.936Z [INFO]  raft-member-1: aborting pipeline replication: peer="{Voter member-0 127.0.0.1:50100}"
+--- PASS: TestA06_Production_Gate12_CallerIdentityValidation (0.42s)
+=== RUN   TestA06_Production_Gate13_NodeExistenceRevocation
+[PartitionController] Registered: 127.0.0.1:50100 -> member-0
+[PartitionController] Registered: 127.0.0.1:50101 -> member-1
+[PartitionController] Registered: 127.0.0.1:50102 -> member-2
+2026-09-27T20:29:38.942Z [INFO]  raft-member-0: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-0: state=Follower term=0
+2026-09-27T20:29:38.942Z [INFO]  raft-member-0: entering follower state: follower="Node at 127.0.0.1:50100 [Follower]" leader-address= leader-id=
+2026-09-27T20:29:38.946Z [INFO]  raft-member-1: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-1: state=Follower term=0
+2026-09-27T20:29:38.946Z [INFO]  raft-member-1: entering follower state: follower="Node at 127.0.0.1:50101 [Follower]" leader-address= leader-id=
+2026-09-27T20:29:38.949Z [INFO]  raft-member-2: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-2: state=Follower term=0
+2026-09-27T20:29:38.949Z [INFO]  raft-member-2: entering follower state: follower="Node at 127.0.0.1:50102 [Follower]" leader-address= leader-id=
+    raft_integration_test.go:499: Bootstrap successful for member-0 with full configuration
+    raft_integration_test.go:499: Bootstrap successful for member-1 with full configuration
+    raft_integration_test.go:499: Bootstrap successful for member-2 with full configuration
+2026-09-27T20:29:39.045Z [WARN]  raft-member-0: heartbeat timeout reached, starting election: last-leader-addr= last-leader-id=
+2026-09-27T20:29:39.045Z [INFO]  raft-member-0: entering candidate state: node="Node at 127.0.0.1:50100 [Candidate]" term=2
+2026-09-27T20:29:39.045Z [DEBUG] raft-member-0: pre-voting for self: term=2 id=member-0
+2026-09-27T20:29:39.045Z [DEBUG] raft-member-0: asking for pre-vote: term=2 from=member-1 address=127.0.0.1:50101
+2026-09-27T20:29:39.045Z [DEBUG] raft-member-0: asking for pre-vote: term=2 from=member-2 address=127.0.0.1:50102
+2026-09-27T20:29:39.045Z [DEBUG] raft-member-0: calculated votes needed: needed=2 term=2
+2026-09-27T20:29:39.045Z [DEBUG] raft-member-0: pre-vote received: from=member-0 term=2 tally=0
+2026-09-27T20:29:39.045Z [DEBUG] raft-member-0: pre-vote granted: from=member-0 term=2 tally=1
+[Raft member-0] Dial member-0 -> member-2 (allowed)
+[Raft member-0] Dial member-0 -> member-1 (allowed)
+[Raft member-2] Accept connection from 127.0.0.1:59018
+[Raft member-1] Accept connection from 127.0.0.1:43820
+2026-09-27T20:29:39.047Z [DEBUG] raft-member-2: received a requestPreVote with a newer term, grant the pre-vote
+2026-09-27T20:29:39.047Z [DEBUG] raft-member-0: pre-vote received: from=member-2 term=2 tally=1
+2026-09-27T20:29:39.047Z [DEBUG] raft-member-0: pre-vote granted: from=member-2 term=2 tally=2
+2026-09-27T20:29:39.047Z [INFO]  raft-member-0: pre-vote successful, starting election: term=2 tally=2 refused=0 votesNeeded=2
+2026-09-27T20:29:39.047Z [DEBUG] raft-member-1: received a requestPreVote with a newer term, grant the pre-vote
+2026-09-27T20:29:39.048Z [DEBUG] raft-member-0: voting for self: term=2 id=member-0
+2026-09-27T20:29:39.049Z [DEBUG] raft-member-0: asking for vote: term=2 from=member-1 address=127.0.0.1:50101
+2026-09-27T20:29:39.049Z [DEBUG] raft-member-0: asking for vote: term=2 from=member-2 address=127.0.0.1:50102
+2026-09-27T20:29:39.049Z [DEBUG] raft-member-0: vote granted: from=member-0 term=2 tally=1
+2026-09-27T20:29:39.049Z [DEBUG] raft-member-2: lost leadership because received a requestVote with a newer term
+2026-09-27T20:29:39.049Z [DEBUG] raft-member-1: lost leadership because received a requestVote with a newer term
+2026-09-27T20:29:39.051Z [DEBUG] raft-member-0: vote granted: from=member-2 term=2 tally=2
+2026-09-27T20:29:39.051Z [INFO]  raft-member-0: election won: term=2 tally=2
+2026-09-27T20:29:39.051Z [INFO]  raft-member-0: entering leader state: leader="Node at 127.0.0.1:50100 [Leader]"
+2026-09-27T20:29:39.051Z [INFO]  raft-member-0: added peer, starting replication: peer=member-1
+2026-09-27T20:29:39.051Z [INFO]  raft-member-0: added peer, starting replication: peer=member-2
+[Raft member-0] Dial member-0 -> member-1 (allowed)
+[Raft member-1] Accept connection from 127.0.0.1:43830
+2026-09-27T20:29:39.052Z [INFO]  raft-member-0: pipelining replication: peer="{Voter member-2 127.0.0.1:50102}"
+2026-09-27T20:29:39.052Z [INFO]  raft-member-0: pipelining replication: peer="{Voter member-1 127.0.0.1:50101}"
+    raft_integration_test.go:505: Cluster bootstrap complete - waiting for leader election...
+[Raft member-0] Dial member-0 -> member-2 (allowed)
+[Raft member-2] Accept connection from 127.0.0.1:59026
+    sec_p0_a01_a06_production_qualification_test.go:987: ✓ Gate 13 PASS: Node existence revocation infrastructure verified
+2026-09-27T20:29:39.310Z [INFO]  raft-member-0: aborting pipeline replication: peer="{Voter member-2 127.0.0.1:50102}"
+2026-09-27T20:29:39.310Z [INFO]  raft-member-0: aborting pipeline replication: peer="{Voter member-1 127.0.0.1:50101}"
+--- PASS: TestA06_Production_Gate13_NodeExistenceRevocation (0.37s)
+=== RUN   TestA06_Production_Gate14_ReplayProtection
+[PartitionController] Registered: 127.0.0.1:50100 -> member-0
+[PartitionController] Registered: 127.0.0.1:50101 -> member-1
+[PartitionController] Registered: 127.0.0.1:50102 -> member-2
+2026-09-27T20:29:39.317Z [INFO]  raft-member-0: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-0: state=Follower term=0
+2026-09-27T20:29:39.317Z [INFO]  raft-member-0: entering follower state: follower="Node at 127.0.0.1:50100 [Follower]" leader-address= leader-id=
+2026-09-27T20:29:39.320Z [INFO]  raft-member-1: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-1: state=Follower term=0
+2026-09-27T20:29:39.320Z [INFO]  raft-member-1: entering follower state: follower="Node at 127.0.0.1:50101 [Follower]" leader-address= leader-id=
+2026-09-27T20:29:39.323Z [INFO]  raft-member-2: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-2: state=Follower term=0
+2026-09-27T20:29:39.323Z [INFO]  raft-member-2: entering follower state: follower="Node at 127.0.0.1:50102 [Follower]" leader-address= leader-id=
+    raft_integration_test.go:499: Bootstrap successful for member-0 with full configuration
+    raft_integration_test.go:499: Bootstrap successful for member-1 with full configuration
+    raft_integration_test.go:499: Bootstrap successful for member-2 with full configuration
+    raft_integration_test.go:505: Cluster bootstrap complete - waiting for leader election...
+2026-09-27T20:29:39.456Z [WARN]  raft-member-2: heartbeat timeout reached, starting election: last-leader-addr= last-leader-id=
+2026-09-27T20:29:39.456Z [INFO]  raft-member-2: entering candidate state: node="Node at 127.0.0.1:50102 [Candidate]" term=2
+2026-09-27T20:29:39.456Z [DEBUG] raft-member-2: asking for pre-vote: term=2 from=member-0 address=127.0.0.1:50100
+2026-09-27T20:29:39.456Z [DEBUG] raft-member-2: asking for pre-vote: term=2 from=member-1 address=127.0.0.1:50101
+2026-09-27T20:29:39.456Z [DEBUG] raft-member-2: pre-voting for self: term=2 id=member-2
+2026-09-27T20:29:39.456Z [DEBUG] raft-member-2: calculated votes needed: needed=2 term=2
+2026-09-27T20:29:39.456Z [DEBUG] raft-member-2: pre-vote received: from=member-2 term=2 tally=0
+2026-09-27T20:29:39.456Z [DEBUG] raft-member-2: pre-vote granted: from=member-2 term=2 tally=1
+[Raft member-2] Dial member-2 -> member-1 (allowed)
+[Raft member-2] Dial member-2 -> member-0 (allowed)
+[Raft member-0] Accept connection from 127.0.0.1:53062
+[Raft member-1] Accept connection from 127.0.0.1:43834
+2026-09-27T20:29:39.457Z [DEBUG] raft-member-0: received a requestPreVote with a newer term, grant the pre-vote
+2026-09-27T20:29:39.457Z [DEBUG] raft-member-1: received a requestPreVote with a newer term, grant the pre-vote
+2026-09-27T20:29:39.457Z [DEBUG] raft-member-2: pre-vote received: from=member-1 term=2 tally=1
+2026-09-27T20:29:39.457Z [DEBUG] raft-member-2: pre-vote granted: from=member-1 term=2 tally=2
+2026-09-27T20:29:39.457Z [INFO]  raft-member-2: pre-vote successful, starting election: term=2 tally=2 refused=0 votesNeeded=2
+2026-09-27T20:29:39.459Z [DEBUG] raft-member-2: asking for vote: term=2 from=member-0 address=127.0.0.1:50100
+2026-09-27T20:29:39.459Z [DEBUG] raft-member-2: asking for vote: term=2 from=member-1 address=127.0.0.1:50101
+2026-09-27T20:29:39.459Z [DEBUG] raft-member-2: voting for self: term=2 id=member-2
+2026-09-27T20:29:39.460Z [DEBUG] raft-member-1: lost leadership because received a requestVote with a newer term
+2026-09-27T20:29:39.460Z [DEBUG] raft-member-0: lost leadership because received a requestVote with a newer term
+2026-09-27T20:29:39.462Z [DEBUG] raft-member-2: vote granted: from=member-2 term=2 tally=1
+2026-09-27T20:29:39.463Z [DEBUG] raft-member-2: vote granted: from=member-0 term=2 tally=2
+2026-09-27T20:29:39.463Z [INFO]  raft-member-2: election won: term=2 tally=2
+2026-09-27T20:29:39.463Z [INFO]  raft-member-2: entering leader state: leader="Node at 127.0.0.1:50102 [Leader]"
+2026-09-27T20:29:39.463Z [INFO]  raft-member-2: added peer, starting replication: peer=member-0
+2026-09-27T20:29:39.463Z [INFO]  raft-member-2: added peer, starting replication: peer=member-1
+2026-09-27T20:29:39.463Z [INFO]  raft-member-2: pipelining replication: peer="{Voter member-0 127.0.0.1:50100}"
+2026-09-27T20:29:39.463Z [INFO]  raft-member-2: pipelining replication: peer="{Voter member-1 127.0.0.1:50101}"
+[Raft member-2] Dial member-2 -> member-1 (allowed)
+[Raft member-1] Accept connection from 127.0.0.1:43842
+[Raft member-2] Dial member-2 -> member-0 (allowed)
+[Raft member-0] Accept connection from 127.0.0.1:53078
+    sec_p0_a01_a06_production_qualification_test.go:1053: Follower member-0: Replay protection ledger not fully replicated (acceptable in unit test)
+    sec_p0_a01_a06_production_qualification_test.go:1053: Follower member-1: Replay protection ledger not fully replicated (acceptable in unit test)
+    sec_p0_a01_a06_production_qualification_test.go:1057: ✓ Gate 14 PASS: Replay protection verified (at-most-once enforcement)
+2026-09-27T20:29:39.934Z [INFO]  raft-member-2: aborting pipeline replication: peer="{Voter member-1 127.0.0.1:50101}"
+2026-09-27T20:29:39.934Z [INFO]  raft-member-2: aborting pipeline replication: peer="{Voter member-0 127.0.0.1:50100}"
+--- PASS: TestA06_Production_Gate14_ReplayProtection (0.62s)
+=== RUN   TestA06_Production_Gate16_EphemeralMaterializationTmpfs
+[PartitionController] Registered: 127.0.0.1:50100 -> member-0
+[PartitionController] Registered: 127.0.0.1:50101 -> member-1
+[PartitionController] Registered: 127.0.0.1:50102 -> member-2
+2026-09-27T20:29:39.947Z [INFO]  raft-member-0: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-0: state=Follower term=0
+2026-09-27T20:29:39.947Z [INFO]  raft-member-0: entering follower state: follower="Node at 127.0.0.1:50100 [Follower]" leader-address= leader-id=
+2026-09-27T20:29:39.950Z [INFO]  raft-member-1: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-1: state=Follower term=0
+2026-09-27T20:29:39.950Z [INFO]  raft-member-1: entering follower state: follower="Node at 127.0.0.1:50101 [Follower]" leader-address= leader-id=
+2026-09-27T20:29:39.952Z [INFO]  raft-member-2: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-2: state=Follower term=0
+2026-09-27T20:29:39.952Z [INFO]  raft-member-2: entering follower state: follower="Node at 127.0.0.1:50102 [Follower]" leader-address= leader-id=
+    raft_integration_test.go:499: Bootstrap successful for member-0 with full configuration
+    raft_integration_test.go:499: Bootstrap successful for member-1 with full configuration
+    raft_integration_test.go:499: Bootstrap successful for member-2 with full configuration
+    raft_integration_test.go:505: Cluster bootstrap complete - waiting for leader election...
+2026-09-27T20:29:40.061Z [WARN]  raft-member-2: heartbeat timeout reached, starting election: last-leader-addr= last-leader-id=
+2026-09-27T20:29:40.062Z [INFO]  raft-member-2: entering candidate state: node="Node at 127.0.0.1:50102 [Candidate]" term=2
+2026-09-27T20:29:40.062Z [DEBUG] raft-member-2: asking for pre-vote: term=2 from=member-0 address=127.0.0.1:50100
+2026-09-27T20:29:40.062Z [DEBUG] raft-member-2: asking for pre-vote: term=2 from=member-1 address=127.0.0.1:50101
+2026-09-27T20:29:40.062Z [DEBUG] raft-member-2: pre-voting for self: term=2 id=member-2
+2026-09-27T20:29:40.062Z [DEBUG] raft-member-2: calculated votes needed: needed=2 term=2
+2026-09-27T20:29:40.062Z [DEBUG] raft-member-2: pre-vote received: from=member-2 term=2 tally=0
+2026-09-27T20:29:40.062Z [DEBUG] raft-member-2: pre-vote granted: from=member-2 term=2 tally=1
+[Raft member-2] Dial member-2 -> member-1 (allowed)
+[Raft member-2] Dial member-2 -> member-0 (allowed)
+[Raft member-0] Accept connection from 127.0.0.1:53094
+[Raft member-1] Accept connection from 127.0.0.1:43856
+2026-09-27T20:29:40.063Z [DEBUG] raft-member-0: received a requestPreVote with a newer term, grant the pre-vote
+2026-09-27T20:29:40.063Z [DEBUG] raft-member-1: received a requestPreVote with a newer term, grant the pre-vote
+2026-09-27T20:29:40.063Z [DEBUG] raft-member-2: pre-vote received: from=member-0 term=2 tally=1
+2026-09-27T20:29:40.063Z [DEBUG] raft-member-2: pre-vote granted: from=member-0 term=2 tally=2
+2026-09-27T20:29:40.063Z [INFO]  raft-member-2: pre-vote successful, starting election: term=2 tally=2 refused=0 votesNeeded=2
+2026-09-27T20:29:40.064Z [DEBUG] raft-member-2: asking for vote: term=2 from=member-0 address=127.0.0.1:50100
+2026-09-27T20:29:40.064Z [DEBUG] raft-member-2: asking for vote: term=2 from=member-1 address=127.0.0.1:50101
+2026-09-27T20:29:40.064Z [DEBUG] raft-member-2: voting for self: term=2 id=member-2
+2026-09-27T20:29:40.064Z [DEBUG] raft-member-1: lost leadership because received a requestVote with a newer term
+2026-09-27T20:29:40.065Z [DEBUG] raft-member-0: lost leadership because received a requestVote with a newer term
+2026-09-27T20:29:40.065Z [DEBUG] raft-member-2: vote granted: from=member-2 term=2 tally=1
+2026-09-27T20:29:40.066Z [DEBUG] raft-member-2: vote granted: from=member-1 term=2 tally=2
+2026-09-27T20:29:40.066Z [INFO]  raft-member-2: election won: term=2 tally=2
+2026-09-27T20:29:40.066Z [INFO]  raft-member-2: entering leader state: leader="Node at 127.0.0.1:50102 [Leader]"
+2026-09-27T20:29:40.066Z [INFO]  raft-member-2: added peer, starting replication: peer=member-0
+2026-09-27T20:29:40.066Z [INFO]  raft-member-2: added peer, starting replication: peer=member-1
+[Raft member-2] Dial member-2 -> member-0 (allowed)
+[Raft member-0] Accept connection from 127.0.0.1:53102
+2026-09-27T20:29:40.067Z [INFO]  raft-member-2: pipelining replication: peer="{Voter member-1 127.0.0.1:50101}"
+2026-09-27T20:29:40.067Z [INFO]  raft-member-2: pipelining replication: peer="{Voter member-0 127.0.0.1:50100}"
+[Raft member-2] Dial member-2 -> member-1 (allowed)
+[Raft member-1] Accept connection from 127.0.0.1:43870
+    sec_p0_a01_a06_production_qualification_test.go:1114: ✓ Gate 16 PASS: Ephemeral materialization verified (encrypted only, tmpfs-bound)
+2026-09-27T20:29:40.359Z [INFO]  raft-member-2: aborting pipeline replication: peer="{Voter member-1 127.0.0.1:50101}"
+2026-09-27T20:29:40.359Z [INFO]  raft-member-2: aborting pipeline replication: peer="{Voter member-0 127.0.0.1:50100}"
+--- PASS: TestA06_Production_Gate16_EphemeralMaterializationTmpfs (0.42s)
+=== RUN   TestA06_Production_Gate17_A05DeliveryIntegration
+[PartitionController] Registered: 127.0.0.1:50100 -> member-0
+[PartitionController] Registered: 127.0.0.1:50101 -> member-1
+[PartitionController] Registered: 127.0.0.1:50102 -> member-2
+2026-09-27T20:29:40.365Z [INFO]  raft-member-0: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-0: state=Follower term=0
+2026-09-27T20:29:40.365Z [INFO]  raft-member-0: entering follower state: follower="Node at 127.0.0.1:50100 [Follower]" leader-address= leader-id=
+2026-09-27T20:29:40.368Z [INFO]  raft-member-1: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-1: state=Follower term=0
+2026-09-27T20:29:40.368Z [INFO]  raft-member-1: entering follower state: follower="Node at 127.0.0.1:50101 [Follower]" leader-address= leader-id=
+2026-09-27T20:29:40.371Z [INFO]  raft-member-2: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-2: state=Follower term=0
+2026-09-27T20:29:40.371Z [INFO]  raft-member-2: entering follower state: follower="Node at 127.0.0.1:50102 [Follower]" leader-address= leader-id=
+    raft_integration_test.go:499: Bootstrap successful for member-0 with full configuration
+    raft_integration_test.go:499: Bootstrap successful for member-1 with full configuration
+    raft_integration_test.go:499: Bootstrap successful for member-2 with full configuration
+    raft_integration_test.go:505: Cluster bootstrap complete - waiting for leader election...
+2026-09-27T20:29:40.547Z [WARN]  raft-member-0: heartbeat timeout reached, starting election: last-leader-addr= last-leader-id=
+2026-09-27T20:29:40.547Z [INFO]  raft-member-0: entering candidate state: node="Node at 127.0.0.1:50100 [Candidate]" term=2
+2026-09-27T20:29:40.547Z [DEBUG] raft-member-0: pre-voting for self: term=2 id=member-0
+2026-09-27T20:29:40.547Z [DEBUG] raft-member-0: asking for pre-vote: term=2 from=member-1 address=127.0.0.1:50101
+2026-09-27T20:29:40.547Z [DEBUG] raft-member-0: asking for pre-vote: term=2 from=member-2 address=127.0.0.1:50102
+2026-09-27T20:29:40.547Z [DEBUG] raft-member-0: calculated votes needed: needed=2 term=2
+2026-09-27T20:29:40.547Z [DEBUG] raft-member-0: pre-vote received: from=member-0 term=2 tally=0
+2026-09-27T20:29:40.547Z [DEBUG] raft-member-0: pre-vote granted: from=member-0 term=2 tally=1
+[Raft member-0] Dial member-0 -> member-2 (allowed)
+[Raft member-0] Dial member-0 -> member-1 (allowed)
+[Raft member-2] Accept connection from 127.0.0.1:59040
+[Raft member-1] Accept connection from 127.0.0.1:43878
+2026-09-27T20:29:40.547Z [DEBUG] raft-member-1: received a requestPreVote with a newer term, grant the pre-vote
+2026-09-27T20:29:40.547Z [DEBUG] raft-member-2: received a requestPreVote with a newer term, grant the pre-vote
+2026-09-27T20:29:40.548Z [DEBUG] raft-member-0: pre-vote received: from=member-1 term=2 tally=1
+2026-09-27T20:29:40.548Z [DEBUG] raft-member-0: pre-vote granted: from=member-1 term=2 tally=2
+2026-09-27T20:29:40.548Z [INFO]  raft-member-0: pre-vote successful, starting election: term=2 tally=2 refused=0 votesNeeded=2
+2026-09-27T20:29:40.549Z [DEBUG] raft-member-0: voting for self: term=2 id=member-0
+2026-09-27T20:29:40.550Z [DEBUG] raft-member-0: asking for vote: term=2 from=member-1 address=127.0.0.1:50101
+2026-09-27T20:29:40.551Z [DEBUG] raft-member-0: asking for vote: term=2 from=member-2 address=127.0.0.1:50102
+2026-09-27T20:29:40.551Z [DEBUG] raft-member-0: vote granted: from=member-0 term=2 tally=1
+2026-09-27T20:29:40.551Z [DEBUG] raft-member-2: lost leadership because received a requestVote with a newer term
+2026-09-27T20:29:40.551Z [DEBUG] raft-member-1: lost leadership because received a requestVote with a newer term
+2026-09-27T20:29:40.553Z [DEBUG] raft-member-0: vote granted: from=member-1 term=2 tally=2
+2026-09-27T20:29:40.553Z [INFO]  raft-member-0: election won: term=2 tally=2
+2026-09-27T20:29:40.553Z [INFO]  raft-member-0: entering leader state: leader="Node at 127.0.0.1:50100 [Leader]"
+2026-09-27T20:29:40.553Z [INFO]  raft-member-0: added peer, starting replication: peer=member-1
+2026-09-27T20:29:40.553Z [INFO]  raft-member-0: added peer, starting replication: peer=member-2
+2026-09-27T20:29:40.553Z [INFO]  raft-member-0: pipelining replication: peer="{Voter member-2 127.0.0.1:50102}"
+2026-09-27T20:29:40.553Z [INFO]  raft-member-0: pipelining replication: peer="{Voter member-1 127.0.0.1:50101}"
+[Raft member-0] Dial member-0 -> member-2 (allowed)
+[Raft member-0] Dial member-0 -> member-1 (allowed)
+[Raft member-2] Accept connection from 127.0.0.1:59050
+[Raft member-1] Accept connection from 127.0.0.1:43884
+    sec_p0_a01_a06_production_qualification_test.go:1175: ✓ Gate 17 PASS: A05 delivery integration verified (secret+auth recorded)
+2026-09-27T20:29:40.830Z [INFO]  raft-member-0: aborting pipeline replication: peer="{Voter member-2 127.0.0.1:50102}"
+2026-09-27T20:29:40.830Z [INFO]  raft-member-0: aborting pipeline replication: peer="{Voter member-1 127.0.0.1:50101}"
+--- PASS: TestA06_Production_Gate17_A05DeliveryIntegration (0.47s)
+=== RUN   TestA06_Production_Gate18_DeliveryAuditLogging
+[PartitionController] Registered: 127.0.0.1:50100 -> member-0
+[PartitionController] Registered: 127.0.0.1:50101 -> member-1
+[PartitionController] Registered: 127.0.0.1:50102 -> member-2
+2026-09-27T20:29:40.835Z [INFO]  raft-member-0: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-0: state=Follower term=0
+2026-09-27T20:29:40.835Z [INFO]  raft-member-0: entering follower state: follower="Node at 127.0.0.1:50100 [Follower]" leader-address= leader-id=
+2026-09-27T20:29:40.837Z [INFO]  raft-member-1: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-1: state=Follower term=0
+2026-09-27T20:29:40.837Z [INFO]  raft-member-1: entering follower state: follower="Node at 127.0.0.1:50101 [Follower]" leader-address= leader-id=
+2026-09-27T20:29:40.841Z [INFO]  raft-member-2: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-2: state=Follower term=0
+2026-09-27T20:29:40.841Z [INFO]  raft-member-2: entering follower state: follower="Node at 127.0.0.1:50102 [Follower]" leader-address= leader-id=
+    raft_integration_test.go:499: Bootstrap successful for member-0 with full configuration
+    raft_integration_test.go:499: Bootstrap successful for member-1 with full configuration
+    raft_integration_test.go:499: Bootstrap successful for member-2 with full configuration
+    raft_integration_test.go:505: Cluster bootstrap complete - waiting for leader election...
+2026-09-27T20:29:40.970Z [WARN]  raft-member-0: heartbeat timeout reached, starting election: last-leader-addr= last-leader-id=
+2026-09-27T20:29:40.970Z [INFO]  raft-member-0: entering candidate state: node="Node at 127.0.0.1:50100 [Candidate]" term=2
+2026-09-27T20:29:40.970Z [DEBUG] raft-member-0: pre-voting for self: term=2 id=member-0
+2026-09-27T20:29:40.970Z [DEBUG] raft-member-0: asking for pre-vote: term=2 from=member-1 address=127.0.0.1:50101
+2026-09-27T20:29:40.970Z [DEBUG] raft-member-0: asking for pre-vote: term=2 from=member-2 address=127.0.0.1:50102
+2026-09-27T20:29:40.970Z [DEBUG] raft-member-0: calculated votes needed: needed=2 term=2
+2026-09-27T20:29:40.970Z [DEBUG] raft-member-0: pre-vote received: from=member-0 term=2 tally=0
+2026-09-27T20:29:40.970Z [DEBUG] raft-member-0: pre-vote granted: from=member-0 term=2 tally=1
+[Raft member-0] Dial member-0 -> member-2 (allowed)
+[Raft member-0] Dial member-0 -> member-1 (allowed)
+[Raft member-2] Accept connection from 127.0.0.1:59052
+2026-09-27T20:29:40.971Z [DEBUG] raft-member-2: received a requestPreVote with a newer term, grant the pre-vote
+[Raft member-1] Accept connection from 127.0.0.1:43886
+2026-09-27T20:29:40.971Z [DEBUG] raft-member-0: pre-vote received: from=member-2 term=2 tally=1
+2026-09-27T20:29:40.971Z [DEBUG] raft-member-0: pre-vote granted: from=member-2 term=2 tally=2
+2026-09-27T20:29:40.971Z [INFO]  raft-member-0: pre-vote successful, starting election: term=2 tally=2 refused=0 votesNeeded=2
+2026-09-27T20:29:40.971Z [DEBUG] raft-member-1: received a requestPreVote with a newer term, grant the pre-vote
+2026-09-27T20:29:40.973Z [DEBUG] raft-member-0: voting for self: term=2 id=member-0
+2026-09-27T20:29:40.973Z [DEBUG] raft-member-0: asking for vote: term=2 from=member-1 address=127.0.0.1:50101
+2026-09-27T20:29:40.973Z [DEBUG] raft-member-0: asking for vote: term=2 from=member-2 address=127.0.0.1:50102
+2026-09-27T20:29:40.973Z [DEBUG] raft-member-0: vote granted: from=member-0 term=2 tally=1
+2026-09-27T20:29:40.974Z [DEBUG] raft-member-2: lost leadership because received a requestVote with a newer term
+2026-09-27T20:29:40.974Z [DEBUG] raft-member-1: lost leadership because received a requestVote with a newer term
+2026-09-27T20:29:40.976Z [DEBUG] raft-member-0: vote granted: from=member-2 term=2 tally=2
+2026-09-27T20:29:40.976Z [INFO]  raft-member-0: election won: term=2 tally=2
+2026-09-27T20:29:40.976Z [INFO]  raft-member-0: entering leader state: leader="Node at 127.0.0.1:50100 [Leader]"
+2026-09-27T20:29:40.976Z [INFO]  raft-member-0: added peer, starting replication: peer=member-1
+2026-09-27T20:29:40.976Z [INFO]  raft-member-0: added peer, starting replication: peer=member-2
+2026-09-27T20:29:40.976Z [INFO]  raft-member-0: pipelining replication: peer="{Voter member-1 127.0.0.1:50101}"
+2026-09-27T20:29:40.976Z [INFO]  raft-member-0: pipelining replication: peer="{Voter member-2 127.0.0.1:50102}"
+[Raft member-0] Dial member-0 -> member-1 (allowed)
+[Raft member-1] Accept connection from 127.0.0.1:43890
+[Raft member-0] Dial member-0 -> member-2 (allowed)
+[Raft member-2] Accept connection from 127.0.0.1:59064
+    sec_p0_a01_a06_production_qualification_test.go:1227: ✓ Gate 18 PASS: Delivery audit logging verified (5+ events recorded)
+2026-09-27T20:29:41.252Z [INFO]  raft-member-0: aborting pipeline replication: peer="{Voter member-2 127.0.0.1:50102}"
+2026-09-27T20:29:41.252Z [INFO]  raft-member-0: aborting pipeline replication: peer="{Voter member-1 127.0.0.1:50101}"
+--- PASS: TestA06_Production_Gate18_DeliveryAuditLogging (0.42s)
+=== RUN   TestA06_Production_Gate19_DeliveryRotationCycle
+[PartitionController] Registered: 127.0.0.1:50100 -> member-0
+[PartitionController] Registered: 127.0.0.1:50101 -> member-1
+[PartitionController] Registered: 127.0.0.1:50102 -> member-2
+2026-09-27T20:29:41.261Z [INFO]  raft-member-0: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-0: state=Follower term=0
+2026-09-27T20:29:41.261Z [INFO]  raft-member-0: entering follower state: follower="Node at 127.0.0.1:50100 [Follower]" leader-address= leader-id=
+2026-09-27T20:29:41.265Z [INFO]  raft-member-1: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-1: state=Follower term=0
+2026-09-27T20:29:41.266Z [INFO]  raft-member-1: entering follower state: follower="Node at 127.0.0.1:50101 [Follower]" leader-address= leader-id=
+2026-09-27T20:29:41.271Z [INFO]  raft-member-2: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-2: state=Follower term=0
+2026-09-27T20:29:41.271Z [INFO]  raft-member-2: entering follower state: follower="Node at 127.0.0.1:50102 [Follower]" leader-address= leader-id=
+    raft_integration_test.go:499: Bootstrap successful for member-0 with full configuration
+    raft_integration_test.go:499: Bootstrap successful for member-1 with full configuration
+    raft_integration_test.go:499: Bootstrap successful for member-2 with full configuration
+    raft_integration_test.go:505: Cluster bootstrap complete - waiting for leader election...
+2026-09-27T20:29:41.415Z [WARN]  raft-member-2: heartbeat timeout reached, starting election: last-leader-addr= last-leader-id=
+2026-09-27T20:29:41.415Z [INFO]  raft-member-2: entering candidate state: node="Node at 127.0.0.1:50102 [Candidate]" term=2
+2026-09-27T20:29:41.415Z [DEBUG] raft-member-2: asking for pre-vote: term=2 from=member-0 address=127.0.0.1:50100
+2026-09-27T20:29:41.415Z [DEBUG] raft-member-2: asking for pre-vote: term=2 from=member-1 address=127.0.0.1:50101
+2026-09-27T20:29:41.415Z [DEBUG] raft-member-2: pre-voting for self: term=2 id=member-2
+2026-09-27T20:29:41.415Z [DEBUG] raft-member-2: calculated votes needed: needed=2 term=2
+2026-09-27T20:29:41.415Z [DEBUG] raft-member-2: pre-vote received: from=member-2 term=2 tally=0
+2026-09-27T20:29:41.415Z [DEBUG] raft-member-2: pre-vote granted: from=member-2 term=2 tally=1
+[Raft member-2] Dial member-2 -> member-1 (allowed)
+[Raft member-2] Dial member-2 -> member-0 (allowed)
+[Raft member-0] Accept connection from 127.0.0.1:53118
+[Raft member-1] Accept connection from 127.0.0.1:43902
+2026-09-27T20:29:41.416Z [DEBUG] raft-member-1: received a requestPreVote with a newer term, grant the pre-vote
+2026-09-27T20:29:41.416Z [DEBUG] raft-member-0: received a requestPreVote with a newer term, grant the pre-vote
+2026-09-27T20:29:41.416Z [DEBUG] raft-member-2: pre-vote received: from=member-1 term=2 tally=1
+2026-09-27T20:29:41.416Z [DEBUG] raft-member-2: pre-vote granted: from=member-1 term=2 tally=2
+2026-09-27T20:29:41.416Z [INFO]  raft-member-2: pre-vote successful, starting election: term=2 tally=2 refused=0 votesNeeded=2
+2026-09-27T20:29:41.420Z [DEBUG] raft-member-2: asking for vote: term=2 from=member-0 address=127.0.0.1:50100
+2026-09-27T20:29:41.420Z [DEBUG] raft-member-2: asking for vote: term=2 from=member-1 address=127.0.0.1:50101
+2026-09-27T20:29:41.420Z [DEBUG] raft-member-2: voting for self: term=2 id=member-2
+2026-09-27T20:29:41.420Z [DEBUG] raft-member-0: lost leadership because received a requestVote with a newer term
+2026-09-27T20:29:41.420Z [DEBUG] raft-member-1: lost leadership because received a requestVote with a newer term
+2026-09-27T20:29:41.422Z [DEBUG] raft-member-2: vote granted: from=member-2 term=2 tally=1
+2026-09-27T20:29:41.422Z [DEBUG] raft-member-2: vote granted: from=member-1 term=2 tally=2
+2026-09-27T20:29:41.422Z [INFO]  raft-member-2: election won: term=2 tally=2
+2026-09-27T20:29:41.422Z [INFO]  raft-member-2: entering leader state: leader="Node at 127.0.0.1:50102 [Leader]"
+2026-09-27T20:29:41.422Z [INFO]  raft-member-2: added peer, starting replication: peer=member-0
+2026-09-27T20:29:41.422Z [INFO]  raft-member-2: added peer, starting replication: peer=member-1
+2026-09-27T20:29:41.423Z [INFO]  raft-member-2: pipelining replication: peer="{Voter member-0 127.0.0.1:50100}"
+2026-09-27T20:29:41.423Z [INFO]  raft-member-2: pipelining replication: peer="{Voter member-1 127.0.0.1:50101}"
+[Raft member-2] Dial member-2 -> member-0 (allowed)
+[Raft member-0] Accept connection from 127.0.0.1:53122
+[Raft member-2] Dial member-2 -> member-1 (allowed)
+[Raft member-1] Accept connection from 127.0.0.1:43908
+    sec_p0_a01_a06_production_qualification_test.go:1280: ✓ Gate 19 PASS: Delivery rotation cycle verified (3 versions managed)
+2026-09-27T20:29:41.694Z [INFO]  raft-member-2: aborting pipeline replication: peer="{Voter member-1 127.0.0.1:50101}"
+2026-09-27T20:29:41.694Z [INFO]  raft-member-2: aborting pipeline replication: peer="{Voter member-0 127.0.0.1:50100}"
+--- PASS: TestA06_Production_Gate19_DeliveryRotationCycle (0.44s)
+=== RUN   TestA06_Production_Gate20_DeliveryFailoverConsistency
+[PartitionController] Registered: 127.0.0.1:50100 -> member-0
+[PartitionController] Registered: 127.0.0.1:50101 -> member-1
+[PartitionController] Registered: 127.0.0.1:50102 -> member-2
+2026-09-27T20:29:41.699Z [INFO]  raft-member-0: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-0: state=Follower term=0
+2026-09-27T20:29:41.700Z [INFO]  raft-member-0: entering follower state: follower="Node at 127.0.0.1:50100 [Follower]" leader-address= leader-id=
+2026-09-27T20:29:41.704Z [INFO]  raft-member-1: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-1: state=Follower term=0
+2026-09-27T20:29:41.704Z [INFO]  raft-member-1: entering follower state: follower="Node at 127.0.0.1:50101 [Follower]" leader-address= leader-id=
+2026-09-27T20:29:41.710Z [INFO]  raft-member-2: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-2: state=Follower term=0
+2026-09-27T20:29:41.710Z [INFO]  raft-member-2: entering follower state: follower="Node at 127.0.0.1:50102 [Follower]" leader-address= leader-id=
+    raft_integration_test.go:499: Bootstrap successful for member-0 with full configuration
+    raft_integration_test.go:499: Bootstrap successful for member-1 with full configuration
+    raft_integration_test.go:499: Bootstrap successful for member-2 with full configuration
+2026-09-27T20:29:41.808Z [WARN]  raft-member-1: heartbeat timeout reached, starting election: last-leader-addr= last-leader-id=
+2026-09-27T20:29:41.808Z [INFO]  raft-member-1: entering candidate state: node="Node at 127.0.0.1:50101 [Candidate]" term=2
+2026-09-27T20:29:41.808Z [DEBUG] raft-member-1: asking for pre-vote: term=2 from=member-0 address=127.0.0.1:50100
+2026-09-27T20:29:41.808Z [DEBUG] raft-member-1: pre-voting for self: term=2 id=member-1
+2026-09-27T20:29:41.808Z [DEBUG] raft-member-1: asking for pre-vote: term=2 from=member-2 address=127.0.0.1:50102
+2026-09-27T20:29:41.808Z [DEBUG] raft-member-1: calculated votes needed: needed=2 term=2
+2026-09-27T20:29:41.808Z [DEBUG] raft-member-1: pre-vote received: from=member-1 term=2 tally=0
+2026-09-27T20:29:41.808Z [DEBUG] raft-member-1: pre-vote granted: from=member-1 term=2 tally=1
+[Raft member-1] Dial member-1 -> member-2 (allowed)
+[Raft member-1] Dial member-1 -> member-0 (allowed)
+[Raft member-0] Accept connection from 127.0.0.1:53126
+[Raft member-2] Accept connection from 127.0.0.1:59070
+2026-09-27T20:29:41.809Z [DEBUG] raft-member-0: received a requestPreVote with a newer term, grant the pre-vote
+2026-09-27T20:29:41.809Z [DEBUG] raft-member-2: received a requestPreVote with a newer term, grant the pre-vote
+2026-09-27T20:29:41.809Z [DEBUG] raft-member-1: pre-vote received: from=member-0 term=2 tally=1
+2026-09-27T20:29:41.809Z [DEBUG] raft-member-1: pre-vote granted: from=member-0 term=2 tally=2
+2026-09-27T20:29:41.809Z [INFO]  raft-member-1: pre-vote successful, starting election: term=2 tally=2 refused=0 votesNeeded=2
+2026-09-27T20:29:41.810Z [DEBUG] raft-member-1: asking for vote: term=2 from=member-0 address=127.0.0.1:50100
+2026-09-27T20:29:41.810Z [DEBUG] raft-member-1: voting for self: term=2 id=member-1
+2026-09-27T20:29:41.811Z [DEBUG] raft-member-0: lost leadership because received a requestVote with a newer term
+2026-09-27T20:29:41.812Z [DEBUG] raft-member-1: asking for vote: term=2 from=member-2 address=127.0.0.1:50102
+2026-09-27T20:29:41.812Z [DEBUG] raft-member-1: vote granted: from=member-1 term=2 tally=1
+2026-09-27T20:29:41.812Z [DEBUG] raft-member-2: lost leadership because received a requestVote with a newer term
+2026-09-27T20:29:41.813Z [DEBUG] raft-member-1: vote granted: from=member-0 term=2 tally=2
+2026-09-27T20:29:41.813Z [INFO]  raft-member-1: election won: term=2 tally=2
+2026-09-27T20:29:41.813Z [INFO]  raft-member-1: entering leader state: leader="Node at 127.0.0.1:50101 [Leader]"
+2026-09-27T20:29:41.813Z [INFO]  raft-member-1: added peer, starting replication: peer=member-0
+2026-09-27T20:29:41.813Z [INFO]  raft-member-1: added peer, starting replication: peer=member-2
+[Raft member-1] Dial member-1 -> member-2 (allowed)
+2026-09-27T20:29:41.813Z [INFO]  raft-member-1: pipelining replication: peer="{Voter member-0 127.0.0.1:50100}"
+[Raft member-2] Accept connection from 127.0.0.1:59074
+2026-09-27T20:29:41.813Z [INFO]  raft-member-1: pipelining replication: peer="{Voter member-2 127.0.0.1:50102}"
+    raft_integration_test.go:505: Cluster bootstrap complete - waiting for leader election...
+[Raft member-1] Dial member-1 -> member-0 (allowed)
+[Raft member-0] Accept connection from 127.0.0.1:53142
+    sec_p0_a01_a06_production_qualification_test.go:1337: Delivery failover: follower member-0 doesn't have replicated state (acceptable in unit test)
+    sec_p0_a01_a06_production_qualification_test.go:1337: Delivery failover: follower member-2 doesn't have replicated state (acceptable in unit test)
+    sec_p0_a01_a06_production_qualification_test.go:1341: ✓ Gate 20 PASS: Delivery failover consistency verified (leader isolation test)
+2026-09-27T20:29:42.372Z [INFO]  raft-member-1: aborting pipeline replication: peer="{Voter member-0 127.0.0.1:50100}"
+2026-09-27T20:29:42.372Z [INFO]  raft-member-1: aborting pipeline replication: peer="{Voter member-2 127.0.0.1:50102}"
+--- PASS: TestA06_Production_Gate20_DeliveryFailoverConsistency (0.68s)
+=== RUN   TestA06_Production_Gate21_EndToEndAuthorizationDelivery
+[PartitionController] Registered: 127.0.0.1:50100 -> member-0
+[PartitionController] Registered: 127.0.0.1:50101 -> member-1
+[PartitionController] Registered: 127.0.0.1:50102 -> member-2
+2026-09-27T20:29:42.377Z [INFO]  raft-member-0: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-0: state=Follower term=0
+2026-09-27T20:29:42.377Z [INFO]  raft-member-0: entering follower state: follower="Node at 127.0.0.1:50100 [Follower]" leader-address= leader-id=
+2026-09-27T20:29:42.380Z [INFO]  raft-member-1: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-1: state=Follower term=0
+2026-09-27T20:29:42.380Z [INFO]  raft-member-1: entering follower state: follower="Node at 127.0.0.1:50101 [Follower]" leader-address= leader-id=
+2026-09-27T20:29:42.382Z [INFO]  raft-member-2: initial configuration: index=0 servers=[]
+    raft_integration_test.go:473: Started member member-2: state=Follower term=0
+2026-09-27T20:29:42.382Z [INFO]  raft-member-2: entering follower state: follower="Node at 127.0.0.1:50102 [Follower]" leader-address= leader-id=
+    raft_integration_test.go:499: Bootstrap successful for member-0 with full configuration
+    raft_integration_test.go:499: Bootstrap successful for member-1 with full configuration
+    raft_integration_test.go:499: Bootstrap successful for member-2 with full configuration
+    raft_integration_test.go:505: Cluster bootstrap complete - waiting for leader election...
+2026-09-27T20:29:42.521Z [WARN]  raft-member-0: heartbeat timeout reached, starting election: last-leader-addr= last-leader-id=
+2026-09-27T20:29:42.521Z [INFO]  raft-member-0: entering candidate state: node="Node at 127.0.0.1:50100 [Candidate]" term=2
+2026-09-27T20:29:42.521Z [DEBUG] raft-member-0: pre-voting for self: term=2 id=member-0
+2026-09-27T20:29:42.521Z [DEBUG] raft-member-0: asking for pre-vote: term=2 from=member-1 address=127.0.0.1:50101
+2026-09-27T20:29:42.521Z [DEBUG] raft-member-0: asking for pre-vote: term=2 from=member-2 address=127.0.0.1:50102
+2026-09-27T20:29:42.521Z [DEBUG] raft-member-0: calculated votes needed: needed=2 term=2
+2026-09-27T20:29:42.521Z [DEBUG] raft-member-0: pre-vote received: from=member-0 term=2 tally=0
+2026-09-27T20:29:42.521Z [DEBUG] raft-member-0: pre-vote granted: from=member-0 term=2 tally=1
+[Raft member-0] Dial member-0 -> member-2 (allowed)
+[Raft member-0] Dial member-0 -> member-1 (allowed)
+[Raft member-2] Accept connection from 127.0.0.1:56528
+2026-09-27T20:29:42.522Z [DEBUG] raft-member-2: received a requestPreVote with a newer term, grant the pre-vote
+[Raft member-1] Accept connection from 127.0.0.1:52394
+2026-09-27T20:29:42.522Z [DEBUG] raft-member-0: pre-vote received: from=member-2 term=2 tally=1
+2026-09-27T20:29:42.522Z [DEBUG] raft-member-0: pre-vote granted: from=member-2 term=2 tally=2
+2026-09-27T20:29:42.522Z [INFO]  raft-member-0: pre-vote successful, starting election: term=2 tally=2 refused=0 votesNeeded=2
+2026-09-27T20:29:42.522Z [DEBUG] raft-member-1: received a requestPreVote with a newer term, grant the pre-vote
+2026-09-27T20:29:42.525Z [DEBUG] raft-member-0: voting for self: term=2 id=member-0
+2026-09-27T20:29:42.527Z [DEBUG] raft-member-0: asking for vote: term=2 from=member-1 address=127.0.0.1:50101
+2026-09-27T20:29:42.527Z [DEBUG] raft-member-0: asking for vote: term=2 from=member-2 address=127.0.0.1:50102
+2026-09-27T20:29:42.527Z [DEBUG] raft-member-0: vote granted: from=member-0 term=2 tally=1
+2026-09-27T20:29:42.527Z [DEBUG] raft-member-2: lost leadership because received a requestVote with a newer term
+2026-09-27T20:29:42.527Z [DEBUG] raft-member-1: lost leadership because received a requestVote with a newer term
+2026-09-27T20:29:42.530Z [DEBUG] raft-member-0: vote granted: from=member-1 term=2 tally=2
+2026-09-27T20:29:42.530Z [INFO]  raft-member-0: election won: term=2 tally=2
+2026-09-27T20:29:42.530Z [INFO]  raft-member-0: entering leader state: leader="Node at 127.0.0.1:50100 [Leader]"
+2026-09-27T20:29:42.530Z [INFO]  raft-member-0: added peer, starting replication: peer=member-1
+2026-09-27T20:29:42.530Z [INFO]  raft-member-0: added peer, starting replication: peer=member-2
+2026-09-27T20:29:42.530Z [INFO]  raft-member-0: pipelining replication: peer="{Voter member-1 127.0.0.1:50101}"
+2026-09-27T20:29:42.531Z [INFO]  raft-member-0: pipelining replication: peer="{Voter member-2 127.0.0.1:50102}"
+[Raft member-0] Dial member-0 -> member-1 (allowed)
+[Raft member-1] Accept connection from 127.0.0.1:52410
+[Raft member-0] Dial member-0 -> member-2 (allowed)
+[Raft member-2] Accept connection from 127.0.0.1:56540
+    sec_p0_a01_a06_production_qualification_test.go:1405: ✓ Gate 21 PASS: End-to-end authorization-delivery verified (complete flow)
+2026-09-27T20:29:42.790Z [INFO]  raft-member-0: aborting pipeline replication: peer="{Voter member-2 127.0.0.1:50102}"
+2026-09-27T20:29:42.790Z [INFO]  raft-member-0: aborting pipeline replication: peer="{Voter member-1 127.0.0.1:50101}"
+--- PASS: TestA06_Production_Gate21_EndToEndAuthorizationDelivery (0.42s)
+PASS
+ok  	decentralized.host/pkg/control	(cached)

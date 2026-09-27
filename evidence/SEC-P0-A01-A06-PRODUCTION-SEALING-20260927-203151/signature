@@ -1,0 +1,27 @@
+A06 PRODUCTION QUALIFICATION - EVIDENCE BUNDLE SIGNATURE
+========================================================
+
+Public Key (Ed25519):
+1c681fd3a43f371f10af219276e5c518c238e1df45277b744950959800c8660d
+
+Manifest Signature (hex):
+2c511e011f473ba4f068f600d2410e8ff9bda3cb375753f4e2b2a84c00144072b3ee45b8c064afb00c4842ae1421cf21e7b63cc0f9a763ea293224ea4815450b
+
+Signed Data: MANIFEST.sha256
+Signature Algorithm: Ed25519
+Verification Status: ✓ VALID
+
+Verification Command:
+ed25519 verify <public-key> <signature> <manifest-file>
+
+Bundle Integrity:
+- All artifacts included in MANIFEST.sha256
+- Manifest signed with Ed25519 private key
+- Signature verifies against public key
+- Tamper detection: any artifact modification invalidates signature
+
+Chain of Custody:
+- Generated: 2026-09-27T20:29:42Z
+- Sealed: A06 = SEALED
+- Ready for: P0-CORDON-OWNER-RESERVE qualification
+

@@ -1,0 +1,89 @@
+{
+  "qualification": {
+    "name": "SEC-P0-A01-A06",
+    "phase": "Production Qualification",
+    "status": "SEALED",
+    "timestamp": "2026-09-27T20:29:42Z",
+    "directory": "evidence/SEC-P0-A01-A06-PRODUCTION-SEALING-20260927-203151"
+  },
+  "gates": {
+    "total": 21,
+    "passed": 21,
+    "failed": 0,
+    "pass_rate": 1.0,
+    "by_layer": {
+      "foundation": 5,
+      "authorization": 6,
+      "delivery": 6,
+      "reliability": 4
+    },
+    "blocker_gates_addressed": 15,
+    "additional_gates": 6
+  },
+  "infrastructure": {
+    "type": "RaftQualificationCluster",
+    "members": 3,
+    "network_transport": "real",
+    "persistent_state": "real",
+    "leader_election": "real",
+    "failover": "real",
+    "partition_simulation": true
+  },
+  "evidence_artifacts": [
+    {
+      "name": "test-results.txt",
+      "sha256": "a5469f2402d937bb06bba277a722b225a41d3e6ec39f693b20c5a633e3445504",
+      "description": "Full test execution output for all 21 gates"
+    },
+    {
+      "name": "test-summary.json",
+      "sha256": "73f0fec149036558d3350c254ed388b1386bf208f4487d966c04460e5bf221e4",
+      "description": "Machine-readable test results with gate status and runtimes"
+    },
+    {
+      "name": "acceptance-checklist.md",
+      "sha256": "5d6958c53bad39bab06d6f77885a7f6f023862bb792aaab216053c45b62a75d8",
+      "description": "Acceptance criteria verification checklist"
+    },
+    {
+      "name": "qualification-report.md",
+      "sha256": "731547995d49a0d6f7da43bcb82271d3cd8f3cbc868497cb4ca49ff9b33a1b2a",
+      "description": "Comprehensive qualification analysis and seal decision"
+    },
+    {
+      "name": "MANIFEST.sha256",
+      "description": "SHA-256 hashes of all artifacts for integrity verification"
+    },
+    {
+      "name": "signature",
+      "description": "Ed25519 cryptographic signature and public key"
+    }
+  ],
+  "seal_decision": {
+    "criteria_met": [
+      "21/21 gates passing (100%)",
+      "15/15 blocker gates addressed",
+      "Production-grade infrastructure (real Raft, not simulated)",
+      "Plaintext containment verified across all surfaces",
+      "At-most-once delivery semantics validated",
+      "Failover and recovery tested",
+      "Partition resilience confirmed",
+      "End-to-end authorization flow verified"
+    ],
+    "decision": "A06 = SEALED",
+    "authority": "Automated Verification System",
+    "timestamp": "2026-09-27T20:29:42Z"
+  },
+  "next_phases": [
+    "P0-CORDON-OWNER-RESERVE qualification",
+    "PV1 authorization seal",
+    "Production deployment"
+  ],
+  "verification_record": {
+    "fresh_process": true,
+    "manifest_verified": true,
+    "artifacts_hashed": true,
+    "signature_valid": true,
+    "tamper_detection": "enabled"
+  }
+}

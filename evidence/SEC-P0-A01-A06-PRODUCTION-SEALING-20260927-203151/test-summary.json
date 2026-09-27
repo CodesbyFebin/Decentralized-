@@ -1,0 +1,51 @@
+{
+  "qualification": "SEC-P0-A01-A06",
+  "phase": "PRODUCTION QUALIFICATION",
+  "timestamp": "2026-09-27T20:29:42Z",
+  "infrastructure": "RaftQualificationCluster (3-member, real network transport, persistent state)",
+  "total_gates": 21,
+  "gates_passed": 21,
+  "gates_failed": 0,
+  "pass_rate": "100%",
+  "gates": {
+    "foundation": [
+      {"gate": 2, "name": "RaftPersistence", "status": "PASS", "runtime": "0.52s"},
+      {"gate": 3, "name": "SnapshotRestore", "status": "PASS", "runtime": "0.42s"},
+      {"gate": 4, "name": "LogReplayNoDuplication", "status": "PASS", "runtime": "0.42s"},
+      {"gate": 8, "name": "PlaintextContainment", "status": "PASS", "runtime": "0.52s"},
+      {"gate": 15, "name": "ConcurrentIdenticalProposals", "status": "PASS", "runtime": "0.42s"}
+    ],
+    "authorization": [
+      {"gate": 9, "name": "LeaseCanonicalEncoding", "status": "PASS", "runtime": "0.42s"},
+      {"gate": 10, "name": "LeaseSignatureVerification", "status": "PASS", "runtime": "0.42s"},
+      {"gate": 11, "name": "TemporalValidity", "status": "PASS", "runtime": "0.42s"},
+      {"gate": 12, "name": "CallerIdentityValidation", "status": "PASS", "runtime": "0.42s"},
+      {"gate": 13, "name": "NodeExistenceRevocation", "status": "PASS", "runtime": "0.37s"},
+      {"gate": 14, "name": "ReplayProtection", "status": "PASS", "runtime": "0.62s"}
+    ],
+    "delivery": [
+      {"gate": 16, "name": "EphemeralMaterializationTmpfs", "status": "PASS", "runtime": "0.42s"},
+      {"gate": 17, "name": "A05DeliveryIntegration", "status": "PASS", "runtime": "0.47s"},
+      {"gate": 18, "name": "DeliveryAuditLogging", "status": "PASS", "runtime": "0.42s"},
+      {"gate": 19, "name": "DeliveryRotationCycle", "status": "PASS", "runtime": "0.44s"},
+      {"gate": 20, "name": "DeliveryFailoverConsistency", "status": "PASS", "runtime": "0.68s"},
+      {"gate": 21, "name": "EndToEndAuthorizationDelivery", "status": "PASS", "runtime": "0.42s"}
+    ],
+    "reliability": [
+      {"gate": 26, "name": "AgentRestartRecovery", "status": "PASS", "runtime": "0.47s"},
+      {"gate": 27, "name": "QuorumRestartConsistency", "status": "PASS", "runtime": "0.53s"},
+      {"gate": 28, "name": "LeaderFailoverRetrySemantics", "status": "PASS", "runtime": "0.77s"},
+      {"gate": 29, "name": "PartitionReconnectionConvergence", "status": "PASS", "runtime": "0.52s"}
+    ]
+  },
+  "blocker_gates_addressed": 15,
+  "additional_gates_implemented": 6,
+  "evidence_artifacts": [
+    "test-results.txt",
+    "test-summary.json",
+    "acceptance-checklist.md",
+    "qualification-report.md",
+    "MANIFEST.sha256",
+    "signature"
+  ]
+}
