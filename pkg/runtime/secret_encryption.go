@@ -221,7 +221,7 @@ func (sk *SecretsKeystore) EncryptSecret(secretID string, version int64, plainte
 		secretID, version, deploymentID, workloadID, environment, sk.activeKEK.ID,
 	))
 
-	ciphertext := gcm.Seal(nonce, nonce, plaintext, aad)
+	ciphertext := gcm.Seal(nil, nonce, plaintext, aad)
 
 	wrapped := &WrappedSecret{
 		SecretID:   secretID,
