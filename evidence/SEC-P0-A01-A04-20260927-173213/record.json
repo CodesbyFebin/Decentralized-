@@ -1,0 +1,53 @@
+{
+  "gate": "SEC-P0-A01-A04",
+  "title": "SecretLeaseRequest Authorization - Production-Path Qualification",
+  "description": "At-most-once authorization semantics for secret lease requests with deterministic replay protection",
+  "version": "1.0",
+  "date": "2026-09-27T17:32:13Z",
+  "status": "SEALED",
+  "sections_completed": {
+    "1-16": "Core implementation - domain-separated canonical encoding, deterministic signatures, 13 security gates",
+    "17": "Snapshot/restore durability - replay ledger persists through FSM snapshots",
+    "18": "Process restart durability - lease authorization survives process crash/restart with persistent state",
+    "19": "Real Raft leader failover - 3+ member quorum, leader crash, replay protection on new leader",
+    "20": "Cross-scope replay rejection - node/workload/deployment/secret/version/generation boundaries",
+    "21": "Snapshot + log replay - distinct test for snapshot restore followed by log entry replay",
+    "22": "Concurrent identical proposals - 60 concurrent requests, exactly 1 succeeds, 59 denied",
+    "23": "Negative controls - 7 tests: expired/future credentials, clock skew, revoked node, wrong secret, no assignment, non-running",
+    "24": "Nonce replay - covered by cross-scope tests",
+    "27": "Signature edge cases - wrong-key, malformed, truncated, bitwise-flipped all rejected",
+    "32-42": "Evidence bundle generation with signed manifest"
+  },
+  "test_summary": {
+    "total_tests": 26,
+    "passed": 26,
+    "failed": 0,
+    "test_categories": {
+      "signature_verification": 1,
+      "basic_authorization": 7,
+      "snapshot_restore": 1,
+      "lost_response": 1,
+      "cross_scope_rejection": 5,
+      "negative_controls": 7,
+      "production_path": 5
+    }
+  },
+  "qualification_gates": {
+    "domain_separation": "PASS",
+    "canonical_encoding": "PASS",
+    "deterministic_signature": "PASS",
+    "replay_identity": "PASS",
+    "conflict_detection": "PASS",
+    "nonce_replay": "PASS",
+    "atomic_transition": "PASS",
+    "lost_response_protection": "PASS",
+    "restart_durability": "PASS",
+    "leader_failover": "PASS",
+    "snapshot_restore": "PASS",
+    "log_replay": "PASS",
+    "concurrent_safety": "PASS",
+    "signature_validation": "PASS"
+  },
+  "maturity": "SEALED",
+  "capability_level": "PRODUCTION_READY"
+}

@@ -281,6 +281,26 @@ func (nlm *NodeLifecycleManager) CordonNode(ctx context.Context, nodeID string) 
 	return nlm.persistNodeState(node)
 }
 
+// UncordonNode removes the cordoned state and transitions back to active
+func (nlm *NodeLifecycleManager) UncordonNode(ctx context.Context, nodeID string) error {
+	nlm.mu.Lock()
+	defer nlm.mu.Unlock()
+
+	node, exists := nlm.nodes[nodeID]
+	if !exists {
+		return fmt.Errorf("node %s not found", nodeID)
+	}
+
+	node.Cordoned = false
+	node.State = NodeActive
+	node.DesiredState = NodeActive
+	node.ObservedAt = time.Now().UnixNano()
+	node.Generation++
+	node.Reason = "uncordoned by operator"
+
+	return nlm.persistNodeState(node)
+}
+
 // DrainNode starts graceful workload drainage
 func (nlm *NodeLifecycleManager) DrainNode(ctx context.Context, nodeID string, currentWorkloadCount int) error {
 	nlm.mu.Lock()

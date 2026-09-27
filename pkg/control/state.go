@@ -39,13 +39,14 @@ type State struct {
 	MeshNext     int64                         `json:"meshNext"`
 	LocalCACert  string                        `json:"localCaCert"`
 	LocalCAKey   string                        `json:"localCaKey"`   // secret: never exported without --include-secrets
-	Secrets      SecretsStore                  `json:"secrets"`      // encrypted secrets (never persisted plaintext)
-	ReplayLedger ReplayLedger                  `json:"replayLedger"` // consumed authorizations (replay protection, survives failover)
-	ResourceLedger *ResourceLedger             `json:"resourceLedger"` // authoritative capacity and allocation ledger (Gate 3-4)
-	Index        int64                         `json:"index"`
-	IndexBase    int64                         `json:"indexBase"` // added to raft indexes after a restore so bundles never go backwards
-	Rejections   []Rejection                   `json:"rejections"`
-	Mirror       MirrorState                   `json:"mirror"`
+	Secrets           SecretsStore                  `json:"secrets"`           // encrypted secrets (never persisted plaintext)
+	ReplayLedger      ReplayLedger                  `json:"replayLedger"`      // consumed authorizations (replay protection, survives failover)
+	LeaseReplayLedger LeaseReplayLedger             `json:"leaseReplayLedger"` // consumed lease authorizations (A04, replay protection, survives failover)
+	ResourceLedger    *ResourceLedger               `json:"resourceLedger"`    // authoritative capacity and allocation ledger (Gate 3-4)
+	Index             int64                         `json:"index"`
+	IndexBase         int64                         `json:"indexBase"` // added to raft indexes after a restore so bundles never go backwards
+	Rejections        []Rejection                   `json:"rejections"`
+	Mirror            MirrorState                   `json:"mirror"`
 }
 
 // Node is a host as the control plane knows it.
@@ -54,6 +55,7 @@ type Node struct {
 	Name          string             `json:"name"`
 	Status        string             `json:"status"` // pending | ready | draining | revoked
 	Health        string             `json:"health"` // live | lost | unknown
+	Cordoned      bool               `json:"cordoned"` // operator-initiated placement hold
 	Keys          []api.KeyRecord    `json:"keys"`
 	Enroll        api.Enroll         `json:"enroll"`
 	EnrollEnv     *envelope.Envelope `json:"enrollEnv"`
@@ -293,6 +295,7 @@ func newState() *State {
 		Federation:   newFederation(),
 		Secrets:      NewSecretsStore(),
 		ReplayLedger: NewReplayLedger(),
+		LeaseReplayLedger: NewLeaseReplayLedger(),
 		ResourceLedger: &ResourceLedger{
 			CapacityByNode:   make(map[string]*NodeCapacityModel),
 			Reservations:     make(map[string]*ResourceReservation),
@@ -337,6 +340,9 @@ func (s *State) ensure() {
 	}
 	if s.ReplayLedger == nil {
 		s.ReplayLedger = NewReplayLedger()
+	}
+	if s.LeaseReplayLedger == nil {
+		s.LeaseReplayLedger = NewLeaseReplayLedger()
 	}
 	if s.ResourceLedger == nil {
 		s.ResourceLedger = &ResourceLedger{
