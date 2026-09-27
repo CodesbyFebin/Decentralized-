@@ -3815,6 +3815,154 @@ func (s *fileSnapshotSink) Cancel() error {
 	return os.Remove(s.f.Name())
 }
 
+// Gate 15: Snapshot Recovery from Disk After Crash
+// Verifies that FSM snapshots can be persisted to disk and a member can recover state after restart.
+// Tests snapshot-based state recovery across member crash/restart cycle (single member test).
+func TestGate15_SnapshotRecoveryFromDiskAfterCrash(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping Gate 15 Snapshot Recovery from Disk After Crash test in short mode")
+	}
+
+	// Phase 1: Create a standalone FSM for testing disk persistence
+	t.Logf("Gate 15: Phase 1 - Creating standalone FSM for persistence testing")
+
+	fsm1 := NewFSM()
+	fsm1.s.Cluster = "recovery-test"
+
+	// Phase 2: Build initial state in FSM
+	t.Logf("Gate 15: Phase 2 - Building initial state (50 nodes)")
+
+	fsm1.mu.Lock()
+	if fsm1.s.Nodes == nil {
+		fsm1.s.Nodes = make(map[string]*Node)
+	}
+	if fsm1.s.Assignments == nil {
+		fsm1.s.Assignments = make(map[string]*AssignmentRec)
+	}
+	for i := 0; i < 50; i++ {
+		nodeID := fmt.Sprintf("persist-node-%02d", i)
+		fsm1.s.Nodes[nodeID] = &Node{
+			ID:     nodeID,
+			Name:   fmt.Sprintf("persist-node-%02d", i),
+			Status: "active",
+			Health: "healthy",
+		}
+
+		assignKey := fmt.Sprintf("persist-assign-%02d@%s", i, nodeID)
+		fsm1.s.Assignments[assignKey] = &AssignmentRec{
+			Key: assignKey,
+			A: api.Assignment{
+				ID:      fmt.Sprintf("persist-assign-%02d", i),
+				App:     "persistence-app",
+				Replica: int64(i),
+				Node:    nodeID,
+			},
+			Created: int64(8000000 + i),
+		}
+	}
+	fsm1.s.Index = int64(500)
+	fsm1.mu.Unlock()
+
+	t.Logf("Gate 15: Phase 2 - Initial FSM state: 50 nodes, 50 assignments, Index=500")
+
+	// Phase 3: Create and persist snapshot to disk
+	t.Logf("Gate 15: Phase 3 - Creating and persisting snapshot to disk")
+
+	tmpDir := t.TempDir()
+	snapPath := fmt.Sprintf("%s/snapshot.dat", tmpDir)
+
+	snap1, err := fsm1.Snapshot()
+	if err != nil {
+		t.Fatalf("Failed to create snapshot: %v", err)
+	}
+
+	snapFile, err := os.Create(snapPath)
+	if err != nil {
+		t.Fatalf("Failed to create snapshot file: %v", err)
+	}
+	defer snapFile.Close()
+
+	diskSnap := &fileSnapshotSink{f: snapFile}
+	if err := snap1.Persist(diskSnap); err != nil {
+		t.Fatalf("Failed to persist snapshot: %v", err)
+	}
+	snap1.Release()
+	diskSnap.Close()
+
+	snapFileInfo, _ := os.Stat(snapPath)
+	t.Logf("Gate 15: Phase 3 - Snapshot persisted: %s (%d bytes)", snapPath, snapFileInfo.Size())
+
+	// Phase 4: Simulate crash - create new FSM (fresh state)
+	t.Logf("Gate 15: Phase 4 - Simulating crash: creating fresh FSM")
+
+	fsm2 := NewFSM()
+	fsm2.s.Cluster = "recovery-test"
+
+	var nodeBefore int
+	var indexBefore int64
+	fsm2.Read(func(s *State) {
+		nodeBefore = len(s.Nodes)
+		indexBefore = s.Index
+	})
+	t.Logf("Gate 15: Phase 4 - Fresh FSM state (before recovery): %d nodes, Index=%d", nodeBefore, indexBefore)
+
+	// Phase 5: Recover state from persisted snapshot
+	t.Logf("Gate 15: Phase 5 - Recovering FSM state from persisted snapshot")
+
+	snapFile2, err := os.Open(snapPath)
+	if err != nil {
+		t.Fatalf("Failed to open snapshot: %v", err)
+	}
+	defer snapFile2.Close()
+
+	if err := fsm2.Restore(io.NopCloser(snapFile2)); err != nil {
+		t.Fatalf("Failed to restore snapshot: %v", err)
+	}
+
+	// Phase 6: Verify recovered state matches original
+	t.Logf("Gate 15: Phase 6 - Verifying recovered state matches persisted snapshot")
+
+	var nodesAfter int
+	var indexAfter int64
+	var assignmentsAfter int
+	fsm2.Read(func(s *State) {
+		nodesAfter = len(s.Nodes)
+		indexAfter = s.Index
+		assignmentsAfter = len(s.Assignments)
+	})
+
+	t.Logf("Gate 15: Phase 6 - Recovered FSM state: %d nodes, %d assignments, Index=%d", nodesAfter, assignmentsAfter, indexAfter)
+
+	if nodesAfter != 50 {
+		t.Fatalf("Recovered node count mismatch: %d, expected 50", nodesAfter)
+	}
+	if assignmentsAfter != 50 {
+		t.Fatalf("Recovered assignments mismatch: %d, expected 50", assignmentsAfter)
+	}
+	if indexAfter != 500 {
+		t.Fatalf("Recovered index mismatch: %d, expected 500", indexAfter)
+	}
+
+	// Phase 7: Verify specific recovered data
+	t.Logf("Gate 15: Phase 7 - Verifying specific recovered data")
+
+	fsm2.Read(func(s *State) {
+		// Verify first and last nodes exist
+		if _, hasFirst := s.Nodes["persist-node-00"]; !hasFirst {
+			t.Fatalf("First node not recovered from snapshot")
+		}
+		if _, hasLast := s.Nodes["persist-node-49"]; !hasLast {
+			t.Fatalf("Last node not recovered from snapshot")
+		}
+		// Verify assignments recovered
+		if _, hasAssign := s.Assignments["persist-assign-25@persist-node-25"]; !hasAssign {
+			t.Fatalf("Sample assignment not recovered from snapshot")
+		}
+	})
+
+	t.Logf("Gate 15 PASSED: Snapshot recovery from disk verified, state preserved across crash/recovery cycle")
+}
+
 // Gate 14: Leader Failover with Snapshot Distribution
 // Verifies that when leader crashes, followers elect new leader and distribute snapshots
 // without the failed leader, and old leader recovers and converges via snapshot.
