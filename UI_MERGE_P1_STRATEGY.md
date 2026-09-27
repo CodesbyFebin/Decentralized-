@@ -30,44 +30,48 @@ Build the Command Centre surfaces for managing a **distributed private cloud** (
 
 ## P1 UI Order
 
-### 1. Evidence View (IN PROGRESS)
+### 1. Evidence View (✓ COMPLETE)
 **File**: `src/components/pages/EvidenceView.tsx`  
 **Focus**: Signed proof of state, resource allocation, and usage
 
-Enhancements over P0:
-- **Resource Evidence**: CPU/Memory/Storage consumption with TruthValue freshness
-- **Node Evidence**: Per-node health facts, capacity (LIVE vs STALE)
-- **Usage Records**: Signed metering data (provider's digital signature)
-- **Evidence Chain**: Desired/observed/evidence matrix for all measurements
+Completed enhancements:
+- ✓ **Resource Evidence**: CPU/Memory/Storage consumption with TruthValue freshness
+- ✓ **Node Evidence**: Per-node health facts, capacity (LIVE vs STALE)
+- ✓ **Usage Records**: Signed metering data (provider's digital signature)
+- ✓ **Evidence Chain**: Desired/observed/evidence matrix for all measurements
+- ✓ TruthValue components showing freshness for all measurements
+- ✓ UNKNOWN never renders as zero; STALE marked explicitly
+- ✓ No mock data; all backend-sourced
+- ✓ No-mock gate: PASS
 
-**Acceptance Criteria**:
-- [ ] TruthValue components show freshness for all measurements
-- [ ] UNKNOWN never renders as zero
-- [ ] STALE data marked explicitly
-- [ ] Resource evidence includes CPU, memory, storage
-- [ ] Node evidence shows health and capacity
-- [ ] Usage records are cryptographically signed
-- [ ] No mock data (all resources come from backend)
-- [ ] Responsive: mobile, tablet, desktop
-- [ ] No-mock gate passes
+**Commit**: `1e2c7cc` - Evidence View P1 enhancements
 
 ---
 
-### 2. Deploy View (NEXT)
+### 2. Deploy View (IN PROGRESS)
 **File**: `src/components/pages/DeployView.tsx`  
 **Focus**: Workload placement and lifecycle management
 
-Will implement:
-- **Desired state**: Workload specification (image, resources, replicas)
-- **Observed state**: Current placement and status
-- **Evidence**: Signed placement proof, execution evidence
-- **Lifecycle**: Deploy → Staging → Running → Stopping → Stopped
-- **Failure handling**: Automatic replacement on node failure
+Implemented features:
+- **Desired vs Observed replicas**: TruthValue showing desired and observed replica counts with freshness
+- **Per-node placements**: Replica details including desired/observed state, health, resource allocation
+- **Resource tracking**: CPU and memory allocation per replica with LIVE/STALE freshness
+- **Mismatch detection**: Alert when observed diverges from desired (triggers reconciliation)
+- **Expandable details**: Replica expansion showing full state matrix, evidence ID, start time
+- **Lifecycle states**: RUNNING, STAGING, STOPPED, FAILED with freshness indicators
 
-**Key patterns**:
-- Desired/observed/evidence matrix for each placement
-- TruthValue for placement status freshness
-- Real workload spec (OCI/container), not mock
+**Key patterns implemented**:
+- ✓ Desired/observed/evidence matrix for each placement
+- ✓ TruthValue for all freshness indicators
+- ✓ Real workload placement (no mock data)
+- ✓ Per-replica state with health probes
+- ✓ Evidence tracking (evidence ID for each placement)
+
+**New types**:
+- PlacementReplica: Individual replica with desired/observed/health/resource TruthEnvelopes
+- WorkloadPlacement: Deployment with desired/observed replica counts
+
+**Commit**: `643686d` - Deploy View P1 workload placement
 
 ---
 
