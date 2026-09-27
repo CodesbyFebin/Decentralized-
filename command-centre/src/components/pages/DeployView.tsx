@@ -1,17 +1,39 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, FileCode2, Upload, Github, Container, Sparkles, Home, Globe2, Users, Box, Network, Check, Server, Layers, CheckCircle2, Clock, Package, Cuboid, Layers3, ShieldCheck } from 'lucide-react';
+import { Plus, FileCode2, Upload, Github, Container, Sparkles, Home, Globe2, Users, Box, Network, Check, Server, Layers, CheckCircle2, Clock, Package, Cuboid, Layers3, ShieldCheck, Target, Cpu, AlertCircle } from 'lucide-react';
 import type { ArtifactRec } from '../../types/reality';
 import { useResource } from '../../lib/useResource';
 import { useSession } from '../../lib/session';
 import type { DeploymentProgress } from './AppDetailView';
 import { SurfaceLayout, SurfaceHero } from '../common/CommandSurface';
 import { Glass, KpiTile, RailPanel, RailItem, PanelHeader, IconTile, StatusPill, Grad, PrimaryButton, GhostButton, TONE, Tone } from '../common/ui';
-import { Gate, Empty, shortDigest, since, fmtBytes, TruthTag } from '../common/states';
+import { Gate, Empty, shortDigest, since, fmtBytes, TruthTag, Note } from '../common/states';
+import { TruthValue, type TruthEnvelope } from '../common/truthDisplay';
+
+interface PlacementReplica {
+  replicaId: string;
+  nodeId: string;
+  nodeName: string;
+  desired: TruthEnvelope<'RUNNING' | 'STOPPED'>;
+  observed: TruthEnvelope<'RUNNING' | 'STAGING' | 'STOPPED' | 'FAILED'>;
+  cpuAllocated: TruthEnvelope<number>;
+  memAllocated: TruthEnvelope<number>;
+  healthStatus: TruthEnvelope<'HEALTHY' | 'UNHEALTHY' | 'UNKNOWN'>;
+  startedAt: number | null;
+  evidenceId: string | null;
+}
+
+interface WorkloadPlacement {
+  deploymentId: string;
+  desiredReplicas: TruthEnvelope<number>;
+  observedReplicas: TruthEnvelope<number>;
+  replicas: PlacementReplica[];
+}
 
 interface Payload {
   deployments: DeploymentProgress[];
   artifacts: ArtifactRec[];
+  placements: WorkloadPlacement[];
 }
 
 export default function DeployView() {
@@ -171,6 +193,9 @@ export default function DeployView() {
               <KpiTile tone="emerald" icon={<CheckCircle2 className="w-6 h-6" />} label="Current generations READY" value={`${[...latestPerApp.values()].filter((x) => x.state === 'READY').length} / ${latestPerApp.size}`} />
               <KpiTile tone="violet" icon={<Clock className="w-6 h-6" />} label="Last deployment" value={latest ? since(latest.submittedAt) : '—'} sub={latest ? `${latest.app} #${latest.generation} · ${latest.state}` : undefined} />
             </div>
+
+            <WorkloadPlacementsSection res={res} />
+
             {d.deployments.length === 0 ? (
               <Empty title="No deployments yet" action={<PrimaryButton onClick={() => navigate('/deploy/new')}><Plus className="w-4 h-4" /> New Deployment</PrimaryButton>} />
             ) : (
@@ -206,5 +231,108 @@ export default function DeployView() {
         )}
       </Gate>
     </SurfaceLayout>
+  );
+}
+
+function WorkloadPlacementsSection({ res }: { res: ReturnType<typeof useResource<Payload>> }) {
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  return (
+    <Gate res={res}>
+      {(d) => {
+        if (!d.placements.length) return null;
+        return (
+          <Glass className="p-4">
+            <PanelHeader icon={<IconTile tone="emerald" size="sm"><Target className="w-4 h-4" /></IconTile>} title="Workload placements (P1)" subtitle="Desired vs observed replica distribution with freshness indicators." />
+            <div className="mt-4 space-y-3">
+              {d.placements.map((placement) => (
+                <div key={placement.deploymentId} className="p-3 rounded-lg bg-slate-800/30 border border-slate-700/20">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-[12px] font-semibold text-slate-100">{placement.deploymentId}</div>
+                    <div className="flex gap-2">
+                      <TruthValue
+                        label="Desired"
+                        envelope={placement.desiredReplicas}
+                        format={(v) => v.toString()}
+                      />
+                      <TruthValue
+                        label="Observed"
+                        envelope={placement.observedReplicas}
+                        format={(v) => v.toString()}
+                      />
+                    </div>
+                  </div>
+
+                  {placement.observedReplicas.value !== placement.desiredReplicas.value && (
+                    <div className="mb-2 p-2 rounded bg-amber-500/10 border border-amber-500/20 flex items-center gap-2 text-[11px] text-amber-200">
+                      <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                      Mismatch: {placement.desiredReplicas.value} desired, {placement.observedReplicas.value} observed
+                    </div>
+                  )}
+
+                  <div className="space-y-1.5">
+                    {placement.replicas.map((replica) => (
+                      <div
+                        key={replica.replicaId}
+                        className="p-2 rounded bg-slate-900/40 cursor-pointer hover:bg-slate-900/60 transition-colors"
+                        onClick={() => setExpandedId(expandedId === replica.replicaId ? null : replica.replicaId)}
+                      >
+                        <div className="flex items-center justify-between text-[11.5px]">
+                          <div className="flex items-center gap-2">
+                            <span className="text-slate-100 font-semibold">{replica.nodeName}</span>
+                            <span className="text-slate-500 font-mono text-[10.5px]">{replica.replicaId.slice(0, 12)}…</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <StatusPill status={replica.observed.value || 'UNKNOWN'} tone={replica.observed.value === 'RUNNING' ? 'emerald' : replica.observed.value === 'STAGING' ? 'blue' : 'slate'} />
+                            <span className={`text-[10px] font-mono ${replica.observed.freshness === 'LIVE' ? 'text-emerald-400' : 'text-slate-400'}`}>{replica.observed.freshness}</span>
+                          </div>
+                        </div>
+
+                        {expandedId === replica.replicaId && (
+                          <div className="mt-2 pt-2 border-t border-slate-700/30 space-y-1">
+                            <TruthValue
+                              label="Desired state"
+                              envelope={{ ...replica.desired, source: 'control-plane' }}
+                              format={(v) => v}
+                            />
+                            <TruthValue
+                              label="Observed state"
+                              envelope={{ ...replica.observed, source: 'node-observation' }}
+                              format={(v) => v}
+                            />
+                            <TruthValue
+                              label="Health"
+                              envelope={{ ...replica.healthStatus, source: 'node-probe' }}
+                              format={(v) => v}
+                            />
+                            <TruthValue
+                              label="CPU allocated (m)"
+                              envelope={replica.cpuAllocated}
+                              format={(v) => Math.round(v).toString()}
+                            />
+                            <TruthValue
+                              label="Memory allocated (B)"
+                              envelope={replica.memAllocated}
+                              format={(v) => (v / (1024 * 1024)).toFixed(1) + ' MB'}
+                            />
+                            {replica.startedAt && (
+                              <div className="text-[11px] text-slate-400 pt-1">Started {since(replica.startedAt)}</div>
+                            )}
+                            {replica.evidenceId && (
+                              <div className="text-[10px] text-slate-500 font-mono pt-1">Evidence: {shortDigest(replica.evidenceId)}</div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <Note>Workload placements show desired/observed replica state with freshness tracking. LIVE indicates current observation; STALE or UNKNOWN indicates measurement is old or unavailable. Mismatch triggers reconciliation.</Note>
+          </Glass>
+        );
+      }}
+    </Gate>
   );
 }
