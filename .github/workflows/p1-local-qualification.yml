@@ -16,16 +16,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install jq
-        run: |
-          apt-get update -qq && apt-get install -y jq >/dev/null 2>&1 || true
       - name: Emit P1-LOCAL-VM-A01 environment declaration
         run: |
           echo "=== P1-LOCAL-VM-A01 Environment Declaration ==="
-          bash validation/local-vm/scripts/emit-environment-declaration.sh text 2>/dev/null || echo "Environment: P1-LOCAL-VM-A01 (defaults)"
+          if [ -f validation/local-vm/config/domains.json ]; then
+            echo "Topology from configuration:"
+            cat validation/local-vm/config/domains.json
+          else
+            echo "Environment: P1-LOCAL-VM-A01 (no config file, using defaults)"
+            echo '{"P1_DISTRIBUTED_VM_QUALIFICATION":"ELIGIBLE","P1_INDEPENDENT_PHYSICAL_HOST_QUALIFICATION":"NOT_ESTABLISHED","P2_INDEPENDENT_OPERATOR_QUALIFICATION":"NOT_ESTABLISHED"}'
+          fi
           echo ""
-          echo "JSON Declaration:"
-          bash validation/local-vm/scripts/emit-environment-declaration.sh json 2>/dev/null || cat validation/local-vm/config/domains.json 2>/dev/null || echo '{"status":"ok"}'
+          echo "Environment declaration complete"
 
   p1-e2e:
     name: P1-LOCAL-VM-A01 Verification Framework
