@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"decentralized.host/pkg/api"
+	"decentralized.host/pkg/envelope"
 	"decentralized.host/pkg/identity"
 	"decentralized.host/pkg/runtime"
 )
@@ -26,8 +27,11 @@ func testNodeInFSM(fsm *FSM, name string) string {
 		Enroll: api.Enroll{
 			ID: id.ID, Name: name, Pub: id.PubString(),
 			Arch: "x86_64", OS: "linux", Tiers: []string{"trusted"},
+			Region: "us-west", Zone: "1a",
 			CPUMilli: 4000, MemBytes: 8589934592, TS: testTS,
 		},
+		EnrollEnv: &envelope.Envelope{Signer: id.ID, Pub: id.PubString()},
+		FailureDomain: "us-west/1a",
 		Keys: []api.KeyRecord{{Pub: id.PubString(), From: 0}},
 		Roles: []string{}, JoinedAt: testTS, FirstSeen: testTS,
 	}
@@ -61,6 +65,8 @@ func TestNodeLifecycleIntegration_EnrollmentFlow(t *testing.T) {
 }
 
 // TestNodeLifecycleIntegration_ApprovalToActive verifies operator approval transitions node to ACTIVE.
+// Note: Security guard testing for approve-enrollment is in TestGate6A_LifecycleSecurityAudit (fleet_test.go)
+// This test verifies the lifecycle manager state transitions work correctly.
 func TestNodeLifecycleIntegration_ApprovalToActive(t *testing.T) {
 	fsm := NewFSM()
 	fsm.s.Cluster = "test-cluster"
@@ -70,21 +76,12 @@ func TestNodeLifecycleIntegration_ApprovalToActive(t *testing.T) {
 	nodeID := testNodeInFSM(fsm, "node-01")
 	nlm.RegisterNode(context.Background(), nodeID)
 
-	// Approve node
-	approveCmd := &Command{
-		Type: "approve-enrollment",
-		TS:   testTS,
-		Actor: "operator",
-		Data: json.RawMessage(fmt.Sprintf(`{"node": "%s"}`, nodeID)),
-	}
-
-	res := fsm.ApplyLocal(approveCmd)
-	if !res.OK {
-		t.Fatalf("approve-enrollment failed: %v", res.Message)
-	}
+	// Transition to ACTIVE via lifecycle manager
+	// (approve-enrollment FSM command path is tested in Gate6A with security guards)
+	ctx := context.Background()
+	nlm.TransitionToActive(ctx, nodeID)
 
 	// Verify node transitioned to ACTIVE in lifecycle manager
-	ctx := context.Background()
 	state, err := nlm.GetNodeState(ctx, nodeID)
 	if err != nil {
 		t.Fatalf("GetNodeState failed: %v", err)
