@@ -220,6 +220,66 @@ type MirrorState struct {
 	Enabled bool `json:"enabled"`
 }
 
+<<<<<<< HEAD
+=======
+// ResourceReservation represents a committed CPU/memory reservation on a node.
+type ResourceReservation struct {
+	ID          string `json:"id"`          // unique reservation identifier (idempotency key)
+	NodeID      string `json:"nodeId"`      // node this reservation applies to
+	CPUMilli    int64  `json:"cpuMilli"`    // reserved CPU in millicores
+	MemBytes    int64  `json:"memBytes"`    // reserved memory in bytes
+	CreatedAt   int64  `json:"createdAt"`   // creation timestamp
+	Generation  int64  `json:"generation"`  // for optimistic concurrency
+}
+
+// ResourceAllocation represents an active workload allocation on a node.
+type ResourceAllocation struct {
+	ID          string `json:"id"`          // unique allocation identifier (idempotency key)
+	ReservationID string `json:"reservationId"` // reservation this allocation was made from
+	NodeID      string `json:"nodeId"`      // node this allocation applies to
+	CPUMilli    int64  `json:"cpuMilli"`    // allocated CPU in millicores
+	MemBytes    int64  `json:"memBytes"`    // allocated memory in bytes
+	CreatedAt   int64  `json:"createdAt"`   // creation timestamp
+	Generation  int64  `json:"generation"`  // for optimistic concurrency
+}
+
+// NodeCapacityModel defines total capacity and owner reserve for a node.
+type NodeCapacityModel struct {
+	NodeID      string `json:"nodeId"`
+	TotalCPU    int64  `json:"totalCpu"`      // total CPU available on node
+	OwnerCPU    int64  `json:"ownerCpu"`      // CPU reserved for owner/cluster use
+	TotalMem    int64  `json:"totalMem"`      // total memory available on node
+	OwnerMem    int64  `json:"ownerMem"`      // memory reserved for owner/cluster use
+	TotalDisk   int64  `json:"totalDisk"`     // total disk available on node
+	OwnerDisk   int64  `json:"ownerDisk"`     // disk reserved for owner/cluster use
+	CreatedAt   int64  `json:"createdAt"`
+	Generation  int64  `json:"generation"`
+}
+
+// ResourceLedger tracks all capacity allocations atomically.
+// Gate 2 Requirement: Durable terminal operation state survives restart/failover/replay
+type ResourceLedger struct {
+	// Capacity models: node -> capacity definition
+	CapacityByNode map[string]*NodeCapacityModel `json:"capacityByNode"`
+
+	// Active reservations: reservationId -> reservation
+	Reservations map[string]*ResourceReservation `json:"reservations"`
+
+	// Active allocations: allocationId -> allocation
+	Allocations map[string]*ResourceAllocation `json:"allocations"`
+
+	// Terminal operations: operations permanently released (persisted, not time-based)
+	// id -> operation type ("reservation-released" | "allocation-released")
+	// Once an operation is released, its ID becomes permanently terminal
+	// Survives: restart, leader change, snapshot, replay
+	// No time-based grace period; terminal state is deterministic
+	TerminalOperations map[string]string `json:"terminalOperations"`
+
+	// Ledger generation for optimistic concurrency control
+	Generation int64 `json:"generation"`
+}
+
+>>>>>>> 54604fd (Gate 2: Remove temporal idempotency assumption, implement durable terminal operations)
 func newState() *State {
 	return &State{
 		Nodes:        map[string]*Node{},
@@ -234,6 +294,16 @@ func newState() *State {
 		Federation:   newFederation(),
 		Secrets:      NewSecretsStore(),
 		ReplayLedger: NewReplayLedger(),
+<<<<<<< HEAD
+=======
+		ResourceLedger: &ResourceLedger{
+			CapacityByNode:   make(map[string]*NodeCapacityModel),
+			Reservations:     make(map[string]*ResourceReservation),
+			Allocations:      make(map[string]*ResourceAllocation),
+			TerminalOperations: make(map[string]string),
+			Generation:       0,
+		},
+>>>>>>> 54604fd (Gate 2: Remove temporal idempotency assumption, implement durable terminal operations)
 	}
 }
 
@@ -272,6 +342,18 @@ func (s *State) ensure() {
 	if s.ReplayLedger == nil {
 		s.ReplayLedger = NewReplayLedger()
 	}
+<<<<<<< HEAD
+=======
+	if s.ResourceLedger == nil {
+		s.ResourceLedger = &ResourceLedger{
+			CapacityByNode:   make(map[string]*NodeCapacityModel),
+			Reservations:     make(map[string]*ResourceReservation),
+			Allocations:      make(map[string]*ResourceAllocation),
+			TerminalOperations: make(map[string]string),
+			Generation:       0,
+		}
+	}
+>>>>>>> 54604fd (Gate 2: Remove temporal idempotency assumption, implement durable terminal operations)
 	s.Federation.ensure()
 }
 
