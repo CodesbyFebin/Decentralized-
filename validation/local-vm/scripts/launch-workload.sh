@@ -125,21 +125,21 @@ import json
 import time
 import sys
 
-class Handler(http.server.BaseRequestHandler):
-    def handle(self):
-        try:
-            self.request.recv(1024)
-            response = json.dumps({
-                'workload_id': '$WORKLOAD_ID',
-                'timestamp': '$(date -u +%Y-%m-%dT%H:%M:%SZ)',
-                'pid': $$,
-                'uptime_seconds': $((SECONDS - startup_seconds)),
-                'requests_served': 1,
-                'status': 'running'
-            })
-            self.request.sendall(b'HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: ' + str(len(response)).encode() + b'\r\nConnection: close\r\n\r\n' + response.encode())
-        except:
-            pass
+class Handler(http.server.BaseHTTPRequestHandler):
+    def do_GET(self):
+        response = json.dumps({
+            'workload_id': '$WORKLOAD_ID',
+            'timestamp': '$(date -u +%Y-%m-%dT%H:%M:%SZ)',
+            'pid': $$,
+            'uptime_seconds': $((SECONDS - startup_seconds)),
+            'requests_served': 1,
+            'status': 'running'
+        })
+        self.send_response(200)
+        self.send_header('Content-Type', 'application/json')
+        self.send_header('Content-Length', str(len(response)))
+        self.end_headers()
+        self.wfile.write(response.encode())
 
 server = http.server.TCPServer(('127.0.0.1', $PORT), Handler)
 while True:
