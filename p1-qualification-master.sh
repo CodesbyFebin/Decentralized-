@@ -106,7 +106,7 @@ log_result "PASS" "Step 7: Resource ledger initialized"
 
 # Step 8: Smoke test (15s)
 log_step 8 "Smoke test (15s traffic)"
-if ! ./validation/local-vm/scripts/launch-workload.sh workload-api-01 >"$LOG_DIR/smoke-test.log" 2>&1; then
+if ! ./validation/local-vm/scripts/launch-workload.sh workload-api-01 1 512 1 15 >"$LOG_DIR/smoke-test.log" 2>&1; then
   log_result "WARN" "Smoke test workload failed; inspecting logs"
   if [ -f "./validation/local-vm/state/workload-logs/workload-api-01-traffic.log" ]; then
     echo "Traffic log:" >> "$LOG_DIR/master.log"
