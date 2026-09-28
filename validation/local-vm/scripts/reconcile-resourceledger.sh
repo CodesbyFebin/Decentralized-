@@ -56,9 +56,127 @@ for node in $nodes; do
   done
 done
 
-# Read results back
-active_count=$(grep -c "^ACTIVE$" "$tmpfile" 2>/dev/null || echo "0")
-mapfile -t orphaned_ids < <(grep -v "^ACTIVE$" "$tmpfile" 2>/dev/null)
+# Read results back (macOS/Bash 3 compatible; no mapfile)
+active_count="$(grep -c '^ACTIVE
+if [ ${#orphaned_ids[@]} -gt 0 ] && [ -n "$AUTO_RELEASE" ]; then
+  echo ""
+  echo "Releasing ${#orphaned_ids[@]} orphaned allocations..."
+
+  # Mark all orphaned allocations as STALE and recalculate totals
+  LEDGER=$(cat "$RESOURCELEDGER_JSON")
+  for alloc_id in "${orphaned_ids[@]}"; do
+    LEDGER=$(echo "$LEDGER" | jq ".node_capacity[].allocations[] |= if .allocation_id == \"$alloc_id\" then .state = \"STALE\" else . end")
+  done
+
+  # Recalculate totals based on ACTIVE allocations only
+  LEDGER=$(echo "$LEDGER" | jq '
+    ([.node_capacity[].allocations[] | select(.state == "ACTIVE") | .cpu] | add // 0) as $total_cpu |
+    ([.node_capacity[].allocations[] | select(.state == "ACTIVE") | .memory_mb] | add // 0) as $total_mem |
+    ([.node_capacity[].allocations[] | select(.state == "ACTIVE") | .disk_gb] | add // 0) as $total_disk |
+    .node_capacity |= map(
+      (([.allocations[] | select(.state == "ACTIVE") | .cpu] | add) // 0) as $cpu_sum |
+      (([.allocations[] | select(.state == "ACTIVE") | .memory_mb] | add) // 0) as $mem_sum |
+      (([.allocations[] | select(.state == "ACTIVE") | .disk_gb] | add) // 0) as $disk_sum |
+      .cpu_allocated = $cpu_sum |
+      .memory_allocated_mb = $mem_sum |
+      .disk_allocated_gb = $disk_sum
+    ) |
+    .summary |= (
+      .cpu_allocated = $total_cpu |
+      .memory_allocated_mb = $total_mem |
+      .disk_allocated_gb = $total_disk
+    )
+  ')
+
+  # Write atomically
+  tmp_file=$(mktemp)
+  echo "$LEDGER" > "$tmp_file"
+  jq empty "$tmp_file" || die "Invalid JSON generated"
+  mv "$tmp_file" "$RESOURCELEDGER_JSON"
+
+  echo "Marked ${#orphaned_ids[@]} allocations as STALE"
+  for aid in "${orphaned_ids[@]}"; do
+    echo "  - $aid"
+  done
+fi
+
+echo ""
+echo "=== Reconciliation Summary ==="
+echo "Active allocations:   $active_count"
+echo "Orphaned allocations: ${#orphaned_ids[@]}"
+if [ -n "$AUTO_RELEASE" ]; then
+  echo "Released allocations: ${#orphaned_ids[@]}"
+  echo ""
+  echo "Updated capacity:"
+  bash "$SCRIPT_DIR/query-resourceledger.sh" 2>/dev/null | head -15
+else
+  echo ""
+  echo "To automatically release orphaned allocations, run:"
+  echo "  bash $0 --auto-release"
+fi
+ "$tmpfile" 2>/dev/null || true)"
+[ -n "$active_count" ] || active_count=0
+orphaned_ids=()
+while IFS= read -r aid; do
+  [ -n "$aid" ] && orphaned_ids+=("$aid")
+done < <(grep -v '^ACTIVE
+if [ ${#orphaned_ids[@]} -gt 0 ] && [ -n "$AUTO_RELEASE" ]; then
+  echo ""
+  echo "Releasing ${#orphaned_ids[@]} orphaned allocations..."
+
+  # Mark all orphaned allocations as STALE and recalculate totals
+  LEDGER=$(cat "$RESOURCELEDGER_JSON")
+  for alloc_id in "${orphaned_ids[@]}"; do
+    LEDGER=$(echo "$LEDGER" | jq ".node_capacity[].allocations[] |= if .allocation_id == \"$alloc_id\" then .state = \"STALE\" else . end")
+  done
+
+  # Recalculate totals based on ACTIVE allocations only
+  LEDGER=$(echo "$LEDGER" | jq '
+    ([.node_capacity[].allocations[] | select(.state == "ACTIVE") | .cpu] | add // 0) as $total_cpu |
+    ([.node_capacity[].allocations[] | select(.state == "ACTIVE") | .memory_mb] | add // 0) as $total_mem |
+    ([.node_capacity[].allocations[] | select(.state == "ACTIVE") | .disk_gb] | add // 0) as $total_disk |
+    .node_capacity |= map(
+      (([.allocations[] | select(.state == "ACTIVE") | .cpu] | add) // 0) as $cpu_sum |
+      (([.allocations[] | select(.state == "ACTIVE") | .memory_mb] | add) // 0) as $mem_sum |
+      (([.allocations[] | select(.state == "ACTIVE") | .disk_gb] | add) // 0) as $disk_sum |
+      .cpu_allocated = $cpu_sum |
+      .memory_allocated_mb = $mem_sum |
+      .disk_allocated_gb = $disk_sum
+    ) |
+    .summary |= (
+      .cpu_allocated = $total_cpu |
+      .memory_allocated_mb = $total_mem |
+      .disk_allocated_gb = $total_disk
+    )
+  ')
+
+  # Write atomically
+  tmp_file=$(mktemp)
+  echo "$LEDGER" > "$tmp_file"
+  jq empty "$tmp_file" || die "Invalid JSON generated"
+  mv "$tmp_file" "$RESOURCELEDGER_JSON"
+
+  echo "Marked ${#orphaned_ids[@]} allocations as STALE"
+  for aid in "${orphaned_ids[@]}"; do
+    echo "  - $aid"
+  done
+fi
+
+echo ""
+echo "=== Reconciliation Summary ==="
+echo "Active allocations:   $active_count"
+echo "Orphaned allocations: ${#orphaned_ids[@]}"
+if [ -n "$AUTO_RELEASE" ]; then
+  echo "Released allocations: ${#orphaned_ids[@]}"
+  echo ""
+  echo "Updated capacity:"
+  bash "$SCRIPT_DIR/query-resourceledger.sh" 2>/dev/null | head -15
+else
+  echo ""
+  echo "To automatically release orphaned allocations, run:"
+  echo "  bash $0 --auto-release"
+fi
+ "$tmpfile" 2>/dev/null || true)
 rm -f "$tmpfile"
 
 # If orphaned allocations found, optionally mark as STALE and recover capacity
