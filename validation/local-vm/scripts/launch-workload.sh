@@ -87,8 +87,9 @@ SSH_OPTS="-i $SSH_KEY -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/nul
 
 # Start workload server on the target node
 echo "Starting workload server on $target_node..."
+REMOTE_LOG_FILE="/tmp/workload-${WORKLOAD_ID}.log"
 ssh $SSH_OPTS -p "$ssh_port" "$SSH_USER@localhost" \
-  bash -s "$WORKLOAD_ID" 8080 "$WORKLOAD_LOG" << 'REMOTE_SCRIPT' &
+  bash -s "$WORKLOAD_ID" 8080 "$REMOTE_LOG_FILE" << 'REMOTE_SCRIPT' &
 SERVER_PID=$!
 
 #!/bin/bash
