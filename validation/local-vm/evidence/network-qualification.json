@@ -1,8 +1,8 @@
 {
   "qualification": "P1-LOCAL-VM-A01",
-  "timestamp_utc": "2026-09-28T20:19:08Z",
-  "cluster_source_sha": "39d16adc32ce36d41b8f38a9aff7c1e4b2926efc",
-  "verifier_source_sha": "225d360f20c6d4bb0e412598a268cf2ed488ef47",
+  "timestamp_utc": "2026-09-28T20:46:31Z",
+  "cluster_source_sha": "d29b3ed6d08f01aa43b876b7b308e918e5bdb924",
+  "verifier_source_sha": "89fee48f1acbf8a02b8f4f1ecc8472079d2118f0",
   "cluster_status": "READY",
   "nodes": 3,
   "scope": "baseline host-forwarded SSH and guest observations; does not prove VM-to-VM partition semantics",
@@ -12,7 +12,7 @@
       "node": "dh-node-1",
       "check": "process_liveness",
       "result": "PASS",
-      "detail": "pid=5194"
+      "detail": "pid=10013"
     },
     {
       "node": "dh-node-1",
@@ -30,7 +30,7 @@
       "node": "dh-node-1",
       "check": "machine_id",
       "result": "PASS",
-      "detail": "7fdab52999ee4a51944be366fca98cc6"
+      "detail": "6f28fca3d9e94c15bbd249e5675d2079"
     },
     {
       "node": "dh-node-1",
@@ -42,13 +42,13 @@
       "node": "dh-node-1",
       "check": "uptime",
       "result": "PASS",
-      "detail": "up 8 minutes"
+      "detail": "up 9 minutes"
     },
     {
       "node": "dh-node-1",
       "check": "disk_available_kb",
       "result": "PASS",
-      "detail": "6051432"
+      "detail": "5976652"
     },
     {
       "node": "dh-node-1",
@@ -60,7 +60,7 @@
       "node": "dh-node-2",
       "check": "process_liveness",
       "result": "PASS",
-      "detail": "pid=5223"
+      "detail": "pid=10042"
     },
     {
       "node": "dh-node-2",
@@ -78,7 +78,7 @@
       "node": "dh-node-2",
       "check": "machine_id",
       "result": "PASS",
-      "detail": "79bf4093e14a4f49a9774c2f2d687960"
+      "detail": "8ee452aa54944c0e93602bba337bb34d"
     },
     {
       "node": "dh-node-2",
@@ -90,13 +90,13 @@
       "node": "dh-node-2",
       "check": "uptime",
       "result": "PASS",
-      "detail": "up 9 minutes"
+      "detail": "up 10 minutes"
     },
     {
       "node": "dh-node-2",
       "check": "disk_available_kb",
       "result": "PASS",
-      "detail": "6114064"
+      "detail": "5976588"
     },
     {
       "node": "dh-node-2",
@@ -108,7 +108,7 @@
       "node": "dh-node-3",
       "check": "process_liveness",
       "result": "PASS",
-      "detail": "pid=5251"
+      "detail": "pid=10074"
     },
     {
       "node": "dh-node-3",
@@ -126,7 +126,7 @@
       "node": "dh-node-3",
       "check": "machine_id",
       "result": "PASS",
-      "detail": "663911be7ac74392bc5094f7ee8b34e1"
+      "detail": "55f56e4a12494bf2ad7d11277833be12"
     },
     {
       "node": "dh-node-3",
@@ -144,7 +144,7 @@
       "node": "dh-node-3",
       "check": "disk_available_kb",
       "result": "PASS",
-      "detail": "5976592"
+      "detail": "5976600"
     },
     {
       "node": "dh-node-3",

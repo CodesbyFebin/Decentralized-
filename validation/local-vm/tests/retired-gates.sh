@@ -14,4 +14,12 @@ for name in verify-p1-close-gates inject-network-partition inject-process-crash;
     echo "FAIL: $name printed PASS" >&2; exit 1
   fi
 done
+output="$(bash "$scripts/../../../validate-p1-close-gates.sh" 2>&1)" && {
+  echo 'FAIL: root validator returned success without a runtime campaign' >&2
+  exit 1
+}
+case "$output" in
+  BLOCKED:*) ;;
+  *) echo 'FAIL: root validator did not report BLOCKED' >&2; exit 1 ;;
+esac
 echo 'PASS: retired gate scripts fail closed without simulated evidence'

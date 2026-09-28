@@ -107,6 +107,13 @@ if ! ./validation/local-vm/scripts/init-resourceledger.sh >"$LOG_DIR/init-resour
 fi
 log_result "PASS" "Step 7: Resource ledger initialized"
 
+# Step 7.5: Start scheduler daemon
+log_step 7.5 "Start scheduler daemon"
+./validation/local-vm/scripts/run-scheduler.sh first-fit "$LOG_DIR/scheduler.log" >"$LOG_DIR/scheduler-startup.log" 2>&1 &
+SCHEDULER_PID=$!
+sleep 2  # Give scheduler time to initialize
+log_result "PASS" "Step 7.5: Scheduler started (PID $SCHEDULER_PID)"
+
 # Step 8: Smoke test (15s)
 log_step 8 "Smoke test (15s traffic)"
 if ! ./validation/local-vm/scripts/launch-workload.sh workload-api-01 1 512 1 15 >"$LOG_DIR/smoke-test.log" 2>&1; then

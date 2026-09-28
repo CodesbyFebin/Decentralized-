@@ -182,7 +182,8 @@ TRAFFIC_TEMP_LOG="$TRAFFIC_LOG.tmp"
     # Send HTTP request to workload server
     response="$(ssh -i "$SSH_KEY" -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -p "$ssh_port" "$SSH_USER@localhost" \
       "python3 -c 'import urllib.request; print(urllib.request.urlopen(\"http://127.0.0.1:$REMOTE_PORT/\", timeout=2).read().decode())'" 2>/dev/null || true)"
-    if printf '%s\n' "$response" | grep -F "\"workload_id\": \"$WORKLOAD_ID\"" >/dev/null 2>&1; then
+    # Check for workload_id in response (handles both compact and pretty JSON)
+    if printf '%s\n' "$response" | grep -E "\"workload_id\"[:' ]*\"$WORKLOAD_ID\"" >/dev/null 2>&1; then
       printf '%s\n' "$response" >> "$TRAFFIC_TEMP_LOG"
     fi
 
