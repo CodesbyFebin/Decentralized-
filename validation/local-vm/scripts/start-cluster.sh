@@ -23,6 +23,18 @@ HYPERVISOR=$(jq -r '.hypervisor' "$CLUSTER_JSON")
 NODES=$(jq -r '.nodes' "$CLUSTER_JSON")
 QEMU_BINARY=$(jq -r '.qemu_binary' "$CLUSTER_JSON")
 GUEST_ARCH=$(jq -r '.guest_architecture' "$CLUSTER_JSON")
+HOST_OS=$(uname -s)
+
+# Detect machine type and accelerator based on host OS and architecture
+if [ "$HOST_OS" = "Darwin" ]; then
+  # macOS: use hvf (Hypervisor.framework) accelerator
+  MACHINE_TYPE="pc"
+  ACCEL="hvf"
+else
+  # Linux: use KVM accelerator
+  MACHINE_TYPE="virt"
+  ACCEL="kvm"
+fi
 
 echo "=== P1-LOCAL-VM-A01: Start Cluster ==="
 echo "Status: Starting from cluster.json"
@@ -93,7 +105,7 @@ for ((i=1; i<=NODES; i++)); do
   QEMU_ARGS=(
     "$QEMU_BINARY"
     "-name" "$NODE_NAME"
-    "-machine" "type=virt,accel=kvm"
+    "-machine" "type=$MACHINE_TYPE,accel=$ACCEL"
     "-cpu" "host"
     "-smp" "$(jq -r '.cpu_per_node' "$CLUSTER_JSON")"
     "-m" "$(jq -r '.memory_per_node_mb' "$CLUSTER_JSON")"
