@@ -1,7 +1,6 @@
 #!/bin/bash
 # P1-LOCAL-VM-A01: Bootstrap Nodes
-# Verifies SSH access to all VMs and collects baseline evidence
-# Usage: ./bootstrap-nodes.sh
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
@@ -9,127 +8,106 @@ STATE_DIR="$REPO_ROOT/validation/local-vm/state"
 CLUSTER_JSON="$STATE_DIR/cluster.json"
 SSH_KEY="$HOME/.ssh/p1-local-vm"
 SSH_USER="ubuntu"
-MAX_RETRIES=20
+BOOT_TIMEOUT_SECONDS=120
 RETRY_DELAY=2
 
-if [ ! -f "$CLUSTER_JSON" ]; then
-  echo "ERROR: Cluster not configured. Run create-vm-cluster.sh first."
-  exit 1
-fi
+die(){ echo "ERROR: $*" >&2; exit 1; }
+set_status(){ local s="$1"; local t; t="$(mktemp)"; jq --arg s "$s" '.status=$s' "$CLUSTER_JSON" > "$t" && mv "$t" "$CLUSTER_JSON"; }
+serial_tail(){ local f="$1"; [ -f "$f" ] && { echo "--- serial tail: $f ---"; tail -100 "$f" || true; }; }
 
-if [ ! -f "$SSH_KEY" ]; then
-  echo "ERROR: SSH key not found: $SSH_KEY"
-  exit 1
-fi
+[ -f "$CLUSTER_JSON" ] || die "Cluster not configured"
+[ -f "$SSH_KEY" ] || die "SSH key not found: $SSH_KEY"
+NODES="$(jq -r '.nodes' "$CLUSTER_JSON")"
+STATUS="$(jq -r '.status' "$CLUSTER_JSON")"
+[ "$STATUS" = "RUNNING" ] || die "Cluster status must be RUNNING before bootstrap; got $STATUS"
 
-NODES=$(jq -r '.nodes' "$CLUSTER_JSON")
-
-echo "=== P1-LOCAL-VM-A01: Bootstrap Nodes ==="
-echo "SSH Key: $SSH_KEY"
-echo "Nodes: $NODES"
-echo ""
-
-ssh_exec() {
-  local port=$1
-  shift
-
-  ssh -i "$SSH_KEY" \
-    -o StrictHostKeyChecking=no \
-    -o UserKnownHostsFile=/dev/null \
-    -o ConnectTimeout=2 \
-    -p "$port" \
-    "$SSH_USER@localhost" "$@" 2>/dev/null || return 1
+ssh_exec(){
+  local port="$1"; shift
+  ssh -i "$SSH_KEY" -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null     -o ConnectTimeout=3 -p "$port" "$SSH_USER@localhost" "$@" 2>/dev/null
 }
 
-# Wait for all nodes to be SSH-accessible
-echo "Waiting for all nodes to boot..."
-all_ready=false
-attempt=0
+echo "=== P1-LOCAL-VM-A01: Bootstrap Nodes ==="
+echo "Nodes: $NODES"
+echo "Boot timeout: ${BOOT_TIMEOUT_SECONDS}s"
 
-while [ "$all_ready" = false ] && [ $attempt -lt $MAX_RETRIES ]; do
-  all_ready=true
-
-  for ((i=1; i<=NODES; i++)); do
-    NODE_NAME=$(jq -r ".node_details[$((i-1))].name" "$CLUSTER_JSON")
-    SSH_PORT=$(jq -r ".node_details[$((i-1))].ssh_port" "$CLUSTER_JSON")
-
-    if ssh_exec "$SSH_PORT" "echo ready" > /dev/null 2>&1; then
-      echo "  ✓ $NODE_NAME ($SSH_PORT)"
-    else
-      all_ready=false
-      echo "  ✗ $NODE_NAME ($SSH_PORT) not ready"
-    fi
-  done
-
-  if [ "$all_ready" = false ]; then
-    attempt=$((attempt + 1))
-    if [ $attempt -lt $MAX_RETRIES ]; then
-      echo "  Attempt $attempt/$MAX_RETRIES, retrying in ${RETRY_DELAY}s..."
-      sleep $RETRY_DELAY
-    fi
-  fi
+# Process liveness is a prerequisite to SSH readiness.
+for ((i=1;i<=NODES;i++)); do
+  idx=$((i-1))
+  name="$(jq -r ".node_details[$idx].name" "$CLUSTER_JSON")"
+  pidfile="$(jq -r ".node_details[$idx].qemu_pid_file" "$CLUSTER_JSON")"
+  slog="$(jq -r ".node_details[$idx].serial_log" "$CLUSTER_JSON")"
+  if [ ! -s "$pidfile" ]; then set_status BOOTSTRAP_FAILED; serial_tail "$slog"; die "$name PROCESS_NOT_RUNNING: PID file missing"; fi
+  pid="$(cat "$pidfile")"
+  if ! [[ "$pid" =~ ^[0-9]+$ ]] || ! kill -0 "$pid" 2>/dev/null; then set_status BOOTSTRAP_FAILED; serial_tail "$slog"; die "$name PROCESS_NOT_RUNNING: PID $pid is not live"; fi
+  echo "✓ $name PROCESS_RUNNING pid=$pid"
 done
 
-if [ "$all_ready" = false ]; then
-  echo ""
-  echo "ERROR: Not all nodes became SSH-accessible"
+set_status BOOTSTRAPPING
+deadline=$((SECONDS + BOOT_TIMEOUT_SECONDS))
+while (( SECONDS < deadline )); do
+  ready=0
+  for ((i=1;i<=NODES;i++)); do
+    idx=$((i-1))
+    name="$(jq -r ".node_details[$idx].name" "$CLUSTER_JSON")"
+    port="$(jq -r ".node_details[$idx].ssh_port" "$CLUSTER_JSON")"
+    pidfile="$(jq -r ".node_details[$idx].qemu_pid_file" "$CLUSTER_JSON")"
+    slog="$(jq -r ".node_details[$idx].serial_log" "$CLUSTER_JSON")"
+    pid="$(cat "$pidfile" 2>/dev/null || true)"
+    if ! [[ "$pid" =~ ^[0-9]+$ ]] || ! kill -0 "$pid" 2>/dev/null; then
+      set_status BOOTSTRAP_FAILED; serial_tail "$slog"; die "$name PROCESS_DIED during bootstrap"
+    fi
+    if ssh_exec "$port" "echo ready" >/dev/null 2>&1; then
+      echo "✓ $name SSH_READY ($port)"
+      ready=$((ready+1))
+    else
+      if lsof -nP -iTCP:"$port" -sTCP:LISTEN 2>/dev/null | grep -q LISTEN; then
+        echo "… $name PORT_LISTENING_SSH_NOT_READY ($port)"
+      else
+        echo "… $name SSH_NOT_READY ($port)"
+      fi
+    fi
+  done
+  [ "$ready" -eq "$NODES" ] && break
+  sleep "$RETRY_DELAY"
+done
+
+ready=0
+for ((i=1;i<=NODES;i++)); do
+  idx=$((i-1)); port="$(jq -r ".node_details[$idx].ssh_port" "$CLUSTER_JSON")"
+  ssh_exec "$port" "echo ready" >/dev/null 2>&1 && ready=$((ready+1))
+done
+if [ "$ready" -ne "$NODES" ]; then
+  set_status BOOTSTRAP_FAILED
+  echo "ERROR: SSH readiness timeout; ready=$ready/$NODES"
+  for ((i=1;i<=NODES;i++)); do idx=$((i-1)); serial_tail "$(jq -r ".node_details[$idx].serial_log" "$CLUSTER_JSON")"; done
   exit 1
 fi
 
-echo ""
-echo "✓ All nodes SSH-accessible"
-echo ""
-
-# Collect baseline evidence from each node
 echo "Collecting baseline evidence..."
-for ((i=1; i<=NODES; i++)); do
-  NODE_NAME=$(jq -r ".node_details[$((i-1))].name" "$CLUSTER_JSON")
-  SSH_PORT=$(jq -r ".node_details[$((i-1))].ssh_port" "$CLUSTER_JSON")
-
-  echo ""
-  echo "Node $i: $NODE_NAME (port $SSH_PORT)"
-
-  # Hostname
-  HOSTNAME=$(ssh_exec "$SSH_PORT" "hostname" 2>/dev/null || echo "UNKNOWN")
-  echo "  Hostname: $HOSTNAME"
-
-  # Machine ID
-  MACHINE_ID=$(ssh_exec "$SSH_PORT" "cat /etc/machine-id" 2>/dev/null || echo "UNKNOWN")
-  echo "  Machine ID: $MACHINE_ID"
-
-  # Kernel
-  KERNEL=$(ssh_exec "$SSH_PORT" "uname -r" 2>/dev/null || echo "UNKNOWN")
-  echo "  Kernel: $KERNEL"
-
-  # Architecture
-  ARCH=$(ssh_exec "$SSH_PORT" "uname -m" 2>/dev/null || echo "UNKNOWN")
-  echo "  Architecture: $ARCH"
-
-  # CPU count
-  CPUS=$(ssh_exec "$SSH_PORT" "grep -c ^processor /proc/cpuinfo" 2>/dev/null || echo "UNKNOWN")
-  echo "  CPUs: $CPUS"
-
-  # Memory
-  MEMORY=$(ssh_exec "$SSH_PORT" "free -h | grep Mem | awk '{print \$2}'" 2>/dev/null || echo "UNKNOWN")
-  echo "  Memory: $MEMORY"
-
-  # Uptime
-  UPTIME=$(ssh_exec "$SSH_PORT" "uptime -p" 2>/dev/null || echo "UNKNOWN")
-  echo "  Uptime: $UPTIME"
-
-  # Disk
-  DISK=$(ssh_exec "$SSH_PORT" "df -h / | tail -1 | awk '{print \$4}'" 2>/dev/null || echo "UNKNOWN")
-  echo "  Disk Free: $DISK"
+machine_ids=()
+for ((i=1;i<=NODES;i++)); do
+  idx=$((i-1))
+  name="$(jq -r ".node_details[$idx].name" "$CLUSTER_JSON")"
+  port="$(jq -r ".node_details[$idx].ssh_port" "$CLUSTER_JSON")"
+  hostname="$(ssh_exec "$port" hostname || true)"
+  mid="$(ssh_exec "$port" 'cat /etc/machine-id' || true)"
+  kernel="$(ssh_exec "$port" 'uname -r' || true)"
+  arch="$(ssh_exec "$port" 'uname -m' || true)"
+  cpus="$(ssh_exec "$port" 'grep -c ^processor /proc/cpuinfo' || true)"
+  memory="$(ssh_exec "$port" "free -h | awk '/^Mem:/ {print \\$2}'" || true)"
+  uptime="$(ssh_exec "$port" 'uptime -p' || true)"
+  disk="$(ssh_exec "$port" "df -h / | awk 'NR==2 {print \\$4}'" || true)"
+  for pair in "Hostname:$hostname" "Machine ID:$mid" "Kernel:$kernel" "Architecture:$arch" "CPUs:$cpus" "Memory:$memory" "Uptime:$uptime" "Disk Free:$disk"; do
+    value="${pair#*:}"; [ -n "$value" ] || { set_status BOOTSTRAP_FAILED; die "$name required evidence field empty: ${pair%%:*}"; }
+  done
+  machine_ids+=("$mid")
+  echo "$name: hostname=$hostname machine_id=$mid arch=$arch cpus=$cpus memory=$memory uptime=$uptime disk_free=$disk"
 done
 
-echo ""
+unique="$(printf '%s\n' "${machine_ids[@]}" | sort -u | wc -l | tr -d ' ')"
+[ "$unique" -eq "$NODES" ] || { set_status BOOTSTRAP_FAILED; die "Machine IDs are not unique ($unique/$NODES)"; }
+
+set_status READY
 echo "=== Bootstrap Complete ==="
-echo "All nodes ready for P1-LOCAL-VM-A01 campaign."
-echo ""
-echo "Verify 3 distinct VMs:"
-for ((i=1; i<=NODES; i++)); do
-  SSH_PORT=$(jq -r ".node_details[$((i-1))].ssh_port" "$CLUSTER_JSON")
-  echo "  ssh -i ~/.ssh/p1-local-vm -p $SSH_PORT ubuntu@localhost 'hostname; cat /etc/machine-id; uname -m'"
-done
-echo ""
-echo "Expected: 3 different hostnames, 3 different machine IDs, same architecture"
+echo "STATUS: READY"
+echo "All $NODES nodes are PROCESS_RUNNING + SSH_READY with unique machine IDs."
