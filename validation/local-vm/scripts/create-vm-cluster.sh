@@ -38,7 +38,7 @@ REQ_MEM="${MEMORY_PER_NODE:-}"
 REQ_DISK="${DISK_PER_NODE:-}"
 
 for v in REQ_NODES REQ_CPU REQ_MEM REQ_DISK; do
-  val="${!v}"
+  eval "val=\${$v}"
   case "$val" in ''|*[!0-9]*|0) echo "ERROR: Invalid persisted topology: $v=$val" >&2; exit 1 ;; esac
 done
 
