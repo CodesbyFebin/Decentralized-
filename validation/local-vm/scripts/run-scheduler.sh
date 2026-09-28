@@ -59,23 +59,23 @@ find_placement_node() {
   local strategy="$4"
 
   if [ "$strategy" = "first-fit" ]; then
-    # Return first node with sufficient capacity
+    # Return first node with sufficient available capacity (Model A: AVAILABLE = TOTAL - OWNER_RESERVE - RESERVED - ALLOCATED)
     jq -r ".node_capacity[] | select(
-      (.cpu_cores - .cpu_allocated) >= $cpu and
-      (.memory_mb - .memory_allocated_mb) >= $mem and
-      (.disk_gb - .disk_allocated_gb) >= $disk
+      (.cpu_cores - .cpu_owner_reserve - .cpu_reserved - .cpu_allocated) >= $cpu and
+      (.memory_mb - .memory_owner_reserve_mb - .memory_reserved_mb - .memory_allocated_mb) >= $mem and
+      (.disk_gb - .disk_owner_reserve_gb - .disk_reserved_gb - .disk_allocated_gb) >= $disk
     ) | .node" "$RESOURCELEDGER_JSON" | head -1
   elif [ "$strategy" = "best-fit" ]; then
-    # Return node with smallest remaining capacity after allocation
+    # Return node with smallest remaining capacity after allocation (Model A)
     jq -r ".node_capacity[] | select(
-      (.cpu_cores - .cpu_allocated) >= $cpu and
-      (.memory_mb - .memory_allocated_mb) >= $mem and
-      (.disk_gb - .disk_allocated_gb) >= $disk
+      (.cpu_cores - .cpu_owner_reserve - .cpu_reserved - .cpu_allocated) >= $cpu and
+      (.memory_mb - .memory_owner_reserve_mb - .memory_reserved_mb - .memory_allocated_mb) >= $mem and
+      (.disk_gb - .disk_owner_reserve_gb - .disk_reserved_gb - .disk_allocated_gb) >= $disk
     ) | {
       node: .node,
-      remaining_cpu: (.cpu_cores - .cpu_allocated - $cpu),
-      remaining_mem: (.memory_mb - .memory_allocated_mb - $mem),
-      remaining_disk: (.disk_gb - .disk_allocated_gb - $disk)
+      remaining_cpu: (.cpu_cores - .cpu_owner_reserve - .cpu_reserved - .cpu_allocated - $cpu),
+      remaining_mem: (.memory_mb - .memory_owner_reserve_mb - .memory_reserved_mb - .memory_allocated_mb - $mem),
+      remaining_disk: (.disk_gb - .disk_owner_reserve_gb - .disk_reserved_gb - .disk_allocated_gb - $disk)
     }" "$RESOURCELEDGER_JSON" | jq -s "sort_by(.remaining_cpu + .remaining_mem/1024 + .remaining_disk) | .[0].node" -r
   fi
 }

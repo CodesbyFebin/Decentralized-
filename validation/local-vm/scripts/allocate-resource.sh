@@ -50,9 +50,18 @@ cpu_total=$(echo "$node_data" | jq '.cpu_cores')
 memory_total=$(echo "$node_data" | jq '.memory_mb')
 disk_total=$(echo "$node_data" | jq '.disk_gb')
 
-cpu_available=$(echo "$cpu_total $cpu_active" | awk '{printf "%.1f", $1 - $2}')
-memory_available=$(echo "$memory_total $mem_active" | awk '{printf "%.0f", $1 - $2}')
-disk_available=$(echo "$disk_total $disk_active" | awk '{printf "%.1f", $1 - $2}')
+cpu_owner_reserve=$(echo "$node_data" | jq '.cpu_owner_reserve')
+memory_owner_reserve=$(echo "$node_data" | jq '.memory_owner_reserve_mb')
+disk_owner_reserve=$(echo "$node_data" | jq '.disk_owner_reserve_gb')
+
+cpu_reserved=$(echo "$node_data" | jq '.cpu_reserved')
+memory_reserved=$(echo "$node_data" | jq '.memory_reserved_mb')
+disk_reserved=$(echo "$node_data" | jq '.disk_reserved_gb')
+
+# Model A: AVAILABLE = TOTAL - OWNER_RESERVE - RESERVED - ALLOCATED
+cpu_available=$(echo "$cpu_total $cpu_owner_reserve $cpu_reserved $cpu_active" | awk '{printf "%.1f", $1 - $2 - $3 - $4}')
+memory_available=$(echo "$memory_total $memory_owner_reserve $memory_reserved $mem_active" | awk '{printf "%.0f", $1 - $2 - $3 - $4}')
+disk_available=$(echo "$disk_total $disk_owner_reserve $disk_reserved $disk_active" | awk '{printf "%.1f", $1 - $2 - $3 - $4}')
 
 # Check allocation feasibility using awk for floating-point comparison
 if awk -v req="$CPU_REQ" -v avail="$cpu_available" 'BEGIN { exit !(req > avail) }'; then
