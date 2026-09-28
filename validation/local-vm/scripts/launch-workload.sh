@@ -125,8 +125,8 @@ serve_requests() {
   if command -v python3 >/dev/null 2>&1; then
     python3 -c "
 import http.server
+import socketserver
 import json
-import time
 import sys
 
 class Handler(http.server.BaseHTTPRequestHandler):
@@ -148,9 +148,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         pass  # Suppress request logging
 
-server = http.server.TCPServer(('127.0.0.1', $PORT), Handler)
-while True:
-    server.handle_request()
+with socketserver.TCPServer(('127.0.0.1', $PORT), Handler) as server:
+    while True:
+        server.handle_request()
 " 2>/dev/null
   else
     # Fallback: try netcat (limited but better than invalid JSON from socat)
