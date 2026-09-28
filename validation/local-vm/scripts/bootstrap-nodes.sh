@@ -8,7 +8,6 @@ STATE_DIR="$REPO_ROOT/validation/local-vm/state"
 CLUSTER_JSON="$STATE_DIR/cluster.json"
 SSH_KEY="$HOME/.ssh/p1-local-vm"
 SSH_USER="ubuntu"
-BOOT_TIMEOUT_SECONDS=120
 RETRY_DELAY=2
 
 die(){ echo "ERROR: $*" >&2; exit 1; }
@@ -17,6 +16,13 @@ serial_tail(){ local f="$1"; [ -f "$f" ] && { echo "--- serial tail: $f ---"; ta
 
 [ -f "$CLUSTER_JSON" ] || die "Cluster not configured"
 [ -f "$SSH_KEY" ] || die "SSH key not found: $SSH_KEY"
+VIRTUALIZATION_MODE="$(jq -r '.virtualization_mode // "UNKNOWN"' "$CLUSTER_JSON")"
+# TCG emulation can take considerably longer than hardware-assisted boot.
+if [ "$VIRTUALIZATION_MODE" = "tcg" ]; then BOOT_TIMEOUT_SECONDS=600; else BOOT_TIMEOUT_SECONDS=120; fi
+if [ -n "${P1_BOOT_TIMEOUT_SECONDS:-}" ]; then
+  [[ "$P1_BOOT_TIMEOUT_SECONDS" =~ ^[0-9]+$ ]] && [ "$P1_BOOT_TIMEOUT_SECONDS" -ge 1 ] && [ "$P1_BOOT_TIMEOUT_SECONDS" -le 1800 ] || die "Invalid P1_BOOT_TIMEOUT_SECONDS"
+  BOOT_TIMEOUT_SECONDS="$P1_BOOT_TIMEOUT_SECONDS"
+fi
 NODES="$(jq -r '.nodes' "$CLUSTER_JSON")"
 STATUS="$(jq -r '.status' "$CLUSTER_JSON")"
 case "$STATUS" in
@@ -32,6 +38,35 @@ esac
 ssh_exec(){
   local port="$1"; shift
   ssh -i "$SSH_KEY" -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null     -o ConnectTimeout=3 -p "$port" "$SSH_USER@localhost" "$@" 2>/dev/null
+}
+
+capture_ssh_diagnostics(){
+  local i idx name port pidfile pid slog node_dir log
+  for ((i=1;i<=NODES;i++)); do
+    idx=$((i-1))
+    name="$(jq -r ".node_details[$idx].name" "$CLUSTER_JSON")"
+    port="$(jq -r ".node_details[$idx].ssh_port" "$CLUSTER_JSON")"
+    pidfile="$(jq -r ".node_details[$idx].qemu_pid_file" "$CLUSTER_JSON")"
+    slog="$(jq -r ".node_details[$idx].serial_log" "$CLUSTER_JSON")"
+    node_dir="$(dirname "$pidfile")"
+    log="$node_dir/ssh-readiness-diagnostic.log"
+    {
+      printf 'node=%s port=%s observed_at=%s virtualization=%s\n' "$name" "$port" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$VIRTUALIZATION_MODE"
+      if [ -f "$pidfile" ]; then
+        pid="$(cat "$pidfile")"
+        if [[ "$pid" =~ ^[0-9]+$ ]]; then ps -p "$pid" -o pid=,args=; fi
+      fi
+      printf 'seed_iso='; if [ -s "$node_dir/seed.iso" ]; then echo PRESENT; else echo MISSING; fi
+      printf 'serial_bytes='; if [ -f "$slog" ]; then wc -c < "$slog"; else echo MISSING; fi
+      printf '%s\n' '--- authenticated SSH diagnostic (private key contents are never printed) ---'
+      ssh -vv -i "$SSH_KEY" -o IdentitiesOnly=yes -o BatchMode=yes \
+        -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+        -o ConnectTimeout=5 -o ConnectionAttempts=1 -p "$port" \
+        "$SSH_USER@localhost" 'echo ready' 2>&1
+    } > "$log" 2>&1 || :
+    echo "$name diagnostic: $log"
+    serial_tail "$slog"
+  done
 }
 
 echo "=== P1-LOCAL-VM-A01: Bootstrap Nodes ==="
@@ -87,7 +122,7 @@ done
 if [ "$ready" -ne "$NODES" ]; then
   set_status BOOTSTRAP_FAILED
   echo "ERROR: SSH readiness timeout; ready=$ready/$NODES"
-  for ((i=1;i<=NODES;i++)); do idx=$((i-1)); serial_tail "$(jq -r ".node_details[$idx].serial_log" "$CLUSTER_JSON")"; done
+  capture_ssh_diagnostics
   exit 1
 fi
 

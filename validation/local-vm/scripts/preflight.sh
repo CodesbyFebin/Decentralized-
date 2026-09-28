@@ -21,6 +21,9 @@ HYPERVISOR="${1:-qemu}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 STATE_DIR="$REPO_ROOT/validation/local-vm/state"
+TOPOLOGY_FILE="$STATE_DIR/topology.sh"
+# An older successful run must not authorize creation after a new failed run.
+rm -f "$TOPOLOGY_FILE"
 
 # Topology defaults (per node)
 NODES=3
@@ -38,6 +41,10 @@ while [[ $# -gt 0 ]]; do
     --disk)    DISK_PER_NODE="$2"; shift 2 ;;
     *)         echo "Unknown option: $1"; exit 1 ;;
   esac
+done
+
+for value in "$NODES" "$CPU_PER_NODE" "$MEMORY_PER_NODE" "$DISK_PER_NODE"; do
+  case "$value" in ''|0|*[!0-9]*) echo "STATUS: FAIL (invalid topology value: $value)" >&2; exit 1 ;; esac
 done
 
 echo "=== P1-LOCAL-VM-A01: Preflight Checks ==="
@@ -154,13 +161,12 @@ case "$HYPERVISOR" in
     RAM_GIB="UNKNOWN"
 
     # Try sysctl first (macOS, some Linux)
-    if command -v sysctl &>/dev/null; then
+    if [ "$(uname -s)" = "Darwin" ] && command -v sysctl &>/dev/null; then
       RAM_BYTES="$(sysctl -n hw.memsize 2>/dev/null || echo "")"
 
       # Validate before arithmetic
       case "$RAM_BYTES" in
         ''|*[!0-9]*)
-          fail "Unable to determine physical RAM (sysctl -n hw.memsize returned invalid value)"
           RAM_BYTES="UNKNOWN"
           ;;
         *)
@@ -193,7 +199,7 @@ case "$HYPERVISOR" in
       esac
     fi
 
-    if [ "$RAM_BYTES" = "UNKNOWN" ]; then
+    if [ "$RAM_MIB" = "UNKNOWN" ]; then
       warn "Could not determine available RAM"
     fi
 
@@ -206,7 +212,7 @@ case "$HYPERVISOR" in
     DISK_GIB="UNKNOWN"
 
     # Use df -k to get available disk in 1024-byte blocks
-    DISK_KIB="$(df -k / 2>/dev/null | awk 'NR==2 {print $4}' | head -1)"
+    DISK_KIB="$(df -k "$REPO_ROOT" 2>/dev/null | awk 'NR==2 {print $4}' | head -1)"
 
     # Validate before arithmetic
     case "$DISK_KIB" in
@@ -268,6 +274,15 @@ case "$HYPERVISOR" in
     echo ""
     echo "Checking resource constraints..."
 
+    HOST_CPUS="UNKNOWN"
+    if command -v nproc >/dev/null 2>&1; then HOST_CPUS="$(nproc 2>/dev/null)";
+    elif [ "$(uname -s)" = "Darwin" ]; then HOST_CPUS="$(sysctl -n hw.ncpu 2>/dev/null)"; fi
+    case "$HOST_CPUS" in
+      ''|*[!0-9]*) fail "Unable to determine host CPU capacity" ;;
+      *) if [ "$HOST_CPUS" -lt "$TOTAL_VCPU" ]; then fail "Insufficient host CPUs: $HOST_CPUS < $TOTAL_VCPU";
+         else echo "✓ Host CPUs adequate: $HOST_CPUS >= $TOTAL_VCPU"; ((PASS++)); fi ;;
+    esac
+
     # Check host has enough physical RAM for guest + QEMU/macOS overhead
     # Assume QEMU/macOS needs ~2GB, guest needs TOTAL_GUEST_RAM_MIB
     if [ "$RAM_GIB" != "UNKNOWN" ]; then
@@ -324,11 +339,12 @@ case "$HYPERVISOR" in
         echo "✓ Running on macOS Intel (Hypervisor.framework available)"
         ((PASS++))
       else
-        if grep -q "kvm" /proc/cpuinfo 2>/dev/null; then
-          echo "✓ KVM support detected"
+        if [ -r /dev/kvm ] && [ -w /dev/kvm ] && [ "$HYPERVISOR" != "qemu-no-kvm" ]; then
+          echo "✓ Virtualization mode: KVM (/dev/kvm usable)"
           ((PASS++))
         else
-          warn "No KVM support (will use slower QEMU emulation)"
+          echo "✓ Virtualization mode: QEMU TCG (KVM unavailable or disabled; slower emulation)"
+          ((PASS++))
         fi
       fi
     fi
@@ -344,8 +360,13 @@ esac
 # PERSIST TOPOLOGY FOR OTHER SCRIPTS
 # ============================================================================
 
+if [ "$BLOCKED" -gt 0 ] || [ "$FAIL" -gt 0 ]; then
+  echo "STATUS: $([ "$BLOCKED" -gt 0 ] && echo BLOCKED || echo FAIL)"
+  echo "Topology was not persisted."
+  exit 1
+fi
+
 mkdir -p "$STATE_DIR"
-TOPOLOGY_FILE="$STATE_DIR/topology.sh"
 
 cat > "$TOPOLOGY_FILE" << 'TOPOLOGY_EOF'
 #!/bin/bash
@@ -356,6 +377,8 @@ TOPOLOGY_EOF
 cat >> "$TOPOLOGY_FILE" << TOPOLOGY_EOF
 
 # Topology accepted by preflight
+PREFLIGHT_STATUS=PASS
+PREFLIGHT_SOURCE_SHA="$(git -C "$REPO_ROOT" rev-parse HEAD)"
 NODES=$NODES
 CPU_PER_NODE=$CPU_PER_NODE
 MEMORY_PER_NODE=$MEMORY_PER_NODE

@@ -42,7 +42,8 @@ echo "QEMU Binary: $QEMU_BINARY"
 [ "$CLUSTER_STATE_DIR" = "$STATE_DIR" ] || die "State root mismatch: cluster=$CLUSTER_STATE_DIR canonical=$STATE_DIR"
 command -v "$QEMU_BINARY" >/dev/null || die "$QEMU_BINARY not found"
 
-if [ "$HOST_OS" = "Darwin" ]; then MACHINE_TYPE="pc"; ACCEL="hvf"; else MACHINE_TYPE="pc"; if [ -e /dev/kvm ]; then ACCEL="kvm"; else ACCEL="tcg"; fi; fi
+if [ "$HOST_OS" = "Darwin" ]; then MACHINE_TYPE="pc"; ACCEL="hvf"; else MACHINE_TYPE="pc"; if [ -r /dev/kvm ] && [ -w /dev/kvm ]; then ACCEL="kvm"; else ACCEL="tcg"; fi; fi
+echo "Virtualization mode: $ACCEL"
 
 # Validate all inputs before mutating runtime state.
 for ((i=1;i<=NODES;i++)); do
@@ -113,6 +114,8 @@ for ((i=1;i<=NODES;i++)); do
 done
 
 set_status RUNNING
+state_tmp="$(mktemp)"
+jq --arg mode "$ACCEL" '.virtualization_mode=$mode' "$CLUSTER_JSON" > "$state_tmp" && mv "$state_tmp" "$CLUSTER_JSON"
 trap - EXIT
 echo "=== VMs RUNNING ==="
 echo "Cluster process state verified. Run:"

@@ -31,6 +31,8 @@ done
 
 # shellcheck disable=SC1090
 source "$TOPOLOGY_FILE"
+[ "${PREFLIGHT_STATUS:-}" = "PASS" ] || { echo "ERROR: Topology has no successful preflight marker" >&2; exit 1; }
+[ "${PREFLIGHT_SOURCE_SHA:-}" = "$(git -C "$REPO_ROOT" rev-parse HEAD)" ] || { echo "ERROR: Preflight source SHA differs from current source" >&2; exit 1; }
 
 REQ_NODES="${NODES:-}"
 REQ_CPU="${CPU_PER_NODE:-}"

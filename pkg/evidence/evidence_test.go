@@ -145,6 +145,47 @@ func TestVerifyDetectsAlteredArtifacts(t *testing.T) {
 	}
 }
 
+func TestVerifyRejectsUnlistedMissingAndUnsafeArtifacts(t *testing.T) {
+	dir := t.TempDir()
+	write(t, dir, "logs/01-build.log", "ok\n", 0o644)
+	files, err := HashFiles(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := Record{Files: files}
+	write(t, dir, "extra.txt", "unexpected", 0o644)
+	if p := Verify(r, dir); len(p) != 1 {
+		t.Fatalf("unlisted artifact: %v", p)
+	}
+	if err := os.Remove(filepath.Join(dir, "extra.txt")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(filepath.Join(dir, "logs/01-build.log")); err != nil {
+		t.Fatal(err)
+	}
+	if p := Verify(r, dir); len(p) != 1 {
+		t.Fatalf("missing artifact: %v", p)
+	}
+	r.Files = []File{{Path: "../outside", Hash: "b3:invalid"}}
+	if p := Verify(r, dir); len(p) == 0 {
+		t.Fatal("unsafe path accepted")
+	}
+}
+
+func TestHashFilesRejectsSymlinkEvidence(t *testing.T) {
+	dir := t.TempDir()
+	outside := filepath.Join(t.TempDir(), "secret")
+	if err := os.WriteFile(outside, []byte("secret"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(outside, filepath.Join(dir, "link")); err != nil {
+		t.Skip(err)
+	}
+	if _, err := HashFiles(dir); err == nil {
+		t.Fatal("symlink evidence accepted")
+	}
+}
+
 // Regression: dh-src-digest/1 skipped any directory named "evidence" (or
 // "bin"), which dropped the source package pkg/evidence from REF-MAC-A01's
 // digest. Output directories are excluded only at the root.

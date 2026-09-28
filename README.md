@@ -75,6 +75,12 @@ export DH_HOME=./devcluster/operator
 ```
 
 For a real installation, see [docs/runbooks/install.md](docs/runbooks/install.md).
+An optional three-member Kubernetes control-plane deployment is documented in
+[deploy/kubernetes/README.md](deploy/kubernetes/README.md). Host agents remain
+on their own machines, and Kubernetes deployment does not establish VM
+qualification evidence.
+The [remaining phases roadmap](docs/remaining-phases/README.md) tracks P1
+closure through independent-host validation, marketplace work and hardening.
 
 ## Layout
 

@@ -35,12 +35,15 @@ die() {
 cd "$SCRIPT_DIR"
 
 # Step 1: Environment verify
-log_step 1 "Environment verification"
+log_step 1 "Environment and preflight verification"
 if ! command -v qemu-system-x86_64 >/dev/null 2>&1; then
   die 1 "qemu-system-x86_64 not found"
 fi
 if ! command -v jq >/dev/null 2>&1; then
   die 1 "jq not found"
+fi
+if ! ./validation/local-vm/scripts/preflight.sh qemu >"$LOG_DIR/preflight.log" 2>&1; then
+  die 1 "Preflight failed; see $LOG_DIR/preflight.log"
 fi
 log_result "PASS" "Step 1: Environment verified"
 
@@ -124,7 +127,8 @@ fi
 log_result "PASS" "Step 9: Baseline completed"
 
 # Final result
-echo "=== P1-LOCAL-VM-A01 QUALIFICATION COMPLETE ===" | tee -a "$LOG_DIR/master.log"
-echo "Status: PASS"
+echo "=== P1-LOCAL-VM-A01 BASELINE COMPLETE ===" | tee -a "$LOG_DIR/master.log"
+echo "Baseline: PASS"
+echo "Qualification: UNKNOWN (failure, recovery, signed evidence and tamper gates not run by this script)"
 echo "Log directory: $LOG_DIR"
 exit 0
