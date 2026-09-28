@@ -1,118 +1,102 @@
 #!/bin/bash
-# P1-LOCAL-VM-A01: Qualify Network Connectivity
-# Test SSH access, baseline evidence, node readiness
-# Usage: ./qualify-network.sh
+# P1-LOCAL-VM-A01: Baseline Network / Node Qualification
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 STATE_DIR="$REPO_ROOT/validation/local-vm/state"
 CLUSTER_JSON="$STATE_DIR/cluster.json"
-SSH_KEY="${SSH_KEY:-$HOME/.ssh/p1-local-vm}"
+RESULTS_DIR="$REPO_ROOT/validation/local-vm/evidence"
+RESULT="$RESULTS_DIR/network-qualification.json"
 SSH_USER="ubuntu"
 
-[ -f "$CLUSTER_JSON" ] || { echo "ERROR: Cluster not configured. Run bootstrap first."; exit 1; }
+die(){ echo "ERROR: $*" >&2; exit 1; }
+[ -f "$CLUSTER_JSON" ] || die "Cluster not configured"
+command -v jq >/dev/null || die "jq not found"
 
+QUAL="$(jq -r '.qualification' "$CLUSTER_JSON")"
+STATUS="$(jq -r '.status' "$CLUSTER_JSON")"
 NODES="$(jq -r '.nodes' "$CLUSTER_JSON")"
-RESULTS_DIR="$REPO_ROOT/validation/local-vm/evidence"
+CLUSTER_SHA="$(jq -r '.source_sha' "$CLUSTER_JSON")"
+SSH_KEY="$(jq -r '.ssh_key_path' "$CLUSTER_JSON")"
+VERIFIER_SHA="$(git -C "$REPO_ROOT" rev-parse HEAD)"
+[ "$QUAL" = "P1-LOCAL-VM-A01" ] || die "Wrong qualification: $QUAL"
+[ "$STATUS" = "READY" ] || die "Cluster must be READY; got $STATUS"
+[ -f "$SSH_KEY" ] || die "SSH key missing: $SSH_KEY"
 mkdir -p "$RESULTS_DIR"
+tmp="$(mktemp)"
+checks="$(mktemp)"
+printf '[]' > "$checks"
+trap 'rm -f "$tmp" "$checks"' EXIT
 
-echo "=== P1-LOCAL-VM-A01: Network Qualification ==="
-echo ""
+add_check(){
+  local node="$1" check="$2" result="$3" detail="$4" t
+  t="$(mktemp)"
+  jq --arg node "$node" --arg check "$check" --arg result "$result" --arg detail "$detail"     '. + [{node:$node,check:$check,result:$result,detail:$detail}]' "$checks" > "$t"
+  mv "$t" "$checks"
+}
 
-ssh_exec() {
+ssh_run(){
   local port="$1"; shift
-  ssh -i "$SSH_KEY" \
-    -o StrictHostKeyChecking=no \
-    -o UserKnownHostsFile=/dev/null \
-    -o BatchMode=yes \
-    -o ConnectTimeout=3 \
-    -p "$port" "$SSH_USER@localhost" "$@" 2>/dev/null || echo ""
+  ssh -i "$SSH_KEY" -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null     -o ConnectTimeout=5 -p "$port" "$SSH_USER@localhost" "$@"
 }
 
-# Create results file
-cat > "$RESULTS_DIR/network-qualification.json" << 'EOF'
-{
-  "test_phase": "P1-ENDTOEND-A01",
-  "timestamp_utc": "TIMESTAMP",
-  "checks": []
-}
-EOF
-
-TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-sed -i "s/TIMESTAMP/$TIMESTAMP/" "$RESULTS_DIR/network-qualification.json"
-
-# Collect results into array
-RESULTS=()
+echo "=== P1-LOCAL-VM-A01: Baseline Network Qualification ==="
+machine_ids=()
+blocking=0
 
 for ((i=1;i<=NODES;i++)); do
   idx=$((i-1))
-  NODE_NAME="$(jq -r ".node_details[$idx].name" "$CLUSTER_JSON")"
-  PORT="$(jq -r ".node_details[$idx].ssh_port" "$CLUSTER_JSON")"
+  name="$(jq -r ".node_details[$idx].name" "$CLUSTER_JSON")"
+  port="$(jq -r ".node_details[$idx].ssh_port" "$CLUSTER_JSON")"
+  pidfile="$(jq -r ".node_details[$idx].qemu_pid_file" "$CLUSTER_JSON")"
 
-  echo "Testing $NODE_NAME (port $PORT)..."
-
-  # Test 1: SSH connectivity
-  echo -n "  1. SSH connectivity... "
-  if ssh_exec "$PORT" "echo ready" > /dev/null 2>&1; then
-    echo "✓"
-    RESULTS+=('{"node": "'$NODE_NAME'", "check": "ssh_connectivity", "result": "PASS"}')
-  else
-    echo "✗"
-    RESULTS+=('{"node": "'$NODE_NAME'", "check": "ssh_connectivity", "result": "FAIL"}')
+  if [ ! -s "$pidfile" ]; then
+    add_check "$name" process_liveness FAIL "PID file missing"; blocking=$((blocking+1)); continue
   fi
-
-  # Test 2: Disk space
-  echo -n "  2. Disk space available... "
-  DISK_AVAILABLE=$(ssh_exec "$PORT" "df -k / | sed -n '2p' | awk '{print \$4}'")
-  if [ -n "$DISK_AVAILABLE" ] && [ "$DISK_AVAILABLE" -gt 1000000 ]; then
-    echo "✓ (${DISK_AVAILABLE}K available)"
-    RESULTS+=('{"node": "'$NODE_NAME'", "check": "disk_space", "result": "PASS", "available_kb": '$DISK_AVAILABLE'}')
-  else
-    echo "⚠ (${DISK_AVAILABLE}K available)"
-    RESULTS+=('{"node": "'$NODE_NAME'", "check": "disk_space", "result": "WARN", "available_kb": '$DISK_AVAILABLE'}')
+  pid="$(cat "$pidfile" 2>/dev/null || true)"
+  if ! [[ "$pid" =~ ^[0-9]+$ ]] || ! kill -0 "$pid" 2>/dev/null; then
+    add_check "$name" process_liveness FAIL "QEMU process not live"; blocking=$((blocking+1)); continue
   fi
+  add_check "$name" process_liveness PASS "pid=$pid"
 
-  # Test 3: System uptime
-  echo -n "  3. System uptime... "
-  UPTIME=$(ssh_exec "$PORT" "uptime -p")
-  if [ -n "$UPTIME" ]; then
-    echo "✓ ($UPTIME)"
-    RESULTS+=('{"node": "'$NODE_NAME'", "check": "uptime", "result": "PASS", "uptime": "'$UPTIME'"}')
-  else
-    echo "✗"
-    RESULTS+=('{"node": "'$NODE_NAME'", "check": "uptime", "result": "FAIL"}')
+  if ! ssh_run "$port" true >/dev/null 2>&1; then
+    add_check "$name" ssh_connectivity FAIL "localhost:$port unreachable/authentication failed"; blocking=$((blocking+1)); continue
   fi
+  add_check "$name" ssh_connectivity PASS "localhost:$port"
 
-  # Test 4: System readiness
-  echo -n "  4. System ready... "
-  if ssh_exec "$PORT" "test -d /opt/decentralized-host"; then
-    echo "✓"
-    RESULTS+=('{"node": "'$NODE_NAME'", "check": "system_ready", "result": "PASS"}')
-  else
-    echo "⚠ (directory will be created by agents)"
-    RESULTS+=('{"node": "'$NODE_NAME'", "check": "system_ready", "result": "WARN"}')
-  fi
+  hostname="$(ssh_run "$port" hostname 2>/dev/null || true)"
+  mid="$(ssh_run "$port" cat /etc/machine-id 2>/dev/null || true)"
+  arch="$(ssh_run "$port" uname -m 2>/dev/null || true)"
+  uptime="$(ssh_run "$port" uptime -p 2>/dev/null || true)"
+  disk="$(ssh_run "$port" df -Pk / 2>/dev/null | sed -n '2p' | tr -s ' ' | cut -d' ' -f4 || true)"
+  ips="$(ssh_run "$port" hostname -I 2>/dev/null || true)"
 
-  echo ""
+  for spec in "hostname:$hostname" "machine_id:$mid" "architecture:$arch" "uptime:$uptime" "disk_available_kb:$disk"; do
+    key="${spec%%:*}"; value="${spec#*:}"
+    if [ -n "$value" ]; then add_check "$name" "$key" PASS "$value"; else add_check "$name" "$key" UNKNOWN "empty observation"; blocking=$((blocking+1)); fi
+  done
+  if [ -n "$ips" ]; then add_check "$name" guest_ip_observation PASS "$ips"; else add_check "$name" guest_ip_observation UNKNOWN "no guest IP reported"; blocking=$((blocking+1)); fi
+  [ -n "$mid" ] && machine_ids+=("$mid")
 done
 
-# SSH latency test (single-host port-forwarded network)
-echo "Testing SSH response latency..."
-for ((i=1;i<=NODES;i++)); do
-  idx=$((i-1))
-  PORT="$(jq -r ".node_details[$idx].ssh_port" "$CLUSTER_JSON")"
-  LATENCY=$(ssh_exec "$PORT" "echo ok" 2>&1 | wc -c)
-  echo "  Port $PORT: responsive"
-done
+if [ "${#machine_ids[@]}" -eq "$NODES" ]; then
+  unique="$(printf '%s\n' "${machine_ids[@]}" | sort -u | wc -l | tr -d ' ')"
+  if [ "$unique" -eq "$NODES" ]; then add_check cluster unique_machine_ids PASS "$unique/$NODES"; else add_check cluster unique_machine_ids FAIL "$unique/$NODES"; blocking=$((blocking+1)); fi
+else
+  add_check cluster unique_machine_ids UNKNOWN "${#machine_ids[@]}/$NODES observed"; blocking=$((blocking+1))
+fi
 
-echo ""
-echo "=== Network Qualification Complete ==="
-echo "Results saved to: $RESULTS_DIR/network-qualification.json"
-echo ""
-echo "Summary:"
-echo "  ✓ = Ready for P1 qualification"
-echo "  ⚠ = Warning (may resolve during agent startup)"
-echo "  ✗ = Blocking issue (fix required)"
-echo ""
-echo "Next: Deploy DHP binaries and start agents"
-echo "  bash $SCRIPT_DIR/../run-scenarios.sh local"
+timestamp="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+overall=PASS
+[ "$blocking" -eq 0 ] || overall=FAIL
+jq -n   --arg qualification "P1-LOCAL-VM-A01"   --arg timestamp_utc "$timestamp"   --arg cluster_source_sha "$CLUSTER_SHA"   --arg verifier_source_sha "$VERIFIER_SHA"   --arg cluster_status "$STATUS"   --arg overall "$overall"   --argjson nodes "$NODES"   --slurpfile checks "$checks"   '{qualification:$qualification,timestamp_utc:$timestamp_utc,cluster_source_sha:$cluster_source_sha,verifier_source_sha:$verifier_source_sha,cluster_status:$cluster_status,nodes:$nodes,scope:"baseline host-forwarded SSH and guest observations; does not prove VM-to-VM partition semantics",overall:$overall,checks:$checks[0]}' > "$tmp"
+jq empty "$tmp"
+mv "$tmp" "$RESULT"
+sha256="$(shasum -a 256 "$RESULT" | awk '{print $1}')"
+printf '%s  %s\n' "$sha256" "$(basename "$RESULT")" > "$RESULT.sha256"
+
+echo "Result: $overall"
+echo "Evidence: $RESULT"
+echo "SHA256: $sha256"
+[ "$overall" = PASS ] || exit 1
