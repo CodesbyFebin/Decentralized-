@@ -1,0 +1,162 @@
+{
+  "qualification": "P1-LOCAL-VM-A01",
+  "timestamp_utc": "2026-09-28T20:00:18Z",
+  "cluster_source_sha": "841da8e2002ab9624d7728cc0d3d2b7de20d4000",
+  "verifier_source_sha": "11a4ede6e4441fdbf7827532f316fd87c691fab1",
+  "cluster_status": "READY",
+  "nodes": 3,
+  "scope": "baseline host-forwarded SSH and guest observations; does not prove VM-to-VM partition semantics",
+  "overall": "PASS",
+  "checks": [
+    {
+      "node": "dh-node-1",
+      "check": "process_liveness",
+      "result": "PASS",
+      "detail": "pid=2538"
+    },
+    {
+      "node": "dh-node-1",
+      "check": "ssh_connectivity",
+      "result": "PASS",
+      "detail": "localhost:2201"
+    },
+    {
+      "node": "dh-node-1",
+      "check": "hostname",
+      "result": "PASS",
+      "detail": "dh-node-1"
+    },
+    {
+      "node": "dh-node-1",
+      "check": "machine_id",
+      "result": "PASS",
+      "detail": "85beb979a79d4625a483eaa737d6d728"
+    },
+    {
+      "node": "dh-node-1",
+      "check": "architecture",
+      "result": "PASS",
+      "detail": "x86_64"
+    },
+    {
+      "node": "dh-node-1",
+      "check": "uptime",
+      "result": "PASS",
+      "detail": "up 8 minutes"
+    },
+    {
+      "node": "dh-node-1",
+      "check": "disk_available_kb",
+      "result": "PASS",
+      "detail": "6051432"
+    },
+    {
+      "node": "dh-node-1",
+      "check": "guest_ip_observation",
+      "result": "PASS",
+      "detail": "10.0.2.15 fec0::5054:ff:fe12:3456 "
+    },
+    {
+      "node": "dh-node-2",
+      "check": "process_liveness",
+      "result": "PASS",
+      "detail": "pid=2566"
+    },
+    {
+      "node": "dh-node-2",
+      "check": "ssh_connectivity",
+      "result": "PASS",
+      "detail": "localhost:2202"
+    },
+    {
+      "node": "dh-node-2",
+      "check": "hostname",
+      "result": "PASS",
+      "detail": "dh-node-2"
+    },
+    {
+      "node": "dh-node-2",
+      "check": "machine_id",
+      "result": "PASS",
+      "detail": "9822414112264b9cb810375d44de4fd6"
+    },
+    {
+      "node": "dh-node-2",
+      "check": "architecture",
+      "result": "PASS",
+      "detail": "x86_64"
+    },
+    {
+      "node": "dh-node-2",
+      "check": "uptime",
+      "result": "PASS",
+      "detail": "up 9 minutes"
+    },
+    {
+      "node": "dh-node-2",
+      "check": "disk_available_kb",
+      "result": "PASS",
+      "detail": "5976612"
+    },
+    {
+      "node": "dh-node-2",
+      "check": "guest_ip_observation",
+      "result": "PASS",
+      "detail": "10.0.2.15 fec0::5054:ff:fe12:3456 "
+    },
+    {
+      "node": "dh-node-3",
+      "check": "process_liveness",
+      "result": "PASS",
+      "detail": "pid=2594"
+    },
+    {
+      "node": "dh-node-3",
+      "check": "ssh_connectivity",
+      "result": "PASS",
+      "detail": "localhost:2203"
+    },
+    {
+      "node": "dh-node-3",
+      "check": "hostname",
+      "result": "PASS",
+      "detail": "dh-node-3"
+    },
+    {
+      "node": "dh-node-3",
+      "check": "machine_id",
+      "result": "PASS",
+      "detail": "85b96fc852034086b560594e249c500b"
+    },
+    {
+      "node": "dh-node-3",
+      "check": "architecture",
+      "result": "PASS",
+      "detail": "x86_64"
+    },
+    {
+      "node": "dh-node-3",
+      "check": "uptime",
+      "result": "PASS",
+      "detail": "up 10 minutes"
+    },
+    {
+      "node": "dh-node-3",
+      "check": "disk_available_kb",
+      "result": "PASS",
+      "detail": "5976616"
+    },
+    {
+      "node": "dh-node-3",
+      "check": "guest_ip_observation",
+      "result": "PASS",
+      "detail": "10.0.2.15 fec0::5054:ff:fe12:3456 "
+    },
+    {
+      "node": "cluster",
+      "check": "unique_machine_ids",
+      "result": "PASS",
+      "detail": "3/3"
+    }
+  ]
+}
