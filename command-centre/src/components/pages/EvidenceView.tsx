@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FileCheck2, RefreshCw, ShieldCheck, ShieldX, Package, Target } from 'lucide-react';
+import { FileCheck2, RefreshCw, ShieldCheck, ShieldX, Package, Target, Zap, Database, HardDrive, BarChart3 } from 'lucide-react';
 import type { ArtifactRec, LedgerVerification, MilestoneRec, ValidationRecord, ValidationVerification } from '../../types/reality';
 import { useSession } from '../../lib/session';
 import { EvidenceSeal, Digest } from '../common/truth';
@@ -8,6 +8,36 @@ import { useResource } from '../../lib/useResource';
 import { api, ApiError } from '../../lib/client';
 import { Glass, PanelHeader, StatusPill, IconTile, GhostButton, FilterChips } from '../common/ui';
 import { Gate, shortDigest, since, fmtTime, ErrorState, Note, TruthTag, Unavailable } from '../common/states';
+import { TruthValue, type TruthEnvelope } from '../common/truthDisplay';
+
+interface ResourceEvidence {
+  nodeId: string;
+  cpuMilliUsed: TruthEnvelope<number>;
+  memBytesUsed: TruthEnvelope<number>;
+  storageUsed: TruthEnvelope<number>;
+  measuredAt: number;
+  duration: number;
+}
+
+interface NodeEvidence {
+  nodeId: string;
+  nodeName: string;
+  cpuTotal: TruthEnvelope<number>;
+  memTotal: TruthEnvelope<number>;
+  healthy: TruthEnvelope<boolean>;
+  lastSeen: number;
+}
+
+interface UsageRecord {
+  id: string;
+  nodeId: string;
+  placementId: string | null;
+  cpuMilliUsed: number;
+  memBytesUsed: number;
+  duration: number;
+  signature: string;
+  signedAt: number;
+}
 
 interface Payload {
   verification: LedgerVerification;
@@ -15,6 +45,9 @@ interface Payload {
   milestones: MilestoneRec[];
   artifacts: ArtifactRec[];
   chaos: { id: string; scenario: string; verdict: string; received: number; signer: string; evidence: string }[];
+  resourceEvidence: ResourceEvidence[];
+  nodeEvidence: NodeEvidence[];
+  usageRecords: UsageRecord[];
 }
 
 export default function EvidenceView() {
@@ -42,6 +75,11 @@ export default function EvidenceView() {
         <p className="text-[13px] text-slate-400">What has actually been verified: signed validation records, the hash-chained audit ledger, and signed host and artifact evidence. Failed records stay visible. Nothing here is editable.</p>
       </div>
       <ValidationRecords />
+
+      <ResourceEvidenceSection res={res} />
+      <NodeEvidenceSection res={res} />
+      <UsageRecordsSection res={res} />
+
       <Gate res={res}>
         {(d) => {
           const v = verify ?? d.verification;
@@ -104,6 +142,148 @@ export default function EvidenceView() {
 }
 
 type OutcomeChip = 'all' | 'PASS' | 'FAIL' | 'UNKNOWN';
+
+function ResourceEvidenceSection({ res }: { res: ReturnType<typeof useResource<Payload>> }) {
+  return (
+    <Gate res={res}>
+      {(d) => {
+        if (!d.resourceEvidence.length) return null;
+        return (
+          <Glass className="p-4">
+            <PanelHeader icon={<IconTile tone="cyan" size="sm"><BarChart3 className="w-4 h-4" /></IconTile>} title="Resource consumption evidence" subtitle="Measured CPU, memory, and storage used by running workloads, with freshness state." />
+            <div className="mt-4 space-y-4">
+              {d.resourceEvidence.map((re) => (
+                <div key={`${re.nodeId}-${re.measuredAt}`} className="p-3 rounded-lg bg-slate-800/30 border border-slate-700/20">
+                  <div className="text-[12px] font-semibold text-slate-100 mb-2">{re.nodeId} ({since(re.measuredAt)})</div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div>
+                      <TruthValue
+                        label="CPU (m)"
+                        envelope={{ ...re.cpuMilliUsed, source: 'measured' }}
+                        format={(v) => Math.round(v).toString()}
+                      />
+                    </div>
+                    <div>
+                      <TruthValue
+                        label="Memory (B)"
+                        envelope={{ ...re.memBytesUsed, source: 'measured' }}
+                        format={(v) => (v / (1024 * 1024)).toFixed(1) + ' MB'}
+                      />
+                    </div>
+                    <div>
+                      <TruthValue
+                        label="Storage (B)"
+                        envelope={{ ...re.storageUsed, source: 'measured' }}
+                        format={(v) => (v / (1024 * 1024)).toFixed(1) + ' MB'}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <Note>Resource evidence is signed by the provider node. LIVE indicates recent measurement; STALE or UNKNOWN indicates measurement is old or unavailable.</Note>
+          </Glass>
+        );
+      }}
+    </Gate>
+  );
+}
+
+function NodeEvidenceSection({ res }: { res: ReturnType<typeof useResource<Payload>> }) {
+  return (
+    <Gate res={res}>
+      {(d) => {
+        if (!d.nodeEvidence.length) return null;
+        return (
+          <Glass className="p-4">
+            <PanelHeader icon={<IconTile tone="violet" size="sm"><Target className="w-4 h-4" /></IconTile>} title="Node evidence" subtitle="Observed node health and capacity facts with freshness indicators." />
+            <div className="mt-4 grid lg:grid-cols-2 gap-4">
+              {d.nodeEvidence.map((ne) => (
+                <div key={ne.nodeId} className="p-3 rounded-lg bg-slate-800/30 border border-slate-700/20">
+                  <div className="flex items-center justify-between mb-2">
+                    <div>
+                      <div className="text-[12px] font-semibold text-slate-100">{ne.nodeName}</div>
+                      <div className="text-[11px] text-slate-500 font-mono">{ne.nodeId}</div>
+                    </div>
+                    <StatusPill status={ne.healthy.value ? 'HEALTHY' : 'OFFLINE'} tone={ne.healthy.value ? 'emerald' : 'rose'} />
+                  </div>
+                  <div className="space-y-1.5 text-[11px]">
+                    <TruthValue
+                      label="Healthy"
+                      envelope={{ ...ne.healthy, source: 'observation', value: ne.healthy.value ? 'yes' : 'no' }}
+                      format={(v) => v}
+                    />
+                    <TruthValue
+                      label="CPU total (m)"
+                      envelope={{ ...ne.cpuTotal, source: 'measured' }}
+                      format={(v) => Math.round(v).toString()}
+                    />
+                    <TruthValue
+                      label="Memory total (B)"
+                      envelope={{ ...ne.memTotal, source: 'measured' }}
+                      format={(v) => (v / (1024 * 1024 * 1024)).toFixed(2) + ' GB'}
+                    />
+                    <div className="text-slate-400 pt-1">Last seen {since(ne.lastSeen)}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <Note>Node evidence reflects the last observed state from the control plane. Freshness indicates how recently the measurement was taken.</Note>
+          </Glass>
+        );
+      }}
+    </Gate>
+  );
+}
+
+function UsageRecordsSection({ res }: { res: ReturnType<typeof useResource<Payload>> }) {
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  return (
+    <Gate res={res}>
+      {(d) => {
+        if (!d.usageRecords.length) return null;
+        return (
+          <Glass className="p-4">
+            <PanelHeader icon={<IconTile tone="amber" size="sm"><Zap className="w-4 h-4" /></IconTile>} title="Usage records" subtitle="Signed metering records from providers; each record is cryptographically signed." />
+            <div className="mt-3 overflow-x-auto">
+              <table className="dh-table w-full min-w-[800px]">
+                <thead><tr><th>Record ID</th><th>Node</th><th>CPU used (m)</th><th>Memory used (B)</th><th>Duration</th><th>Signed</th><th></th></tr></thead>
+                <tbody>
+                  {d.usageRecords.map((ur) => (
+                    <React.Fragment key={ur.id}>
+                      <tr className="hover:bg-slate-800/40 cursor-pointer" onClick={() => setExpandedId(expandedId === ur.id ? null : ur.id)}>
+                        <td><span className="font-mono text-[12px] text-cyan-300">{shortDigest(ur.id)}</span></td>
+                        <td className="text-[12px]">{ur.nodeId.slice(0, 12)}…</td>
+                        <td className="text-[12px] font-mono text-slate-200">{Math.round(ur.cpuMilliUsed)}</td>
+                        <td className="text-[12px] font-mono text-slate-200">{(ur.memBytesUsed / (1024 * 1024)).toFixed(1)} MB</td>
+                        <td className="text-[12px] text-slate-400">{(ur.duration / 1000).toFixed(1)}s</td>
+                        <td className="text-[11px] text-emerald-300">{since(ur.signedAt)}</td>
+                        <td className="text-slate-400 text-center">→</td>
+                      </tr>
+                      {expandedId === ur.id && (
+                        <tr className="bg-slate-900/40">
+                          <td colSpan={7} className="p-3">
+                            <div className="text-[11px] space-y-1">
+                              <div><span className="text-slate-400">Full ID:</span> <span className="font-mono text-cyan-300">{ur.id}</span></div>
+                              <div><span className="text-slate-400">Placement:</span> <span className="font-mono text-slate-300">{ur.placementId || 'none'}</span></div>
+                              <div><span className="text-slate-400">Signature:</span> <span className="font-mono text-slate-500">{shortDigest(ur.signature)}…</span></div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <Note>Each usage record carries the provider's digital signature as proof of metering. Usage records form the basis for settlement accounting (P2+).</Note>
+          </Glass>
+        );
+      }}
+    </Gate>
+  );
+}
 
 function ValidationRecords() {
   const { capabilities } = useSession();
