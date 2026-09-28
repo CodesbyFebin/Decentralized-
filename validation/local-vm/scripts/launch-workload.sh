@@ -231,7 +231,7 @@ ssh $SSH_OPTS -p "$ssh_port" "$SSH_USER@localhost" "pkill -f 'nc -l 127.0.0.1 80
 wait $MONITOR_PID || true
 
 # Update workload state
-jq '.status = "COMPLETED" | .completed_at = "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"' "$WORKLOAD_STATE_FILE" > "$WORKLOAD_STATE_FILE.tmp"
+jq --arg completed_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '.status = "COMPLETED" | .completed_at = $completed_at' "$WORKLOAD_STATE_FILE" > "$WORKLOAD_STATE_FILE.tmp"
 mv "$WORKLOAD_STATE_FILE.tmp" "$WORKLOAD_STATE_FILE"
 
 echo ""
