@@ -114,35 +114,44 @@ serve_requests() {
   request_count=0
   startup_seconds=$SECONDS
 
-  while true; do
-    # Simple HTTP server
-    {
-      read -t 5 method path protocol 2>/dev/null || true
+  # Start simple HTTP server using socat if available, else Python
+  if command -v socat >/dev/null 2>&1; then
+    # Use socat for listening and request handling
+    socat TCP-LISTEN:$PORT,reuseaddr,fork SYSTEM:"bash -c 'read -t 5 line; request_count=$((request_count+1)); echo \"$(date -u +%Y-%m-%dT%H:%M:%SZ) \$line\" >> \"$LOG_FILE\"; echo \"HTTP/1.1 200 OK\"; echo \"Content-Type: application/json\"; echo \"Content-Length: 250\"; echo \"Connection: close\"; echo \"\"; echo \"{\\\"workload_id\\\":\\\"$WORKLOAD_ID\\\",\\\"timestamp\\\":\\\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\\\",\\\"pid\\\":$$,\\\"uptime_seconds\\\":$((SECONDS - startup_seconds)),\\\"requests_served\\\":$request_count,\\\"status\\\":\\\"running\\\"}\"'" 2>/dev/null
+  elif command -v python3 >/dev/null 2>&1; then
+    # Use Python as fallback
+    python3 -c "
+import http.server
+import json
+import time
+import sys
 
-      if [ -n "$method" ]; then
-        request_count=$((request_count + 1))
-        echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) $method $path" >> "$LOG_FILE"
+class Handler(http.server.BaseRequestHandler):
+    def handle(self):
+        try:
+            self.request.recv(1024)
+            response = json.dumps({
+                'workload_id': '$WORKLOAD_ID',
+                'timestamp': '$(date -u +%Y-%m-%dT%H:%M:%SZ)',
+                'pid': $$,
+                'uptime_seconds': $((SECONDS - startup_seconds)),
+                'requests_served': 1,
+                'status': 'running'
+            })
+            self.request.sendall(b'HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: ' + str(len(response)).encode() + b'\r\nConnection: close\r\n\r\n' + response.encode())
+        except:
+            pass
 
-        # HTTP response
-        echo "HTTP/1.1 200 OK"
-        echo "Content-Type: application/json"
-        echo "Content-Length: 250"
-        echo "Connection: close"
-        echo ""
-
-        cat <<EOF
-{
-  "workload_id": "$WORKLOAD_ID",
-  "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-  "pid": $$,
-  "uptime_seconds": $((SECONDS - startup_seconds)),
-  "requests_served": $request_count,
-  "status": "running"
-}
-EOF
-      fi
-    } | nc -q 1 -l 127.0.0.1 "$PORT" 2>/dev/null || true
-  done
+server = http.server.TCPServer(('127.0.0.1', $PORT), Handler)
+while True:
+    server.handle_request()
+" 2>/dev/null
+  else
+    # Fallback: try netcat with simple echo (limited but better than nothing)
+    while true; do
+      (echo 'HTTP/1.1 200 OK'; echo 'Content-Type: application/json'; echo ''; echo "{\"workload_id\":\"$WORKLOAD_ID\",\"status\":\"running\"}") | nc -l 127.0.0.1 $PORT 2>/dev/null || sleep 0.1
+    done
+  fi
 }
 
 trap 'echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) Shutting down" | tee -a "$LOG_FILE"; exit 0' SIGTERM
