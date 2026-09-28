@@ -1,26 +1,26 @@
 #!/bin/bash
-# P1-ENDTOEND-A01: Bootstrap Local Nodes
-# Verify SSH access and baseline evidence collection
+# P1-LOCAL-VM-A01: Bootstrap Local Nodes
+# Verify SSH access to all 3 VMs and collect baseline evidence
 # Usage: ./bootstrap-nodes.sh
 
-set -e
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONFIG_DIR="$SCRIPT_DIR/../config"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+CLUSTER_STATE_DIR="$REPO_ROOT/.p1-local-vm-state"
 SSH_KEY="${SSH_KEY:-$HOME/.ssh/p1-local-vm}"
 SSH_USER="ubuntu"
-MAX_RETRIES=10
-RETRY_DELAY=3
+MAX_RETRIES=15
+RETRY_DELAY=2
 
-if [ ! -f "$CONFIG_DIR/vm-specs.json" ]; then
-  echo "ERROR: VM cluster not configured. Run create-vm-cluster.sh first."
+if [ ! -f "$CLUSTER_STATE_DIR/manifest.json" ]; then
+  echo "ERROR: Cluster not configured. Run create-vm-cluster.sh first."
   exit 1
 fi
 
-NODES=$(jq -r '.nodes[] | .node_id' "$CONFIG_DIR/vm-specs.json" 2>/dev/null || seq 1 3)
+NODES=$(jq -r '.nodes' "$CLUSTER_STATE_DIR/manifest.json")
 
-echo "=== P1-ENDTOEND-A01: Bootstrap Nodes ==="
+echo "=== P1-LOCAL-VM-A01: Bootstrap Nodes ==="
 echo "SSH Key: $SSH_KEY"
+echo "Cluster State: $CLUSTER_STATE_DIR"
 echo ""
 
 if [ ! -f "$SSH_KEY" ]; then
@@ -29,82 +29,99 @@ if [ ! -f "$SSH_KEY" ]; then
 fi
 
 ssh_exec() {
-  local node_id=$1
-  local port=$((2220 + node_id))
+  local port=$1
   shift
 
   ssh -i "$SSH_KEY" \
     -o StrictHostKeyChecking=no \
     -o UserKnownHostsFile=/dev/null \
-    -o ConnectTimeout=5 \
-    "$SSH_USER@localhost" -p "$port" "$@" 2>/dev/null || echo ""
+    -o ConnectTimeout=3 \
+    -p "$port" \
+    "$SSH_USER@localhost" "$@" 2>/dev/null || return 1
 }
 
-# Wait for SSH availability
-for node_id in $NODES; do
-  NODE_NAME="dh-local-$(printf '%02d' $node_id)"
-  PORT=$((2220 + node_id))
+# Wait for SSH availability on all nodes
+echo "Waiting for all nodes to boot..."
+all_ready=false
+attempts=0
 
-  echo "Waiting for $NODE_NAME (port $PORT) to boot..."
+while [ "$all_ready" = false ] && [ $attempts -lt $MAX_RETRIES ]; do
+  all_ready=true
 
-  for retry in $(seq 1 $MAX_RETRIES); do
-    if ssh_exec "$node_id" "echo ok" > /dev/null 2>&1; then
-      echo "✓ $NODE_NAME SSH access OK"
-      break
-    fi
+  for ((i=1; i<=NODES; i++)); do
+    NODE_NAME=$(jq -r ".nodes[$((i-1))].name" "$CLUSTER_STATE_DIR/manifest.json")
+    SSH_PORT=$(jq -r ".nodes[$((i-1))].ssh_port" "$CLUSTER_STATE_DIR/manifest.json")
 
-    if [ $retry -lt $MAX_RETRIES ]; then
-      echo "  Attempt $retry/$MAX_RETRIES (waiting ${RETRY_DELAY}s)..."
-      sleep $RETRY_DELAY
+    if ! ssh_exec "$SSH_PORT" "echo ok" > /dev/null 2>&1; then
+      all_ready=false
+      echo "  ✗ $NODE_NAME not ready"
     else
-      echo "✗ $NODE_NAME failed to boot"
-      exit 1
+      echo "  ✓ $NODE_NAME SSH OK"
     fi
   done
 
-  echo ""
+  if [ "$all_ready" = false ]; then
+    attempts=$((attempts + 1))
+    if [ $attempts -lt $MAX_RETRIES ]; then
+      echo "  Waiting... (attempt $attempts/$MAX_RETRIES)"
+      sleep $RETRY_DELAY
+    fi
+  fi
 done
 
-# Verify baseline evidence
-echo "Verifying baseline evidence collection..."
-for node_id in $NODES; do
-  NODE_NAME="dh-local-$(printf '%02d' $node_id)"
+if [ "$all_ready" = false ]; then
+  echo ""
+  echo "ERROR: Not all nodes reached SSH availability after $((MAX_RETRIES * RETRY_DELAY)) seconds."
+  exit 1
+fi
 
-  echo "Checking $NODE_NAME..."
+echo ""
+echo "✓ All nodes SSH accessible"
+echo ""
 
-  # Check baseline evidence
-  if ssh_exec "$node_id" "test -f /var/log/decentralized-host/baseline-evidence.json"; then
-    echo "  ✓ Baseline evidence collected"
-  else
-    echo "  ✗ Baseline evidence NOT found"
-  fi
+# Collect baseline evidence from each node
+echo "Collecting baseline evidence..."
+for ((i=1; i<=NODES; i++)); do
+  NODE_NAME=$(jq -r ".nodes[$((i-1))].name" "$CLUSTER_STATE_DIR/manifest.json")
+  SSH_PORT=$(jq -r ".nodes[$((i-1))].ssh_port" "$CLUSTER_STATE_DIR/manifest.json")
 
-  # Check network evidence
-  if ssh_exec "$node_id" "test -f /var/log/decentralized-host/network-evidence.json"; then
-    echo "  ✓ Network evidence collected"
-  else
-    echo "  ✗ Network evidence NOT found"
-  fi
+  echo "Node $i: $NODE_NAME (port $SSH_PORT)"
 
-  # Check system status
-  UPTIME=$(ssh_exec "$node_id" "uptime -p")
-  echo "  Uptime: $UPTIME"
-
-  # Check hostname
-  HOSTNAME=$(ssh_exec "$node_id" "hostname")
+  # Check system info
+  HOSTNAME=$(ssh_exec "$SSH_PORT" "hostname" 2>/dev/null || echo "UNKNOWN")
   echo "  Hostname: $HOSTNAME"
 
-  # Check disk space
-  DISK=$(ssh_exec "$node_id" "df -h / | tail -1 | awk '{print \$4}' ")
-  echo "  Free Disk: $DISK"
+  KERNEL=$(ssh_exec "$SSH_PORT" "uname -r" 2>/dev/null || echo "UNKNOWN")
+  echo "  Kernel: $KERNEL"
+
+  ARCH=$(ssh_exec "$SSH_PORT" "uname -m" 2>/dev/null || echo "UNKNOWN")
+  echo "  Architecture: $ARCH"
+
+  CPUS=$(ssh_exec "$SSH_PORT" "grep -c ^processor /proc/cpuinfo" 2>/dev/null || echo "UNKNOWN")
+  echo "  CPUs: $CPUS"
+
+  MEMORY=$(ssh_exec "$SSH_PORT" "free -h | grep Mem | awk '{print \$2}'" 2>/dev/null || echo "UNKNOWN")
+  echo "  Memory: $MEMORY"
+
+  UPTIME=$(ssh_exec "$SSH_PORT" "uptime -p" 2>/dev/null || echo "UNKNOWN")
+  echo "  Uptime: $UPTIME"
+
+  DISK_FREE=$(ssh_exec "$SSH_PORT" "df -h / | tail -1 | awk '{print \$4}'" 2>/dev/null || echo "UNKNOWN")
+  echo "  Disk Free (/): $DISK_FREE"
 
   echo ""
 done
 
 echo "=== Bootstrap Complete ==="
-echo "All nodes are ready for Decentralized Host deployment."
+echo "All nodes are ready for P1-LOCAL-VM-A01 qualification campaign."
+echo ""
+echo "To SSH into a node directly:"
+echo "  ssh -i ~/.ssh/p1-local-vm -p 2201 ubuntu@localhost  # Node 1"
+echo "  ssh -i ~/.ssh/p1-local-vm -p 2202 ubuntu@localhost  # Node 2"
+echo "  ssh -i ~/.ssh/p1-local-vm -p 2203 ubuntu@localhost  # Node 3"
 echo ""
 echo "Next steps:"
-echo "1. Copy DHP binaries to each node"
-echo "2. Start agents: sudo systemctl start decentralized-host-agent"
-echo "3. Run scenarios: bash $SCRIPT_DIR/run-scenarios.sh"
+echo "  1. Deploy Decentralized Host agent to each node"
+echo "  2. Establish distributed consensus"
+echo "  3. Inject failures and measure detection/recovery"
+echo "  4. Collect and seal evidence"

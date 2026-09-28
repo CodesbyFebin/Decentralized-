@@ -1,97 +1,135 @@
 #!/bin/bash
-# P1-ENDTOEND-A01: Start Local VM Cluster
+# P1-LOCAL-VM-A01: Start Local VM Cluster
+# Boots 3 distinct VMs with cloud-init configuration
 # Usage: ./start-cluster.sh
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONFIG_DIR="$SCRIPT_DIR/../config"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+CLUSTER_STATE_DIR="$REPO_ROOT/.p1-local-vm-state"
 
-if [ ! -f "$CONFIG_DIR/vm-specs.json" ]; then
-  echo "ERROR: VM cluster not configured. Run create-vm-cluster.sh first."
+if [ ! -f "$CLUSTER_STATE_DIR/manifest.json" ]; then
+  echo "ERROR: Cluster not initialized. Run create-vm-cluster.sh first."
   exit 1
 fi
 
-CLUSTER_DIR=$(jq -r '.cluster_dir' "$CONFIG_DIR/vm-specs.json")
-HYPERVISOR=$(jq -r '.hypervisor' "$CONFIG_DIR/vm-specs.json")
-NODES=$(jq -r '.nodes | length' "$CONFIG_DIR/vm-specs.json")
+# Parse manifest
+QEMU_ARCH=$(jq -r '.qemu_arch' "$CLUSTER_STATE_DIR/manifest.json")
+NODES=$(jq -r '.nodes' "$CLUSTER_STATE_DIR/manifest.json")
+CPU_PER_NODE=$(jq -r '.cpu_per_node' "$CLUSTER_STATE_DIR/manifest.json")
+MEMORY_PER_NODE=$(jq -r '.memory_per_node_mb' "$CLUSTER_STATE_DIR/manifest.json")
 
-echo "=== P1-ENDTOEND-A01: Starting Cluster ==="
-echo "Hypervisor: $HYPERVISOR"
-echo "Nodes: $NODES"
-echo "Cluster Directory: $CLUSTER_DIR"
-echo ""
-
-case "$HYPERVISOR" in
-  qemu)
-    echo "Starting QEMU VMs..."
-    for i in $(seq 1 $NODES); do
-      VM_NAME="dh-local-$(printf '%02d' $i)"
-      QEMU_PID_FILE="$CLUSTER_DIR/$VM_NAME/qemu.pid"
-
-      if [ -f "$QEMU_PID_FILE" ]; then
-        PID=$(cat "$QEMU_PID_FILE")
-        if kill -0 "$PID" 2>/dev/null; then
-          echo "✓ $VM_NAME already running (PID: $PID)"
-          continue
-        fi
-      fi
-
-      DISK="$CLUSTER_DIR/$VM_NAME/disk.qcow2"
-      VNC_PORT=$((5900 + i))
-
-      echo "Starting $VM_NAME..."
-      qemu-system-x86_64 \
-        -enable-kvm \
-        -cpu host \
-        -smp $CPU_PER_NODE \
-        -m $MEMORY_PER_NODE \
-        -drive file=$DISK,format=qcow2 \
-        -net user,hostfwd=tcp::$((2220 + i))-:22 \
-        -net nic \
-        -vnc :$(($i - 1)) \
-        -daemonize \
-        -pidfile "$QEMU_PID_FILE" \
-        -name "$VM_NAME"
-
-      echo "  VNC: localhost:$VNC_PORT"
-      echo "  SSH: ssh -p $((2220 + i)) ubuntu@localhost"
-    done
+# Determine QEMU binary
+case "$QEMU_ARCH" in
+  aarch64)
+    QEMU_BINARY="qemu-system-aarch64"
     ;;
-
-  docker)
-    echo "Starting Docker containers..."
-    for i in $(seq 1 $NODES); do
-      VM_NAME="dh-local-$(printf '%02d' $i)"
-      echo "Starting $VM_NAME..."
-      docker run -d \
-        --name "$VM_NAME" \
-        --hostname "$VM_NAME" \
-        -p $((2220 + i)):22 \
-        -e NODE_ID=$i \
-        -v "$CLUSTER_DIR/$VM_NAME/data:/var/lib/decentralized-host" \
-        -v "$CLUSTER_DIR/$VM_NAME/logs:/var/log/decentralized-host" \
-        ubuntu:22.04 \
-        sleep infinity
-
-      echo "  SSH: ssh -p $((2220 + i)) ubuntu@localhost"
-    done
+  x86_64)
+    QEMU_BINARY="qemu-system-x86_64"
     ;;
-
   *)
-    echo "ERROR: Unsupported hypervisor: $HYPERVISOR"
+    echo "ERROR: Unsupported QEMU architecture: $QEMU_ARCH"
     exit 1
     ;;
 esac
 
+echo "=== P1-LOCAL-VM-A01: Starting Cluster ==="
+echo "QEMU Architecture: $QEMU_ARCH"
+echo "QEMU Binary: $QEMU_BINARY"
+echo "Nodes: $NODES"
+echo "CPU/Node: $CPU_PER_NODE"
+echo "Memory/Node: $MEMORY_PER_NODE MB"
+echo "Cluster State: $CLUSTER_STATE_DIR"
 echo ""
-echo "=== Cluster Started ==="
-echo "Waiting for nodes to boot (30 seconds)..."
-sleep 30
+
+# Check if QEMU binary is available
+if ! command -v "$QEMU_BINARY" &> /dev/null; then
+  echo "ERROR: $QEMU_BINARY not found. Cannot start cluster."
+  exit 1
+fi
+
+# Start each VM
+echo "Starting QEMU VMs..."
+for ((i=1; i<=NODES; i++)); do
+  NODE_NAME=$(jq -r ".nodes[$((i-1))].name" "$CLUSTER_STATE_DIR/manifest.json")
+  DISK=$(jq -r ".nodes[$((i-1))].disk" "$CLUSTER_STATE_DIR/manifest.json")
+  SEED=$(jq -r ".nodes[$((i-1))].seed" "$CLUSTER_STATE_DIR/manifest.json")
+  SSH_PORT=$(jq -r ".nodes[$((i-1))].ssh_port" "$CLUSTER_STATE_DIR/manifest.json")
+
+  NODE_DIR="$(dirname "$DISK")"
+  PID_FILE="$NODE_DIR/qemu.pid"
+
+  # Check if already running
+  if [ -f "$PID_FILE" ]; then
+    PID=$(cat "$PID_FILE")
+    if kill -0 "$PID" 2>/dev/null; then
+      echo "✓ $NODE_NAME already running (PID: $PID)"
+      continue
+    fi
+  fi
+
+  echo "Starting $NODE_NAME (SSH port: $SSH_PORT)..."
+
+  # Create cloud-init ISO if needed
+  SEED_ISO="$NODE_DIR/seed.iso"
+  if [ ! -f "$SEED_ISO" ]; then
+    if command -v cloud-localds &> /dev/null; then
+      cloud-localds -v "$SEED_ISO" "$SEED/user-data" "$SEED/meta-data"
+    else
+      # Fallback: create minimal ISO without cloud-localds
+      mkisofs -output "$SEED_ISO" -volid cidata -joliet -rock "$SEED" 2>/dev/null || {
+        echo "WARNING: Could not create cloud-init ISO. VMs will start but may not be configured."
+      }
+    fi
+  fi
+
+  # Build QEMU command based on architecture
+  QEMU_CMD=(
+    "$QEMU_BINARY"
+    "-name" "$NODE_NAME"
+    "-machine" "type=virt,accel=kvm"
+    "-cpu" "host"
+    "-smp" "$CPU_PER_NODE"
+    "-m" "${MEMORY_PER_NODE}M"
+    "-drive" "file=$DISK,format=qcow2,cache=writeback"
+    "-net" "user,hostfwd=tcp::${SSH_PORT}-:22"
+    "-net" "nic,model=virtio"
+    "-nographic"
+    "-daemonize"
+    "-pidfile" "$PID_FILE"
+  )
+
+  # Add cloud-init seed if available
+  if [ -f "$SEED_ISO" ]; then
+    QEMU_CMD+=("-drive" "file=$SEED_ISO,format=raw,media=cdrom")
+  fi
+
+  # For Intel/x86_64 with KVM, add special boot options
+  if [ "$QEMU_ARCH" = "x86_64" ]; then
+    QEMU_CMD+=("-boot" "c")
+  fi
+
+  "${QEMU_CMD[@]}"
+
+  echo "  SSH: ssh -i $HOME/.ssh/p1-local-vm -p $SSH_PORT ubuntu@localhost"
+  echo "  PID file: $PID_FILE"
+done
 
 echo ""
-echo "To verify connectivity:"
+echo "=== Cluster Started ==="
+echo "Waiting for nodes to boot (15 seconds)..."
+sleep 15
+
+echo ""
+echo "To check node status:"
+echo "  for port in 2201 2202 2203; do ssh -i ~/.ssh/p1-local-vm -p \$port -o ConnectTimeout=2 ubuntu@localhost hostname 2>/dev/null && echo \"✓ Node on port \$port\" || echo \"✗ Node on port \$port not ready\"; done"
+echo ""
+echo "To verify cluster connectivity:"
 echo "  bash $SCRIPT_DIR/bootstrap-nodes.sh"
 echo ""
 echo "To stop cluster:"
 echo "  bash $SCRIPT_DIR/stop-cluster.sh"
+echo ""
+echo "To destroy cluster completely:"
+echo "  bash $SCRIPT_DIR/destroy-cluster.sh"

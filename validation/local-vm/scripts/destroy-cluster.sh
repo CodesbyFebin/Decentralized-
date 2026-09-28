@@ -1,27 +1,25 @@
 #!/bin/bash
-# P1-ENDTOEND-A01: Destroy Local VM Cluster
+# P1-LOCAL-VM-A01: Destroy Local VM Cluster
+# Forcefully terminates all QEMU processes and removes cluster state
 # Usage: ./destroy-cluster.sh
 
-set -e
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONFIG_DIR="$SCRIPT_DIR/../config"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+CLUSTER_STATE_DIR="$REPO_ROOT/.p1-local-vm-state"
 
-if [ ! -f "$CONFIG_DIR/vm-specs.json" ]; then
+if [ ! -f "$CLUSTER_STATE_DIR/manifest.json" ]; then
   echo "No cluster configured."
   exit 0
 fi
 
-CLUSTER_DIR=$(jq -r '.cluster_dir' "$CONFIG_DIR/vm-specs.json")
-HYPERVISOR=$(jq -r '.hypervisor' "$CONFIG_DIR/vm-specs.json")
-NODES=$(jq -r '.nodes | length' "$CONFIG_DIR/vm-specs.json")
+NODES=$(jq -r '.nodes' "$CLUSTER_STATE_DIR/manifest.json")
 
-echo "=== P1-ENDTOEND-A01: Destroy Cluster ==="
-echo "Hypervisor: $HYPERVISOR"
+echo "=== P1-LOCAL-VM-A01: Destroy Cluster ==="
 echo "Nodes: $NODES"
-echo "Cluster Directory: $CLUSTER_DIR"
+echo "Cluster State: $CLUSTER_STATE_DIR"
 echo ""
 echo "⚠️  WARNING: This will destroy all VMs and local data!"
+echo "⚠️  Evidence files in $REPO_ROOT/validation/local-vm/evidence/ will NOT be deleted."
 echo "⚠️  This action cannot be undone."
 echo ""
 read -p "Type 'yes' to confirm destruction: " CONFIRM
@@ -34,42 +32,37 @@ fi
 echo ""
 echo "Destroying VMs..."
 
-case "$HYPERVISOR" in
-  qemu)
-    for i in $(seq 1 $NODES); do
-      VM_NAME="dh-local-$(printf '%02d' $i)"
-      QEMU_PID_FILE="$CLUSTER_DIR/$VM_NAME/qemu.pid"
+# Kill all QEMU processes
+for ((i=1; i<=NODES; i++)); do
+  NODE_NAME=$(jq -r ".nodes[$((i-1))].name" "$CLUSTER_STATE_DIR/manifest.json")
+  DISK=$(jq -r ".nodes[$((i-1))].disk" "$CLUSTER_STATE_DIR/manifest.json")
+  NODE_DIR="$(dirname "$DISK")"
+  PID_FILE="$NODE_DIR/qemu.pid"
 
-      if [ -f "$QEMU_PID_FILE" ]; then
-        PID=$(cat "$QEMU_PID_FILE")
-        if kill -0 "$PID" 2>/dev/null; then
-          echo "Stopping $VM_NAME (PID: $PID)..."
-          kill -9 "$PID" 2>/dev/null || true
-          sleep 1
-        fi
-        rm -f "$QEMU_PID_FILE"
-      fi
-    done
-    ;;
+  if [ -f "$PID_FILE" ]; then
+    PID=$(cat "$PID_FILE")
+    if kill -0 "$PID" 2>/dev/null; then
+      echo "Terminating $NODE_NAME (PID: $PID)..."
+      kill -9 "$PID" 2>/dev/null || true
+    fi
+    rm -f "$PID_FILE"
+  fi
+done
 
-  docker)
-    for i in $(seq 1 $NODES); do
-      VM_NAME="dh-local-$(printf '%02d' $i)"
-      echo "Removing $VM_NAME..."
-      docker rm -f "$VM_NAME" 2>/dev/null || true
-    done
-    ;;
-
-  *)
-    echo "WARNING: Unsupported hypervisor. Manual cleanup may be needed."
-    ;;
-esac
+sleep 1
 
 echo ""
-echo "Removing cluster directory: $CLUSTER_DIR"
-rm -rf "$CLUSTER_DIR" 2>/dev/null || true
+echo "Removing cluster state directory..."
+rm -rf "$CLUSTER_STATE_DIR" || true
 
 echo ""
 echo "=== Cleanup Complete ==="
 echo "Cluster has been destroyed."
-echo "Evidence files (if backed up) are still available in: $SCRIPT_DIR/../evidence/"
+echo ""
+echo "Preserved:"
+echo "  - Evidence/qualification records: $REPO_ROOT/validation/local-vm/evidence/"
+echo "  - Configuration templates: $REPO_ROOT/validation/local-vm/config/"
+echo "  - Scripts: $REPO_ROOT/validation/local-vm/scripts/"
+echo ""
+echo "To run qualification again:"
+echo "  bash $SCRIPT_DIR/create-vm-cluster.sh qemu"
