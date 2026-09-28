@@ -19,7 +19,15 @@ serial_tail(){ local f="$1"; [ -f "$f" ] && { echo "--- serial tail: $f ---"; ta
 [ -f "$SSH_KEY" ] || die "SSH key not found: $SSH_KEY"
 NODES="$(jq -r '.nodes' "$CLUSTER_JSON")"
 STATUS="$(jq -r '.status' "$CLUSTER_JSON")"
-[ "$STATUS" = "RUNNING" ] || die "Cluster status must be RUNNING before bootstrap; got $STATUS"
+case "$STATUS" in
+  RUNNING|BOOTSTRAPPING) ;;
+  BOOTSTRAP_FAILED)
+    echo "Resuming bootstrap after previous failure state: $STATUS"
+    ;;
+  *)
+    die "Cluster status must be RUNNING, BOOTSTRAPPING, or BOOTSTRAP_FAILED before bootstrap; got $STATUS"
+    ;;
+esac
 
 ssh_exec(){
   local port="$1"; shift
@@ -42,7 +50,7 @@ for ((i=1;i<=NODES;i++)); do
   echo "✓ $name PROCESS_RUNNING pid=$pid"
 done
 
-set_status BOOTSTRAPPING
+[ "$STATUS" = "BOOTSTRAPPING" ] || set_status BOOTSTRAPPING
 deadline=$((SECONDS + BOOT_TIMEOUT_SECONDS))
 while (( SECONDS < deadline )); do
   ready=0
