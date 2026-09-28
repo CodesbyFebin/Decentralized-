@@ -76,18 +76,18 @@ if [ ${#orphaned_ids[@]} -gt 0 ] && [ -n "$AUTO_RELEASE" ]; then
 
   # Recalculate totals based on ACTIVE allocations only
   LEDGER=$(echo "$LEDGER" | jq '
+    ([.node_capacity[].allocations[] | select(.state == "ACTIVE") | .cpu] | add // 0) as $total_cpu |
+    ([.node_capacity[].allocations[] | select(.state == "ACTIVE") | .memory_mb] | add // 0) as $total_mem |
+    ([.node_capacity[].allocations[] | select(.state == "ACTIVE") | .disk_gb] | add // 0) as $total_disk |
     .node_capacity |= map(
-      ((.allocations[] | select(.state == "ACTIVE") | .cpu) | add // 0) as $cpu_sum |
-      ((.allocations[] | select(.state == "ACTIVE") | .memory_mb) | add // 0) as $mem_sum |
-      ((.allocations[] | select(.state == "ACTIVE") | .disk_gb) | add // 0) as $disk_sum |
+      (([.allocations[] | select(.state == "ACTIVE") | .cpu] | add) // 0) as $cpu_sum |
+      (([.allocations[] | select(.state == "ACTIVE") | .memory_mb] | add) // 0) as $mem_sum |
+      (([.allocations[] | select(.state == "ACTIVE") | .disk_gb] | add) // 0) as $disk_sum |
       .cpu_allocated = $cpu_sum |
       .memory_allocated_mb = $mem_sum |
       .disk_allocated_gb = $disk_sum
     ) |
     .summary |= (
-      ((.node_capacity[].allocations[] | select(.state == "ACTIVE") | .cpu) | add // 0) as $total_cpu |
-      ((.node_capacity[].allocations[] | select(.state == "ACTIVE") | .memory_mb) | add // 0) as $total_mem |
-      ((.node_capacity[].allocations[] | select(.state == "ACTIVE") | .disk_gb) | add // 0) as $total_disk |
       .cpu_allocated = $total_cpu |
       .memory_allocated_mb = $total_mem |
       .disk_allocated_gb = $total_disk
