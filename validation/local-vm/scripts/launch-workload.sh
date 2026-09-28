@@ -87,9 +87,10 @@ SSH_OPTS="-i $SSH_KEY -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/nul
 
 # Start workload server on the target node
 echo "Starting workload server on $target_node..."
-{
-  ssh $SSH_OPTS -p "$ssh_port" "$SSH_USER@localhost" \
-    "bash -s" << 'REMOTE_SCRIPT'
+ssh $SSH_OPTS -p "$ssh_port" "$SSH_USER@localhost" \
+  bash -s "$WORKLOAD_ID" 8080 "$WORKLOAD_LOG" << 'REMOTE_SCRIPT' &
+SERVER_PID=$!
+
 #!/bin/bash
 set -euo pipefail
 
@@ -147,8 +148,6 @@ trap 'echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) Shutting down" | tee -a "$LOG_FILE"; 
 
 serve_requests
 REMOTE_SCRIPT
-} "$WORKLOAD_ID" 8080 "$WORKLOAD_LOG" &
-SERVER_PID=$!
 
 sleep 1
 
