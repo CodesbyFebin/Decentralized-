@@ -42,7 +42,7 @@ echo "QEMU Binary: $QEMU_BINARY"
 [ "$CLUSTER_STATE_DIR" = "$STATE_DIR" ] || die "State root mismatch: cluster=$CLUSTER_STATE_DIR canonical=$STATE_DIR"
 command -v "$QEMU_BINARY" >/dev/null || die "$QEMU_BINARY not found"
 
-if [ "$HOST_OS" = "Darwin" ]; then MACHINE_TYPE="pc"; ACCEL="hvf"; else MACHINE_TYPE="pc"; ACCEL="kvm"; fi
+if [ "$HOST_OS" = "Darwin" ]; then MACHINE_TYPE="pc"; ACCEL="hvf"; else MACHINE_TYPE="pc"; if [ -e /dev/kvm ]; then ACCEL="kvm"; else ACCEL="tcg"; fi; fi
 
 # Validate all inputs before mutating runtime state.
 for ((i=1;i<=NODES;i++)); do
@@ -96,7 +96,8 @@ for ((i=1;i<=NODES;i++)); do
 
   : > "$SERIAL_LOG"
   echo "Starting $NODE_NAME (SSH port $SSH_PORT)..."
-  "$QEMU_BINARY"     -name "$NODE_NAME"     -machine "type=$MACHINE_TYPE,accel=$ACCEL"     -cpu host     -smp "$(jq -r '.cpu_per_node' "$CLUSTER_JSON")"     -m "$(jq -r '.memory_per_node_mb' "$CLUSTER_JSON")"     -drive "file=$DISK,format=qcow2,cache=writeback"     -drive "file=$SEED_ISO,format=raw,media=cdrom,readonly=on"     -net "user,hostfwd=tcp::${SSH_PORT}-:22"     -net "nic,model=virtio"     -display none     -daemonize     -pidfile "$PID_FILE"     -serial "file:$SERIAL_LOG" || {
+  if [ "$ACCEL" = "tcg" ]; then CPU_MODEL="qemu64"; else CPU_MODEL="host"; fi
+  "$QEMU_BINARY"     -name "$NODE_NAME"     -machine "type=$MACHINE_TYPE,accel=$ACCEL"     -cpu "$CPU_MODEL"     -smp "$(jq -r '.cpu_per_node' "$CLUSTER_JSON")"     -m "$(jq -r '.memory_per_node_mb' "$CLUSTER_JSON")"     -drive "file=$DISK,format=qcow2,cache=writeback"     -drive "file=$SEED_ISO,format=raw,media=cdrom,readonly=on"     -net "user,hostfwd=tcp::${SSH_PORT}-:22"     -net "nic,model=virtio"     -display none     -daemonize     -pidfile "$PID_FILE"     -serial "file:$SERIAL_LOG" || {
       serial_tail "$SERIAL_LOG"
       stop_started "${started_pids[@]}"
       die "$NODE_NAME QEMU launch failed"
