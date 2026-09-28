@@ -121,12 +121,8 @@ serve_requests() {
   request_count=0
   startup_seconds=$SECONDS
 
-  # Start simple HTTP server using socat if available, else Python
-  if command -v socat >/dev/null 2>&1; then
-    # Use socat for listening and request handling
-    socat TCP-LISTEN:$PORT,reuseaddr,fork SYSTEM:"bash -c 'read -t 5 line; request_count=$((request_count+1)); echo \"$(date -u +%Y-%m-%dT%H:%M:%SZ) \$line\" >> \"$LOG_FILE\"; echo \"HTTP/1.1 200 OK\"; echo \"Content-Type: application/json\"; echo \"Content-Length: 250\"; echo \"Connection: close\"; echo \"\"; echo \"{\\\"workload_id\\\":\\\"$WORKLOAD_ID\\\",\\\"timestamp\\\":\\\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\\\",\\\"pid\\\":$$,\\\"uptime_seconds\\\":$((SECONDS - startup_seconds)),\\\"requests_served\\\":$request_count,\\\"status\\\":\\\"running\\\"}\"'" 2>/dev/null
-  elif command -v python3 >/dev/null 2>&1; then
-    # Use Python as fallback
+  # Use Python HTTP server (reliable JSON encoding, proper Content-Length)
+  if command -v python3 >/dev/null 2>&1; then
     python3 -c "
 import http.server
 import json
@@ -149,14 +145,18 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(response.encode())
 
+    def log_message(self, format, *args):
+        pass  # Suppress request logging
+
 server = http.server.TCPServer(('127.0.0.1', $PORT), Handler)
 while True:
     server.handle_request()
 " 2>/dev/null
   else
-    # Fallback: try netcat with simple echo (limited but better than nothing)
+    # Fallback: try netcat (limited but better than invalid JSON from socat)
     while true; do
-      (echo 'HTTP/1.1 200 OK'; echo 'Content-Type: application/json'; echo ''; echo "{\"workload_id\":\"$WORKLOAD_ID\",\"status\":\"running\"}") | nc -l 127.0.0.1 $PORT 2>/dev/null || sleep 0.1
+      response="{\"workload_id\":\"$WORKLOAD_ID\",\"status\":\"running\"}"
+      (echo 'HTTP/1.1 200 OK'; echo 'Content-Type: application/json'; echo "Content-Length: ${#response}"; echo 'Connection: close'; echo ''; echo "$response") | nc -l 127.0.0.1 $PORT 2>/dev/null || sleep 0.1
     done
   fi
 }
