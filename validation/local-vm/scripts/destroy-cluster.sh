@@ -1,73 +1,54 @@
 #!/bin/bash
 # P1-LOCAL-VM-A01: Destroy Cluster
-# Forcefully terminates VMs and removes cluster state
-# Preserves evidence directory
-# Usage: ./destroy-cluster.sh
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 STATE_DIR="$REPO_ROOT/validation/local-vm/state"
 CLUSTER_JSON="$STATE_DIR/cluster.json"
 EVIDENCE_DIR="$REPO_ROOT/validation/local-vm/evidence"
+FORCE=false
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --yes|-y) FORCE=true; shift ;;
+    *) echo "ERROR: Unknown option: $1" >&2; exit 1 ;;
+  esac
+done
 
 if [ ! -f "$CLUSTER_JSON" ]; then
   echo "No cluster configured."
   exit 0
 fi
 
-HYPERVISOR=$(jq -r '.hypervisor' "$CLUSTER_JSON")
-NODES=$(jq -r '.nodes' "$CLUSTER_JSON")
+HYPERVISOR="$(jq -r '.hypervisor' "$CLUSTER_JSON")"
+NODES="$(jq -r '.nodes' "$CLUSTER_JSON")"
+[ "$HYPERVISOR" = "qemu" ] || { echo "ERROR: Refusing to destroy non-QEMU backend: $HYPERVISOR" >&2; exit 1; }
 
 echo "=== P1-LOCAL-VM-A01: Destroy Cluster ==="
-echo "Hypervisor: $HYPERVISOR"
 echo "Nodes: $NODES"
 echo "State Directory: $STATE_DIR"
-echo ""
-echo "⚠️  WARNING: This will destroy all VMs and cluster state!"
-echo "⚠️  Evidence directory ($EVIDENCE_DIR) will be PRESERVED"
-echo ""
-read -p "Type 'yes' to confirm destruction: " CONFIRM
+echo "Evidence preserved: $EVIDENCE_DIR"
 
-if [ "$CONFIRM" != "yes" ]; then
-  echo "Cancelled."
-  exit 0
+if [ "$FORCE" != true ]; then
+  printf "Type 'yes' to confirm destruction: "
+  read -r CONFIRM
+  [ "$CONFIRM" = "yes" ] || { echo "Cancelled."; exit 2; }
 fi
 
-echo ""
-
-if [ "$HYPERVISOR" != "qemu" ]; then
-  echo "ERROR: Cluster backend is '$HYPERVISOR', expected QEMU"
-  echo "Cannot safely destroy unknown backend"
-  exit 1
-fi
-
-# Destroy each VM (SIGKILL if necessary)
-echo "Destroying VMs..."
-for ((i=1; i<=NODES; i++)); do
-  NODE_NAME=$(jq -r ".node_details[$((i-1))].name" "$CLUSTER_JSON")
-  PID_FILE=$(jq -r ".node_details[$((i-1))].qemu_pid_file" "$CLUSTER_JSON")
-
-  if [ -f "$PID_FILE" ]; then
-    PID=$(cat "$PID_FILE")
-    if kill -0 "$PID" 2>/dev/null; then
-      echo "  Terminating $NODE_NAME (PID: $PID)..."
-      kill -9 "$PID" 2>/dev/null || true
-      sleep 1
+for ((i=1;i<=NODES;i++)); do
+  pidfile="$(jq -r ".node_details[$((i-1))].qemu_pid_file" "$CLUSTER_JSON")"
+  name="$(jq -r ".node_details[$((i-1))].name" "$CLUSTER_JSON")"
+  if [ -s "$pidfile" ]; then
+    pid="$(cat "$pidfile" 2>/dev/null || true)"
+    if [[ "$pid" =~ ^[0-9]+$ ]] && kill -0 "$pid" 2>/dev/null; then
+      echo "Stopping $name (PID $pid)"
+      kill "$pid" 2>/dev/null || true
+      for _ in {1..10}; do kill -0 "$pid" 2>/dev/null || break; sleep 0.2; done
+      kill -0 "$pid" 2>/dev/null && kill -9 "$pid" 2>/dev/null || true
     fi
-    rm -f "$PID_FILE"
   fi
 done
 
-echo ""
-echo "Removing cluster state..."
-rm -rf "$STATE_DIR" || true
-
-echo ""
-echo "=== Destruction Complete ==="
-echo ""
-echo "Preserved:"
-echo "  - Evidence/qualification records: $EVIDENCE_DIR"
-echo "  - Configuration templates: $REPO_ROOT/validation/local-vm/config/"
-echo ""
-echo "To run qualification again:"
-echo "  bash $SCRIPT_DIR/create-vm-cluster.sh qemu"
+rm -rf "$STATE_DIR"
+echo "STATUS: DESTROYED"
