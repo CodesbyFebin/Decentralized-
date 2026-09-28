@@ -36,13 +36,15 @@ echo ""
 
 # Request placement from scheduler
 echo "Requesting placement from scheduler..."
-allocation_id=$(bash "$SCRIPT_DIR/request-placement.sh" "$WORKLOAD_ID" "$CPU_REQ" "$MEMORY_REQ" "$DISK_REQ" 30) || die "Placement failed"
+bash "$SCRIPT_DIR/request-placement.sh" "$WORKLOAD_ID" "$CPU_REQ" "$MEMORY_REQ" "$DISK_REQ" 30 || die "Placement failed"
+PLACEMENT_RESULT_FILE="$STATE_DIR/placement-result.json"
+allocation_id="$(jq -r '.allocation_id' "$PLACEMENT_RESULT_FILE")"
+[ -n "$allocation_id" ] && [ "$allocation_id" != "null" ] || die "Placement result missing allocation_id"
 
 echo "Allocation ID: $allocation_id"
 echo ""
 
 # Get target node from scheduler's placement result
-PLACEMENT_RESULT_FILE="$STATE_DIR/placement-result.json"
 target_node=$(jq -r '.target_node' "$PLACEMENT_RESULT_FILE")
 [ -n "$target_node" ] || die "Could not determine target node from scheduler"
 
@@ -88,8 +90,14 @@ SSH_USER="ubuntu"
 # Start workload server on the target node
 echo "Starting workload server on $target_node..."
 REMOTE_LOG_FILE="/tmp/workload-${WORKLOAD_ID}.log"
+REMOTE_PORT=18080
+case "$WORKLOAD_ID" in
+  workload-api-01) REMOTE_PORT=18081 ;;
+  workload-api-02) REMOTE_PORT=18082 ;;
+  workload-cache-01) REMOTE_PORT=18083 ;;
+esac
 ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -p "$ssh_port" "$SSH_USER@localhost" \
-  bash -s "$WORKLOAD_ID" 8080 "$REMOTE_LOG_FILE" << 'REMOTE_SCRIPT' &
+  bash -s "$WORKLOAD_ID" "$REMOTE_PORT" "$REMOTE_LOG_FILE" << 'REMOTE_SCRIPT' &
 
 #!/bin/bash
 set -euo pipefail
@@ -161,7 +169,7 @@ REMOTE_SCRIPT
 SERVER_PID=$!
 sleep 1
 
-echo "Server started (PID $SERVER_PID on remote)"
+echo "Server launcher PID $SERVER_PID; remote port $REMOTE_PORT"
 echo ""
 
 # Generate continuous traffic
@@ -174,10 +182,10 @@ TRAFFIC_TEMP_LOG="$TRAFFIC_LOG.tmp"
     # Send HTTP request to workload server
     {
       echo "GET / HTTP/1.1"
-      echo "Host: localhost:8080"
+      echo "Host: localhost:$REMOTE_PORT"
       echo "Connection: close"
       echo ""
-    } | ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -p "$ssh_port" "$SSH_USER@localhost" "nc -q 1 127.0.0.1 8080" 2>/dev/null | grep -E "^{" >> "$TRAFFIC_TEMP_LOG" || true
+    } | ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -p "$ssh_port" "$SSH_USER@localhost" "nc -q 1 127.0.0.1 "$REMOTE_PORT"" 2>/dev/null | grep -E "^{" >> "$TRAFFIC_TEMP_LOG" || true
 
     sleep 1
   done
@@ -194,6 +202,7 @@ TRAFFIC_TEMP_LOG="$TRAFFIC_LOG.tmp"
   fi
 
   echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) Traffic generation complete: $request_count requests" | tee -a "$TRAFFIC_LOG"
+  [ "$request_count" -gt 0 ] || exit 42
 } &
 TRAFFIC_PID=$!
 
@@ -220,11 +229,16 @@ REMOTE_MONITOR
 MONITOR_PID=$!
 
 # Wait for workload to complete
-wait $TRAFFIC_PID || true
+if ! wait $TRAFFIC_PID; then
+  bash "$SCRIPT_DIR/deallocate-resource.sh" "$allocation_id" >/dev/null 2>&1 || true
+  jq --arg completed_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '.status = "FAILED" | .failure = "NO_TRAFFIC" | .completed_at = $completed_at' "$WORKLOAD_STATE_FILE" > "$WORKLOAD_STATE_FILE.tmp"
+  mv "$WORKLOAD_STATE_FILE.tmp" "$WORKLOAD_STATE_FILE"
+  die "Traffic verification failed for $WORKLOAD_ID"
+fi
 sleep 1
 
 # Terminate server
-ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -p "$ssh_port" "$SSH_USER@localhost" "pkill -f 'nc -l 127.0.0.1 8080'" || true
+ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -p "$ssh_port" "$SSH_USER@localhost" "pkill -f 'nc -l 127.0.0.1 "$REMOTE_PORT"'" || true
 
 # Wait for monitor
 wait $MONITOR_PID || true
