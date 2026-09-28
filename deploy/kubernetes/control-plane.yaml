@@ -1,0 +1,115 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: decentralized-host
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dh-control
+  namespace: decentralized-host
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector:
+    app: dh-control
+  ports:
+    - name: api
+      port: 7700
+      targetPort: api
+    - name: raft
+      port: 7800
+      targetPort: raft
+    - name: mesh
+      port: 51900
+      protocol: UDP
+      targetPort: mesh
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: dh-control
+  namespace: decentralized-host
+spec:
+  serviceName: dh-control
+  replicas: 3
+  podManagementPolicy: Parallel
+  selector:
+    matchLabels:
+      app: dh-control
+  template:
+    metadata:
+      labels:
+        app: dh-control
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+      containers:
+        - name: control
+          # Set the exact built image digest before applying; no floating tag.
+          image: REPLACE_WITH_IMAGE_AT_SHA256_DIGEST
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-ec"]
+          args:
+            - |
+              : "${POD_NAME:?}"
+              address="${POD_NAME}.dh-control.${POD_NAMESPACE}.svc.cluster.local"
+              exec /usr/local/bin/dh-control \
+                --data /var/lib/dh-control \
+                --api 0.0.0.0:7700 --api-advertise "${address}:7700" \
+                --raft 0.0.0.0:7800 --raft-advertise "${address}:7800" \
+                --mesh 0.0.0.0:51900 --mesh-advertise "${address}:51900" \
+                --tls
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          ports:
+            - name: api
+              containerPort: 7700
+            - name: raft
+              containerPort: 7800
+            - name: mesh
+              containerPort: 51900
+              protocol: UDP
+          # Port readiness proves only that the process accepts connections.
+          # The operator must separately verify bootstrap, quorum and signed state.
+          startupProbe:
+            tcpSocket:
+              port: api
+            periodSeconds: 3
+            failureThreshold: 40
+          readinessProbe:
+            tcpSocket:
+              port: api
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              memory: 1Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            readOnlyRootFilesystem: true
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/dh-control
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 10Gi
