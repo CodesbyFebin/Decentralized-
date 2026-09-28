@@ -1,0 +1,13 @@
+{
+  "workload_id": "workload-api-01",
+  "allocation_id": "alloc-1790637590-1934450490",
+  "target_node": "dh-node-1",
+  "ssh_port": 2201,
+  "cpu_requested": 0.3,
+  "memory_requested_mb": 256,
+  "disk_requested_gb": 2,
+  "started_at": "2026-09-28T23:20:34Z",
+  "duration_seconds": 120,
+  "status": "COMPLETED",
+  "completed_at": "2026-09-28T23:22:44Z"
+}

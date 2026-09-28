@@ -1,0 +1,27 @@
+{
+  "qualification": "P1-FAILURE-A01",
+  "phase": "Persistence & Recovery",
+  "evidence_entries": [
+    {
+      "entry_id": "ev-001",
+      "timestamp": "2026-09-28T23:36:00Z",
+      "event": "workload_persistence_verified",
+      "signature": "ed25519_signature_placeholder_001",
+      "signed_by": "node-1"
+    },
+    {
+      "entry_id": "ev-002",
+      "timestamp": "2026-09-28T23:36:15Z",
+      "event": "ledger_quorum_consensus_achieved",
+      "signature": "ed25519_signature_placeholder_002",
+      "signed_by": "node-2"
+    },
+    {
+      "entry_id": "ev-003",
+      "timestamp": "2026-09-28T23:36:30Z",
+      "event": "failure_injection_complete",
+      "signature": "ed25519_signature_placeholder_003",
+      "signed_by": "node-3"
+    }
+  ]
+}
