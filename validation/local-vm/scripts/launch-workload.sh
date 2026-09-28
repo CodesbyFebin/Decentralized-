@@ -84,12 +84,11 @@ echo ""
 # SSH key configuration
 SSH_KEY="${SSH_KEY:-$HOME/.ssh/p1-local-vm}"
 SSH_USER="ubuntu"
-SSH_OPTS="-i $SSH_KEY -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5"
 
 # Start workload server on the target node
 echo "Starting workload server on $target_node..."
 REMOTE_LOG_FILE="/tmp/workload-${WORKLOAD_ID}.log"
-ssh $SSH_OPTS -p "$ssh_port" "$SSH_USER@localhost" \
+ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -p "$ssh_port" "$SSH_USER@localhost" \
   bash -s "$WORKLOAD_ID" 8080 "$REMOTE_LOG_FILE" << 'REMOTE_SCRIPT' &
 
 #!/bin/bash
@@ -178,7 +177,7 @@ TRAFFIC_TEMP_LOG="$TRAFFIC_LOG.tmp"
       echo "Host: localhost:8080"
       echo "Connection: close"
       echo ""
-    } | ssh $SSH_OPTS -p "$ssh_port" "$SSH_USER@localhost" "nc -q 1 127.0.0.1 8080" 2>/dev/null | grep -E "^{" >> "$TRAFFIC_TEMP_LOG" || true
+    } | ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -p "$ssh_port" "$SSH_USER@localhost" "nc -q 1 127.0.0.1 8080" 2>/dev/null | grep -E "^{" >> "$TRAFFIC_TEMP_LOG" || true
 
     sleep 1
   done
@@ -206,7 +205,7 @@ echo "Monitoring resource utilization..."
 
   while (( SECONDS < deadline )); do
     # Get system resource usage on remote node
-    ssh $SSH_OPTS -p "$ssh_port" "$SSH_USER@localhost" <<'REMOTE_MONITOR' 2>/dev/null
+    ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -p "$ssh_port" "$SSH_USER@localhost" <<'REMOTE_MONITOR' 2>/dev/null
 echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) CPU: $(grep -c ^processor /proc/cpuinfo) cores, Usage: $(top -bn1 | grep Cpu | awk '{print $2}')";
 echo "Memory: $(free -m | awk 'NR==2 {printf "Used: %dM / %dM (%.1f%%)", $3, $2, $3/$2*100}')";
 echo "Disk: $(df -h / | awk 'NR==2 {printf "Used: %s / %s (%s)", $3, $2, $5}')";
@@ -225,7 +224,7 @@ wait $TRAFFIC_PID || true
 sleep 1
 
 # Terminate server
-ssh $SSH_OPTS -p "$ssh_port" "$SSH_USER@localhost" "pkill -f 'nc -l 127.0.0.1 8080'" || true
+ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -p "$ssh_port" "$SSH_USER@localhost" "pkill -f 'nc -l 127.0.0.1 8080'" || true
 
 # Wait for monitor
 wait $MONITOR_PID || true
