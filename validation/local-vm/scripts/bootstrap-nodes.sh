@@ -94,9 +94,9 @@ for ((i=1;i<=NODES;i++)); do
   kernel="$(ssh_exec "$port" 'uname -r' || true)"
   arch="$(ssh_exec "$port" 'uname -m' || true)"
   cpus="$(ssh_exec "$port" 'grep -c ^processor /proc/cpuinfo' || true)"
-  memory="$(ssh_exec "$port" "free -h | awk '/^Mem:/ {print \\$2}'" || true)"
+  memory="$(ssh_exec "$port" 'free -h | awk '"'"'/^Mem:/ {print $2}'"'"'' || true)"
   uptime="$(ssh_exec "$port" 'uptime -p' || true)"
-  disk="$(ssh_exec "$port" "df -h / | awk 'NR==2 {print \\$4}'" || true)"
+  disk="$(ssh_exec "$port" 'df -h / | awk '"'"'NR==2 {print $4}'"'"'' || true)"
   for pair in "Hostname:$hostname" "Machine ID:$mid" "Kernel:$kernel" "Architecture:$arch" "CPUs:$cpus" "Memory:$memory" "Uptime:$uptime" "Disk Free:$disk"; do
     value="${pair#*:}"; [ -n "$value" ] || { set_status BOOTSTRAP_FAILED; die "$name required evidence field empty: ${pair%%:*}"; }
   done
