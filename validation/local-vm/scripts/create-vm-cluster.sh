@@ -155,7 +155,7 @@ for ((i=1; i<=NODES; i++)); do
   # Create qcow2 disk overlay (copy-on-write, sparse)
   DISK="$NODE_DIR/disk.qcow2"
   if [ ! -f "$DISK" ]; then
-    qemu-img create -f qcow2 -b "$UBUNTU_IMAGE" "$DISK" "${DISK_PER_NODE}G"
+    qemu-img create -f qcow2 -b "$UBUNTU_IMAGE" -F qcow2 "$DISK" "${DISK_PER_NODE}G"
   fi
 
   # Generate cloud-init user-data
