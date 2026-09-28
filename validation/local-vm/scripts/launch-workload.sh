@@ -41,9 +41,10 @@ allocation_id=$(bash "$SCRIPT_DIR/request-placement.sh" "$WORKLOAD_ID" "$CPU_REQ
 echo "Allocation ID: $allocation_id"
 echo ""
 
-# Extract node name from cluster.json to find its SSH port
-target_node=$(jq -r ".node_details[] | select(.qemu_pid_file != null) | .name" "$CLUSTER_JSON" | head -1)
-[ -n "$target_node" ] || die "Could not determine target node"
+# Get target node from scheduler's placement result
+PLACEMENT_RESULT_FILE="$STATE_DIR/placement-result.json"
+target_node=$(jq -r '.target_node' "$PLACEMENT_RESULT_FILE")
+[ -n "$target_node" ] || die "Could not determine target node from scheduler"
 
 # Find SSH port for this node
 ssh_port=$(jq -r ".node_details[] | select(.name == \"$target_node\") | .ssh_port" "$CLUSTER_JSON")
@@ -90,7 +91,7 @@ echo "Starting workload server on $target_node..."
 REMOTE_LOG_FILE="/tmp/workload-${WORKLOAD_ID}.log"
 ssh $SSH_OPTS -p "$ssh_port" "$SSH_USER@localhost" \
   bash -s "$WORKLOAD_ID" 8080 "$REMOTE_LOG_FILE" << 'REMOTE_SCRIPT' &
-SERVER_PID=$!
+SERVER_PID=${!:-unknown}
 
 #!/bin/bash
 set -euo pipefail
