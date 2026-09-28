@@ -91,7 +91,6 @@ echo "Starting workload server on $target_node..."
 REMOTE_LOG_FILE="/tmp/workload-${WORKLOAD_ID}.log"
 ssh $SSH_OPTS -p "$ssh_port" "$SSH_USER@localhost" \
   bash -s "$WORKLOAD_ID" 8080 "$REMOTE_LOG_FILE" << 'REMOTE_SCRIPT' &
-SERVER_PID=${!:-unknown}
 
 #!/bin/bash
 set -euo pipefail
@@ -151,6 +150,7 @@ trap 'echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) Shutting down" | tee -a "$LOG_FILE"; 
 serve_requests
 REMOTE_SCRIPT
 
+SERVER_PID=$!
 sleep 1
 
 echo "Server started (PID $SERVER_PID on remote)"
