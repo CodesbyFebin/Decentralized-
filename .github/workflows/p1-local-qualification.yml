@@ -1,95 +1,31 @@
-name: P1-LOCAL-VM-A01-QUALIFICATION
+name: P1 local VM tooling checks (not qualification)
 
 on:
   push:
     branches:
       - p1-local-vm
       - claude/friendly-gauss-kfxoc2
-  schedule:
-    - cron: '0 2 * * *'
   workflow_dispatch:
 
 jobs:
-  environment-declaration:
-    name: Emit Environment Declaration
+  tooling:
+    name: Syntax and evidence verifier tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Emit P1-LOCAL-VM-A01 environment declaration
-        run: |
-          echo "=== P1-LOCAL-VM-A01 Environment Declaration ==="
-          if [ -f validation/local-vm/config/domains.json ]; then
-            cat validation/local-vm/config/domains.json
-          else
-            echo '{"P1_DISTRIBUTED_VM_QUALIFICATION":"ELIGIBLE","P1_INDEPENDENT_PHYSICAL_HOST_QUALIFICATION":"NOT_ESTABLISHED","P2_INDEPENDENT_OPERATOR_QUALIFICATION":"NOT_ESTABLISHED"}'
-          fi
-
-  p1-e2e:
-    name: P1-LOCAL-VM-A01 Verification Framework
-    needs: environment-declaration
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Verify toolkit structure
-        run: |
-          echo "P1-LOCAL-VM-A01 Verification Framework"
-          echo "======================================="
-          echo ""
-          echo "Checking toolkit structure..."
-          if [ -d validation/local-vm ]; then
-            echo "✓ validation/local-vm directory exists"
-          else
-            echo "✗ ERROR: validation/local-vm not found"
-            exit 1
-          fi
-          echo "Directory contents:"
-          ls -la validation/local-vm/
-
-      - name: Create mock evidence
-        run: |
-          mkdir -p p1-evidence/dh-local-01
-          mkdir -p p1-evidence/dh-local-02
-          mkdir -p p1-evidence/dh-local-03
-          echo '{"node_id":"1"}' > p1-evidence/dh-local-01/baseline-evidence.json
-          echo '{"node_id":"2"}' > p1-evidence/dh-local-02/baseline-evidence.json
-          echo '{"node_id":"3"}' > p1-evidence/dh-local-03/baseline-evidence.json
-          echo "✓ Mock evidence created"
-
-      - name: Upload evidence
-        if: always()
-        uses: actions/upload-artifact@v4
+      - uses: actions/setup-go@v5
         with:
-          name: p1-evidence-${{ github.run_id }}
-          path: p1-evidence/
-          retention-days: 30
-
-  tamper-copy-negative-control:
-    name: Tamper-Copy Negative Control
-    needs: p1-e2e
-    runs-on: ubuntu-latest
-    if: always()
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Download evidence artifacts
-        uses: actions/download-artifact@v4
-        continue-on-error: true
-        with:
-          name: p1-evidence-${{ github.run_id }}
-          path: ./p1-evidence/
-
-      - name: Verify evidence
+          go-version-file: go.mod
+          cache: true
+      - name: Shell syntax
+        run: bash -n p1-qualification-master.sh validation/local-vm/scripts/*.sh validation/local-vm/tests/*.sh
+      - name: Preflight gate regression
+        run: bash validation/local-vm/tests/preflight-gate.sh
+      - name: SSH diagnostic regression
+        run: python3 validation/local-vm/tests/bootstrap-diagnostics.py
+      - name: Evidence verifier unit tests
+        run: go test ./pkg/evidence
+      - name: Scope declaration
         run: |
-          echo "Tamper-Copy Negative Control"
-          echo "============================"
-          if [ -d p1-evidence ]; then
-            echo "✓ Evidence artifacts downloaded"
-            echo "Evidence files:"
-            find p1-evidence -type f
-          else
-            echo "✓ Evidence artifacts not available (expected in CI)"
-          fi
+          echo 'These checks use CI runner processes and synthetic test inputs.'
+          echo 'P1-LOCAL-VM-A01 qualification remains UNKNOWN until actual QEMU VM and signed evidence gates pass.'
