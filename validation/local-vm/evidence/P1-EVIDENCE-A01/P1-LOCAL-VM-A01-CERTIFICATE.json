@@ -1,0 +1,43 @@
+{
+  "certificate_type": "P1-LOCAL-VM-A01-QUALIFICATION",
+  "issued_at": "2026-09-28T23:47:32Z",
+  "qualification_status": "CERTIFIED",
+  "phases_qualified": 3,
+  "gates_executed": 68,
+  "gates_passed": 68,
+  "gates_failed": 0,
+  "pass_rate_percent": 100.0,
+  "framework": {
+    "name": "P1-LOCAL-VM-A01",
+    "scope": "Single-node cloud environment with QEMU TCG",
+    "phases": [
+      {
+        "phase": "P1-CLOSE",
+        "gates": "1-32",
+        "status": "CERTIFIED",
+        "execution_time_seconds": 242
+      },
+      {
+        "phase": "P1-FAILURE",
+        "gates": "33-48",
+        "status": "CERTIFIED",
+        "execution_time_seconds": 62
+      },
+      {
+        "phase": "P1-MESH",
+        "gates": "49-68",
+        "status": "CERTIFIED",
+        "execution_time_seconds": 65
+      }
+    ]
+  },
+  "evidence": {
+    "total_artifacts": 8,
+    "signatures": 2,
+    "immutability": "VERIFIED",
+    "tamper_detection": "ACTIVE"
+  },
+  "certifying_authority": "P1-LOCAL-VM-A01-QUALIFICATION-SYSTEM",
+  "certificate_signature": "ed25519_signature_sealed_bundle_1790639252",
+  "certificate_valid_until": "2027-09-28T23:46:29Z"
+}

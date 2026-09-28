@@ -1,0 +1,23 @@
+{
+  "qualification_id": "P1-LOCAL-VM-A01",
+  "final_status": "CERTIFIED",
+  "completion_date": "2026-09-28T23:47:32Z",
+  "total_phases": 3,
+  "total_gates": 68,
+  "gates_passed": 68,
+  "gates_failed": 0,
+  "pass_rate_percent": 100.0,
+  "phases": {
+    "p1_close": {"gates": 32, "status": "CERTIFIED"},
+    "p1_failure": {"gates": 16, "status": "CERTIFIED"},
+    "p1_mesh": {"gates": 20, "status": "CERTIFIED"}
+  },
+  "evidence_validation": {
+    "gates_69_72": {"phase": "Collection & Sealing", "status": "PASS"},
+    "gates_73_76": {"phase": "Verification & Validation", "status": "PASS"},
+    "gates_77_80": {"phase": "Tamper Detection & Certification", "status": "PASS"}
+  },
+  "certification": "APPROVED",
+  "certificate_file": "P1-LOCAL-VM-A01-CERTIFICATE.json",
+  "audit_trail": "audit-trail.log"
+}
