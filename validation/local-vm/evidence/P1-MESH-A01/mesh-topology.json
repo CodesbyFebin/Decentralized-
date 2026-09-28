@@ -1,0 +1,14 @@
+{
+  "mesh_type": "full-mesh",
+  "nodes": 3,
+  "topology": [
+    {"node": "dh-node-1", "role": "leader", "term": 2},
+    {"node": "dh-node-2", "role": "follower", "term": 2},
+    {"node": "dh-node-3", "role": "untrusted", "term": 2}
+  ],
+  "connections": [
+    {"from": "dh-node-1", "to": "dh-node-2", "status": "connected"},
+    {"from": "dh-node-1", "to": "dh-node-3", "status": "connected"},
+    {"from": "dh-node-2", "to": "dh-node-3", "status": "connected"}
+  ]
+}
