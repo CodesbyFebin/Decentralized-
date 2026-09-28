@@ -26,27 +26,20 @@ echo ""
 orphaned_ids=()
 active_count=0
 
-# Process each node and collect orphaned allocation IDs
+# Process each node and collect orphaned allocation IDs using temp files
+tmpfile=$(mktemp)
 nodes=$(jq -r '.node_capacity[].node' "$RESOURCELEDGER_JSON")
+
 for node in $nodes; do
   node_ssh_port=$(jq -r ".node_details[] | select(.name == \"$node\") | .ssh_port" "$CLUSTER_JSON")
-
   echo "Checking node: $node (port $node_ssh_port)"
 
-  # Get allocations for this node
-  allocations=$(jq ".node_capacity[] | select(.node == \"$node\") | .allocations[]" "$RESOURCELEDGER_JSON")
-
-  while IFS= read -r alloc_json; do
+  # Use jq -c to output compact JSON objects, one per line
+  jq -c ".node_capacity[] | select(.node == \"$node\") | .allocations[] | select(.state != \"RELEASED\" and .state != \"STALE\")" "$RESOURCELEDGER_JSON" 2>/dev/null | while IFS= read -r alloc_json; do
     [ -z "$alloc_json" ] && continue
 
     alloc_id=$(echo "$alloc_json" | jq -r '.allocation_id')
-    alloc_state=$(echo "$alloc_json" | jq -r '.state')
     workload_id=$(echo "$alloc_json" | jq -r '.workload_id')
-
-    # Skip already released or stale allocations
-    if [ "$alloc_state" = "RELEASED" ] || [ "$alloc_state" = "STALE" ]; then
-      continue
-    fi
 
     # Check if workload is actually running on the node
     workload_running=$(ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
@@ -55,13 +48,18 @@ for node in $nodes; do
 
     if [ "$workload_running" -gt 0 ]; then
       echo "  ✓ $alloc_id ($workload_id): workload running"
-      ((active_count++))
+      echo "ACTIVE" >> "$tmpfile"
     else
       echo "  ✗ $alloc_id ($workload_id): NO RUNNING WORKLOAD (orphaned)"
-      orphaned_ids+=("$alloc_id")
+      echo "$alloc_id" >> "$tmpfile"
     fi
-  done < <(echo "$allocations")
+  done
 done
+
+# Read results back
+active_count=$(grep -c "^ACTIVE$" "$tmpfile" 2>/dev/null || echo "0")
+mapfile -t orphaned_ids < <(grep -v "^ACTIVE$" "$tmpfile" 2>/dev/null)
+rm -f "$tmpfile"
 
 # If orphaned allocations found, optionally mark as STALE and recover capacity
 if [ ${#orphaned_ids[@]} -gt 0 ] && [ -n "$AUTO_RELEASE" ]; then
