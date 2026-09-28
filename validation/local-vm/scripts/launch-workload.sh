@@ -158,9 +158,9 @@ echo ""
 
 # Generate continuous traffic
 echo "Generating traffic to $target_node:8080..."
+TRAFFIC_TEMP_LOG="$TRAFFIC_LOG.tmp"
 {
   deadline=$((SECONDS + DURATION))
-  request_count=0
 
   while (( SECONDS < deadline )); do
     # Send HTTP request to workload server
@@ -169,13 +169,21 @@ echo "Generating traffic to $target_node:8080..."
       echo "Host: localhost:8080"
       echo "Connection: close"
       echo ""
-    } | ssh $SSH_OPTS -p "$ssh_port" "$SSH_USER@localhost" "nc -q 1 127.0.0.1 8080" 2>/dev/null | grep -E "^{" | while read response; do
-      request_count=$((request_count + 1))
-      echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) Request $request_count: $response" >> "$TRAFFIC_LOG"
-    done || true
+    } | ssh $SSH_OPTS -p "$ssh_port" "$SSH_USER@localhost" "nc -q 1 127.0.0.1 8080" 2>/dev/null | grep -E "^{" >> "$TRAFFIC_TEMP_LOG" || true
 
     sleep 1
   done
+
+  # Count responses and format for final log
+  if [ -f "$TRAFFIC_TEMP_LOG" ]; then
+    request_count=$(wc -l < "$TRAFFIC_TEMP_LOG")
+    while IFS= read -r response; do
+      echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) Request $((request_count++)): $response" >> "$TRAFFIC_LOG"
+    done < "$TRAFFIC_TEMP_LOG"
+    rm -f "$TRAFFIC_TEMP_LOG"
+  else
+    request_count=0
+  fi
 
   echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) Traffic generation complete: $request_count requests" | tee -a "$TRAFFIC_LOG"
 } &
