@@ -36,8 +36,5 @@ bootstrap.fingerprint
 /chaos-reports/runner/
 
 # P1-LOCAL-VM-A01 runtime state (ephemeral QEMU cluster state, not tracked)
-/validation/local-vm/state/node-*/
-/validation/local-vm/state/*.json
-/validation/local-vm/state/*.img
-/validation/local-vm/state/*.iso
-/validation/local-vm/state/workload-logs/
+/validation/local-vm/state/
+/p1-evidence/
