@@ -173,28 +173,29 @@ echo "Server launcher PID $SERVER_PID; remote port $REMOTE_PORT"
 echo ""
 
 # Generate continuous traffic
-echo "Generating traffic to $target_node:8080..."
+echo "Generating traffic to $target_node:$REMOTE_PORT..."
 TRAFFIC_TEMP_LOG="$TRAFFIC_LOG.tmp"
 {
   deadline=$((SECONDS + DURATION))
 
   while (( SECONDS < deadline )); do
     # Send HTTP request to workload server
-    {
-      echo "GET / HTTP/1.1"
-      echo "Host: localhost:$REMOTE_PORT"
-      echo "Connection: close"
-      echo ""
-    } | ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -p "$ssh_port" "$SSH_USER@localhost" "nc -q 1 127.0.0.1 "$REMOTE_PORT"" 2>/dev/null | grep -E "^{" >> "$TRAFFIC_TEMP_LOG" || true
+    response="$(ssh -i "$SSH_KEY" -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -p "$ssh_port" "$SSH_USER@localhost" \
+      "python3 -c 'import urllib.request; print(urllib.request.urlopen(\"http://127.0.0.1:$REMOTE_PORT/\", timeout=2).read().decode())'" 2>/dev/null || true)"
+    if printf '%s\n' "$response" | grep -F "\"workload_id\": \"$WORKLOAD_ID\"" >/dev/null 2>&1; then
+      printf '%s\n' "$response" >> "$TRAFFIC_TEMP_LOG"
+    fi
 
     sleep 1
   done
 
   # Count responses and format for final log
   if [ -f "$TRAFFIC_TEMP_LOG" ]; then
-    request_count=$(wc -l < "$TRAFFIC_TEMP_LOG")
+    request_count="$(wc -l < "$TRAFFIC_TEMP_LOG" | tr -d ' ')"
+    request_number=0
     while IFS= read -r response; do
-      echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) Request $((request_count++)): $response" >> "$TRAFFIC_LOG"
+      request_number=$((request_number + 1))
+      echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) Request $request_number: $response" >> "$TRAFFIC_LOG"
     done < "$TRAFFIC_TEMP_LOG"
     rm -f "$TRAFFIC_TEMP_LOG"
   else
@@ -238,7 +239,7 @@ fi
 sleep 1
 
 # Terminate server
-ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -p "$ssh_port" "$SSH_USER@localhost" "pkill -f 'nc -l 127.0.0.1 "$REMOTE_PORT"'" || true
+ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -p "$ssh_port" "$SSH_USER@localhost" "pkill -f 'workload-$WORKLOAD_ID' || true" >/dev/null 2>&1 || true
 
 # Wait for monitor
 wait $MONITOR_PID || true
