@@ -46,10 +46,22 @@ echo "Started ${#WORKLOAD_PIDS[@]} workloads"
 echo "Waiting for completion..."
 echo ""
 
-# Wait for all workloads to complete
-for pid in "${WORKLOAD_PIDS[@]}"; do
-  wait $pid || true
+# Wait for all workloads to complete and track failures
+failed_count=0
+for i in "${!WORKLOAD_PIDS[@]}"; do
+  pid=${WORKLOAD_PIDS[$i]}
+  if ! wait $pid; then
+    failed_count=$((failed_count + 1))
+    echo "ERROR: Workload ${workloads[$i]} (PID $pid) failed"
+  fi
 done
+
+if [ $failed_count -gt 0 ]; then
+  echo ""
+  echo "=== Baseline Workload Failed ===" >&2
+  echo "$failed_count of ${#WORKLOAD_PIDS[@]} workloads failed" >&2
+  exit 1
+fi
 
 echo ""
 echo "=== Baseline Workload Complete ==="

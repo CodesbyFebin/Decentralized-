@@ -37,9 +37,15 @@ ALLOCATION_ID="alloc-$(date -u +%s)-$(od -An -N4 -tu4 /dev/urandom | tr -d ' ')"
 node_data="$(jq ".node_capacity[] | select(.node == \"$NODE_NAME\")" "$RESOURCELEDGER_JSON")"
 [ -n "$node_data" ] || die "Node '$NODE_NAME' not found in ResourceLedger"
 
-cpu_available="$(echo "$node_data" | jq '.cpu_cores - .cpu_allocated')"
-memory_available="$(echo "$node_data" | jq '.memory_mb - .memory_allocated_mb')"
-disk_available="$(echo "$node_data" | jq '.disk_gb - .disk_allocated_gb')"
+# Calculate allocated from ACTIVE allocations only
+active_allocated=$(echo "$node_data" | jq '[.allocations[] | select(.state == "ACTIVE") | {cpu: .cpu, mem: .memory_mb, disk: .disk_gb}] | {cpu: map(.cpu) | add // 0, mem: map(.mem) | add // 0, disk: map(.disk) | add // 0}')
+cpu_active=$(echo "$active_allocated" | jq '.cpu')
+mem_active=$(echo "$active_allocated" | jq '.mem')
+disk_active=$(echo "$active_allocated" | jq '.disk')
+
+cpu_available="$(echo "$node_data" | jq -n --argjson total "$($node_data | jq '.cpu_cores')" --argjson active "$cpu_active" '$total - $active')"
+memory_available="$(echo "$node_data" | jq -n --argjson total "$($node_data | jq '.memory_mb')" --argjson active "$mem_active" '$total - $active')"
+disk_available="$(echo "$node_data" | jq -n --argjson total "$($node_data | jq '.disk_gb')" --argjson active "$disk_active" '$total - $active')"
 
 # Check allocation feasibility using awk for floating-point comparison
 if awk -v req="$CPU_REQ" -v avail="$cpu_available" 'BEGIN { exit !(req > avail) }'; then
