@@ -1,24 +1,15 @@
 #!/bin/bash
 # P1-LOCAL-VM-A01: Create Local VM Cluster
-# Single physical host, 3 distinct VMs proving VM/OS/filesystem/node failure boundaries
-# Supports: QEMU (Linux, macOS), others explicitly not supported in this phase
-# Usage: ./create-vm-cluster.sh qemu [options]
+# Single physical host, 3 distinct QEMU VMs
+# Creates persistent cluster.json state file
+# Usage: ./create-vm-cluster.sh qemu [--nodes N] [--cpu C] [--memory M] [--disk D]
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-CONFIG_DIR="$SCRIPT_DIR/../config"
-CLOUD_INIT_DIR="$SCRIPT_DIR/../cloud-init"
-CLUSTER_STATE_DIR="$REPO_ROOT/.p1-local-vm-state"
-
-# Defaults
-HYPERVISOR="${1:-qemu}"
-NODES=3
-CPU_PER_NODE=2
-MEMORY_PER_NODE=4096  # MB
-DISK_PER_NODE=50      # GB
-SSH_KEY_PATH="$HOME/.ssh/p1-local-vm"
+STATE_DIR="$REPO_ROOT/validation/local-vm/state"
+CLOUD_INIT_DIR="$REPO_ROOT/validation/local-vm/cloud-init"
 
 # Detect architecture
 ARCH=$(uname -m)
@@ -39,237 +30,240 @@ case "$ARCH" in
     ;;
 esac
 
+# Defaults
+HYPERVISOR="${1:-qemu}"
+NODES=3
+CPU_PER_NODE=2
+MEMORY_PER_NODE=4096
+DISK_PER_NODE=50
+SSH_KEY_PATH="$HOME/.ssh/p1-local-vm"
 UBUNTU_IMAGE_URL="https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-${UBUNTU_ARCH}.img"
 
-echo "=== P1-LOCAL-VM-A01: Local VM Cluster Setup ==="
-echo "Host Architecture: $ARCH"
-echo "QEMU Architecture: $QEMU_ARCH"
+# Parse arguments
+shift || true
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --nodes) NODES="$2"; shift 2 ;;
+    --cpu) CPU_PER_NODE="$2"; shift 2 ;;
+    --memory) MEMORY_PER_NODE="$2"; shift 2 ;;
+    --disk) DISK_PER_NODE="$2"; shift 2 ;;
+    --ssh-key) SSH_KEY_PATH="$2"; shift 2 ;;
+    *) echo "Unknown option: $1"; exit 1 ;;
+  esac
+done
+
+echo "=== P1-LOCAL-VM-A01: Create Local VM Cluster ==="
+echo "Host Architecture: $ARCH ($QEMU_ARCH)"
+echo "QEMU Binary: $QEMU_BINARY"
 echo "Hypervisor: $HYPERVISOR"
 echo "Nodes: $NODES"
 echo "CPU/Node: $CPU_PER_NODE cores"
 echo "Memory/Node: $MEMORY_PER_NODE MB"
 echo "Disk/Node: $DISK_PER_NODE GB"
-echo "Ubuntu Image: $UBUNTU_IMAGE_URL"
 echo ""
 
+# Validate hypervisor
+if [ "$HYPERVISOR" != "qemu" ] && [ "$HYPERVISOR" != "qemu-no-kvm" ]; then
+  echo "ERROR: Only 'qemu' hypervisor is supported for P1-LOCAL-VM-A01"
+  exit 1
+fi
+
 # Check prerequisites
-check_prerequisites() {
-  echo "Checking prerequisites..."
-  local missing=()
+if ! command -v "$QEMU_BINARY" &> /dev/null; then
+  echo "ERROR: $QEMU_BINARY not found"
+  echo "Cannot proceed. Install QEMU first."
+  exit 1
+fi
 
-  if ! command -v "$QEMU_BINARY" &> /dev/null; then
-    missing+=("$QEMU_BINARY")
-  fi
+if ! command -v qemu-img &> /dev/null; then
+  echo "ERROR: qemu-img not found"
+  exit 1
+fi
 
-  if ! command -v qemu-img &> /dev/null; then
-    missing+=("qemu-img")
-  fi
+if ! command -v ssh-keygen &> /dev/null; then
+  echo "ERROR: ssh-keygen not found"
+  exit 1
+fi
 
-  if ! command -v ssh-keygen &> /dev/null; then
-    missing+=("ssh-keygen")
-  fi
+if ! command -v curl &> /dev/null; then
+  echo "ERROR: curl not found"
+  exit 1
+fi
 
-  if ! command -v curl &> /dev/null; then
-    missing+=("curl")
-  fi
+echo "✓ All prerequisites available"
+echo ""
 
-  if [ ${#missing[@]} -gt 0 ]; then
-    echo "ERROR: Missing prerequisites: ${missing[*]}"
-    echo ""
-    echo "To install on macOS:"
-    echo "  brew install qemu"
-    echo ""
-    echo "To install on Ubuntu/Debian:"
-    echo "  sudo apt-get install qemu qemu-system qemu-system-x86-64 qemu-img curl"
-    echo ""
+# Create/verify SSH key
+if [ ! -f "$SSH_KEY_PATH" ]; then
+  echo "Creating SSH key: $SSH_KEY_PATH"
+  mkdir -p "$(dirname "$SSH_KEY_PATH")"
+  ssh-keygen -t rsa -b 4096 -f "$SSH_KEY_PATH" -N ""
+  chmod 600 "$SSH_KEY_PATH"
+  chmod 644 "$SSH_KEY_PATH.pub"
+fi
+
+SSH_PUBLIC_KEY=$(cat "$SSH_KEY_PATH.pub")
+echo "✓ SSH key ready"
+echo ""
+
+# Create state directory
+mkdir -p "$STATE_DIR"
+
+# Check port availability before creating anything
+echo "Checking SSH port availability..."
+for ((i=1; i<=NODES; i++)); do
+  PORT=$((2200 + i))
+  if lsof -nP -iTCP:$PORT -sTCP:LISTEN 2>/dev/null | grep -q LISTEN; then
+    echo "ERROR: Port $PORT already in use"
     exit 1
   fi
+done
+echo "✓ All SSH ports available"
+echo ""
 
-  echo "✓ All prerequisites available"
-}
+# Download base Ubuntu image
+echo "Setting up base Ubuntu image..."
+UBUNTU_IMAGE="$STATE_DIR/ubuntu-${UBUNTU_ARCH}.img"
 
-# Create SSH key if needed
-setup_ssh_key() {
-  if [ ! -f "$SSH_KEY_PATH" ]; then
-    echo "Creating SSH key: $SSH_KEY_PATH"
-    mkdir -p "$(dirname "$SSH_KEY_PATH")"
-    ssh-keygen -t rsa -b 4096 -f "$SSH_KEY_PATH" -N ""
-    chmod 600 "$SSH_KEY_PATH"
-    chmod 644 "$SSH_KEY_PATH.pub"
-  fi
+if [ ! -f "$UBUNTU_IMAGE" ]; then
+  echo "Downloading Ubuntu cloud image from:"
+  echo "  $UBUNTU_IMAGE_URL"
 
-  SSH_PUBLIC_KEY=$(cat "$SSH_KEY_PATH.pub")
-  echo "✓ SSH key ready: $SSH_KEY_PATH"
-}
-
-# Download Ubuntu cloud image
-download_ubuntu_image() {
-  local image_path="$CLUSTER_STATE_DIR/ubuntu-${UBUNTU_ARCH}.img"
-
-  if [ -f "$image_path" ]; then
-    echo "✓ Ubuntu image already present: $image_path"
-    return
-  fi
-
-  echo "Downloading Ubuntu cloud image..."
-  mkdir -p "$CLUSTER_STATE_DIR"
-
-  if ! curl -L -o "$image_path" "$UBUNTU_IMAGE_URL"; then
-    echo "ERROR: Failed to download Ubuntu image from $UBUNTU_IMAGE_URL"
-    rm -f "$image_path"
+  if ! curl -L --progress-bar -o "$UBUNTU_IMAGE" "$UBUNTU_IMAGE_URL"; then
+    echo "ERROR: Failed to download Ubuntu image"
+    rm -f "$UBUNTU_IMAGE"
     exit 1
   fi
+fi
+echo "✓ Base image ready: $UBUNTU_IMAGE"
+echo ""
 
-  echo "✓ Ubuntu image downloaded: $image_path"
-}
+# Create VM disks and cloud-init
+echo "Creating $NODES VM disks and cloud-init configurations..."
+SSH_PORTS=()
 
-# Create individual VM disk from base image
-create_vm_disk() {
-  local node_id=$1
-  local disk_path="$CLUSTER_STATE_DIR/node-${node_id}/disk.qcow2"
-  local base_image="$CLUSTER_STATE_DIR/ubuntu-${UBUNTU_ARCH}.img"
+for ((i=1; i<=NODES; i++)); do
+  NODE_DIR="$STATE_DIR/node-${i}"
+  NODE_NAME="dh-node-${i}"
+  SSH_PORT=$((2200 + i))
+  SSH_PORTS+=("$SSH_PORT")
 
-  mkdir -p "$(dirname "$disk_path")"
+  mkdir -p "$NODE_DIR"
 
-  if [ -f "$disk_path" ]; then
-    echo "  VM disk already exists: $disk_path"
-    return
+  echo "  Node $i: $NODE_NAME (SSH port $SSH_PORT)"
+
+  # Create qcow2 disk overlay (copy-on-write, sparse)
+  DISK="$NODE_DIR/disk.qcow2"
+  if [ ! -f "$DISK" ]; then
+    qemu-img create -f qcow2 -b "$UBUNTU_IMAGE" "$DISK" "${DISK_PER_NODE}G"
   fi
 
-  # Create qcow2 overlay from base image (copy-on-write, sparse)
-  qemu-img create -f qcow2 -b "$base_image" "$disk_path" "${DISK_PER_NODE}G"
-  echo "  ✓ Created disk: $disk_path"
-}
-
-# Generate per-node cloud-init config
-generate_cloud_init() {
-  local node_id=$1
-  local node_name="dh-node-${node_id}"
-  local seed_dir="$CLUSTER_STATE_DIR/node-${node_id}/seed"
-
-  mkdir -p "$seed_dir"
-
-  # Substitute node-specific values into user-data
-  cat > "$seed_dir/user-data" << EOF
+  # Generate cloud-init user-data
+  cat > "$NODE_DIR/user-data" << CLOUD_INIT_EOF
 #cloud-config
-hostname: $node_name
-fqdn: $node_name.local
+hostname: $NODE_NAME
+fqdn: $NODE_NAME.local
+preserve_hostname: true
 
 users:
   - name: ubuntu
     sudo: ALL=(ALL) NOPASSWD:ALL
     ssh_authorized_keys:
       - $SSH_PUBLIC_KEY
+    home: /home/ubuntu
+    shell: /bin/bash
 
 packages:
   - openssh-server
   - curl
   - jq
-  - cloud-utils
+  - ca-certificates
+  - systemd
 
 runcmd:
-  - echo "P1-LOCAL-VM-A01 Node: $node_name" > /etc/motd
-  - mkdir -p /opt/decentralized-host
-  - mkdir -p /var/lib/decentralized-host
-  - mkdir -p /var/log/decentralized-host
-  - echo "$node_name" > /opt/decentralized-host/node-id
+  - mkdir -p /opt/decentralized-host /var/lib/decentralized-host /var/log/decentralized-host
+  - echo "$NODE_NAME" > /etc/hostname
+  - hostnamectl set-hostname "$NODE_NAME"
   - systemctl enable ssh
-  - systemctl restart ssh
-EOF
+  - systemctl start ssh
+  - echo "P1-LOCAL-VM-A01 Node: $NODE_NAME ready" > /var/log/cloud-init-success.log
 
-  # Generate empty meta-data for cloud-init
-  cat > "$seed_dir/meta-data" << EOF
-instance-id: $node_id
-local-hostname: $node_name
-EOF
+power_state:
+  mode: poweroff
+  timeout: 0
+  condition: False
+CLOUD_INIT_EOF
 
-  echo "  ✓ Generated cloud-init for node $node_id: $seed_dir"
-}
+  # Generate cloud-init meta-data
+  cat > "$NODE_DIR/meta-data" << CLOUD_META_EOF
+instance-id: $i
+local-hostname: $NODE_NAME
+CLOUD_META_EOF
 
-# Setup QEMU cluster
-setup_qemu_cluster() {
-  echo ""
-  echo "Setting up QEMU-based cluster ($QEMU_ARCH)..."
+  echo "    ✓ Disk: $DISK"
+  echo "    ✓ Cloud-init: $NODE_DIR"
+done
 
-  check_prerequisites
-  echo ""
+echo ""
 
-  setup_ssh_key
-  echo ""
+# Create cluster.json state file (single source of truth)
+CLUSTER_JSON="$STATE_DIR/cluster.json"
 
-  download_ubuntu_image
-  echo ""
-
-  echo "Creating VM disks and cloud-init..."
-  for ((i=1; i<=NODES; i++)); do
-    echo "  Node $i:"
-    create_vm_disk "$i"
-    generate_cloud_init "$i"
-  done
-  echo ""
-
-  # Create cluster manifest
-  cat > "$CLUSTER_STATE_DIR/manifest.json" << EOF
+cat > "$CLUSTER_JSON" << JSON_EOF
 {
   "qualification": "P1-LOCAL-VM-A01",
   "created_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-  "host_arch": "$ARCH",
-  "qemu_arch": "$QEMU_ARCH",
+  "source_sha": "$(cd "$REPO_ROOT" && git rev-parse HEAD)",
+  "hypervisor": "qemu",
+  "host_architecture": "$ARCH",
+  "guest_architecture": "$QEMU_ARCH",
+  "qemu_binary": "$QEMU_BINARY",
   "nodes": $NODES,
   "cpu_per_node": $CPU_PER_NODE,
   "memory_per_node_mb": $MEMORY_PER_NODE,
   "disk_per_node_gb": $DISK_PER_NODE,
-  "base_image": "ubuntu-jammy-cloudimg-${UBUNTU_ARCH}",
+  "base_image": "$UBUNTU_IMAGE",
   "ssh_key_path": "$SSH_KEY_PATH",
-  "state_directory": "$CLUSTER_STATE_DIR",
-  "nodes": [
-EOF
+  "state_directory": "$STATE_DIR",
+  "status": "CREATED",
+  "node_details": [
+JSON_EOF
 
-  for ((i=1; i<=NODES; i++)); do
-    local comma=$([[ $i -lt $NODES ]] && echo "," || echo "")
-    cat >> "$CLUSTER_STATE_DIR/manifest.json" << EOF
+for ((i=1; i<=NODES; i++)); do
+  NODE_DIR="$STATE_DIR/node-${i}"
+  SSH_PORT=$((2200 + i))
+  COMMA=$([[ $i -lt $NODES ]] && echo "," || echo "")
+
+  cat >> "$CLUSTER_JSON" << JSON_NODE_EOF
     {
       "id": $i,
       "name": "dh-node-${i}",
-      "disk": "$CLUSTER_STATE_DIR/node-${i}/disk.qcow2",
-      "seed": "$CLUSTER_STATE_DIR/node-${i}/seed",
-      "ssh_port": $((2200 + i))
-    }${comma}
-EOF
-  done
+      "disk": "$NODE_DIR/disk.qcow2",
+      "cloud_init_dir": "$NODE_DIR",
+      "ssh_port": $SSH_PORT,
+      "qemu_pid_file": "$NODE_DIR/qemu.pid",
+      "qemu_socket": "$NODE_DIR/qemu.sock",
+      "serial_log": "$NODE_DIR/serial.log"
+    }${COMMA}
+JSON_NODE_EOF
+done
 
-  cat >> "$CLUSTER_STATE_DIR/manifest.json" << EOF
+cat >> "$CLUSTER_JSON" << JSON_END_EOF
   ]
 }
-EOF
+JSON_END_EOF
 
-  echo "✓ Cluster manifest: $CLUSTER_STATE_DIR/manifest.json"
-}
+echo "✓ Cluster configuration persisted: $CLUSTER_JSON"
+echo ""
 
-# Main dispatch
-case "$HYPERVISOR" in
-  qemu|qemu-no-kvm)
-    setup_qemu_cluster
-    ;;
-  utm|virtualbox|docker)
-    echo "ERROR: Hypervisor '$HYPERVISOR' not yet supported for P1-LOCAL-VM-A01"
-    echo "Use 'qemu' for Linux/macOS (Intel/Apple Silicon)"
-    exit 1
-    ;;
-  *)
-    echo "ERROR: Unsupported hypervisor: $HYPERVISOR"
-    echo "Supported: qemu"
-    exit 1
-    ;;
-esac
+cat "$CLUSTER_JSON" | jq '.' 2>/dev/null || cat "$CLUSTER_JSON"
 
 echo ""
-echo "=== Cluster Setup Complete ==="
-echo "Cluster state: $CLUSTER_STATE_DIR"
+echo "=== Cluster Creation Complete ==="
 echo ""
 echo "Next steps:"
-echo "  1. Review cluster manifest:"
-echo "     cat $CLUSTER_STATE_DIR/manifest.json"
+echo "  1. Verify prerequisites:"
+echo "     bash $SCRIPT_DIR/preflight.sh qemu"
 echo ""
 echo "  2. Start cluster:"
 echo "     bash $SCRIPT_DIR/start-cluster.sh"
@@ -277,5 +271,4 @@ echo ""
 echo "  3. Bootstrap nodes:"
 echo "     bash $SCRIPT_DIR/bootstrap-nodes.sh"
 echo ""
-echo "  4. Destroy cluster (when done):"
-echo "     bash $SCRIPT_DIR/destroy-cluster.sh"
+echo "State directory: $STATE_DIR"
