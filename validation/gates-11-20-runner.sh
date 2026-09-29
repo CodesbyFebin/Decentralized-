@@ -78,13 +78,13 @@ EOF
   done
   wait
 
-  # Count created apps
-  APPS_CREATED=$(dh get apps 2>/dev/null | grep -c "gate-11-concurrent" || echo "0")
+  # Count created apps (remove newlines)
+  APPS_CREATED=$(dh get apps 2>/dev/null | grep "gate-11-concurrent" | wc -l | tr -d '\n' || echo "0")
 
   # Cleanup
   rm -rf "$APP_DIR"
 
-  if [ "$APPS_CREATED" -ge 8 ]; then
+  if [ "${APPS_CREATED:-0}" -ge 8 ]; then
     gate_pass "11" "Created $APPS_CREATED/10 concurrent apps (deterministic admission under load)" | tee "$GATES_DIR/gate-11.json"
     log_gate "11" "PASS" "Concurrent admission verified"
   else
@@ -124,8 +124,8 @@ EOF
   # Attempt to apply - should either reject or admit with placement failures
   APPLY_OUTPUT=$(dh apply -f "$APP_DIR/overload.yaml" 2>&1 || echo "REJECTED")
 
-  # Check if app was created at all
-  APP_EXISTS=$(dh get apps 2>/dev/null | grep -c "gate-12-overload" || echo "0")
+  # Check if app was created at all (clean newlines)
+  APP_EXISTS=$(dh get apps 2>/dev/null | grep "gate-12-overload" | wc -l | tr -d '\n' || echo "0")
 
   rm -rf "$APP_DIR"
 
@@ -133,13 +133,13 @@ EOF
   # 1. App was rejected outright, OR
   # 2. App was created but has no admitted/running replicas (admission denied)
 
-  if echo "$APPLY_OUTPUT" | grep -q "insufficient\|exceeds\|too large\|denied" || [ "$APP_EXISTS" -eq 0 ]; then
+  if echo "$APPLY_OUTPUT" | grep -q "insufficient\|exceeds\|too large\|denied" || [ "${APP_EXISTS:-0}" -eq 0 ]; then
     gate_pass "12" "Over-subscription correctly enforced (app rejected or placement denied)" | tee "$GATES_DIR/gate-12.json"
     log_gate "12" "PASS" "Capacity enforcement verified"
   else
     # Even if app was created, verify it doesn't have replicas running
-    RUNNING=$(dh describe app gate-12-overload 2>/dev/null | grep -c "Running\|Admitted" || echo "0")
-    if [ "$RUNNING" -eq 0 ]; then
+    RUNNING=$(dh describe app gate-12-overload 2>/dev/null | grep "Running\|Admitted" | wc -l | tr -d '\n' || echo "0")
+    if [ "${RUNNING:-0}" -eq 0 ]; then
       gate_pass "12" "Over-subscription contained (no replicas admitted)" | tee "$GATES_DIR/gate-12.json"
       log_gate "12" "PASS" "Capacity enforcement verified"
     else
@@ -230,7 +230,7 @@ echo "Gate 16: Cascade Failure Containment (stop 2 nodes, verify 1 node survives
   sleep 5
 
   # Check if we can still query system state (would fail if all nodes down)
-  NODES_ALIVE=$(dh get nodes 2>/dev/null | grep -c "Ready\|Unknown" || echo "0")
+  NODES_ALIVE=$(dh get nodes 2>/dev/null | grep "Ready\|Unknown" | wc -l | tr -d '\n' || echo "0")
 
   # Attempt to create an app while 2 nodes are down
   APP_DIR="/tmp/gate-16-$$"
@@ -259,11 +259,11 @@ EOF
   podman start dh-node-1 dh-node-2 2>/dev/null
   sleep 10
 
-  if [ "$NODES_ALIVE" -ge 1 ]; then
-    gate_pass "16" "System remained queryable with 2/3 nodes down (cascade containment verified)" | tee "$GATES_DIR/gate-16.json"
+  if [ "${NODES_ALIVE:-0}" -ge 1 ]; then
+    gate_pass "16" "System remained queryable (cascade containment verified)" | tee "$GATES_DIR/gate-16.json"
     log_gate "16" "PASS" "Cascade containment verified"
   else
-    gate_fail "16" "All nodes became unreachable (cascade propagated)" | tee "$GATES_DIR/gate-16.json"
+    gate_fail "16" "System became unreachable" | tee "$GATES_DIR/gate-16.json"
     log_gate "16" "FAIL" "Cascade propagated"
   fi
 } 2>&1 | tee -a "$GATES_DIR/gate-16.log"
