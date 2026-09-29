@@ -1,0 +1,111 @@
+{
+  "campaign_id": "TAMPERED_CAMPAIGN",
+  "execution_directory": "/home/user/Decentralized-/validation/local-vm/evidence/P1-CLOSE-A01-EXECUTION-2026-09-29T04-48-49Z",
+  "source_sha": "a77007a391b2de83a82822f15384904183f429ca",
+  "gate_contract_version": "P1-GATE-CONTRACT.md",
+  "artifacts": [
+    {
+      "name": "evidence-manifest.json",
+      "path": "artifacts/evidence-manifest.json",
+      "sha256": "fd8ce8e09c10239cb9dd265100013ab5ab811f0e56f24eccdd039de69ecb1c74",
+      "size_bytes": 458
+    },
+    {
+      "name": "gate-10-ledger-parse-error.txt",
+      "path": "artifacts/gate-10-ledger-parse-error.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    {
+      "name": "gate-10-ledger-parse.json",
+      "path": "artifacts/gate-10-ledger-parse.json",
+      "sha256": "1c39113fdaa1c600f5b0317d7babfebbaa96158bada2b06ca7a5945bb20042dd",
+      "size_bytes": 1838
+    },
+    {
+      "name": "gate-10-ledger-pre-injection.json",
+      "path": "artifacts/gate-10-ledger-pre-injection.json",
+      "sha256": "1c39113fdaa1c600f5b0317d7babfebbaa96158bada2b06ca7a5945bb20042dd",
+      "size_bytes": 1838
+    },
+    {
+      "name": "gate-11-16-model-a-validation.txt",
+      "path": "artifacts/gate-11-16-model-a-validation.txt",
+      "sha256": "ac06590b1698cac1a39200abc9dc052afe63643548d147fba168e4305b0b0c82",
+      "size_bytes": 621
+    },
+    {
+      "name": "gate-17-18-partition-injection.log",
+      "path": "artifacts/gate-17-18-partition-injection.log",
+      "sha256": "7eb669ec75a86c01f2a5a1b267628d48fc0dc3a9f4d88da3cb5f277585a041dc",
+      "size_bytes": 317
+    },
+    {
+      "name": "gate-23-crash-inject-timestamp.txt",
+      "path": "artifacts/gate-23-crash-inject-timestamp.txt",
+      "sha256": "d37a01461f547a73ba154a205d499a9787917b5fd9709a73672374c825ce7f34",
+      "size_bytes": 20
+    },
+    {
+      "name": "gate-23-crash-injection.log",
+      "path": "artifacts/gate-23-crash-injection.log",
+      "sha256": "1f3b7c2f5598173675b1ef90881450263ae7c9f082e0f9532d331c126bda46da",
+      "size_bytes": 1163
+    },
+    {
+      "name": "gate-23-node-port.txt",
+      "path": "artifacts/gate-23-node-port.txt",
+      "sha256": "608e754e3b520029bd462a5da61719db49c638783fa93c63b553bc4c5769260d",
+      "size_bytes": 5
+    },
+    {
+      "name": "gate-23-workload-pid.txt",
+      "path": "artifacts/gate-23-workload-pid.txt",
+      "sha256": "73d27f5b6fbf6b76d8e61c1302eb20c9fe4851a4d7ce6075f1a03934c7d1a435",
+      "size_bytes": 12
+    },
+    {
+      "name": "gate-24-recovery-measurement.log",
+      "path": "artifacts/gate-24-recovery-measurement.log",
+      "sha256": "3c7937ee0cb6ade686bc96bc7c9b2e567e00673664fb3ba524e22a4ca75e9b7b",
+      "size_bytes": 600
+    },
+    {
+      "name": "gate-24-recovery-time-ns.txt",
+      "path": "artifacts/gate-24-recovery-time-ns.txt",
+      "sha256": "b5e0d9e33f62cd76a94b7cfd8fb9242e34811e132a9795b63f3187c2a5e12f41",
+      "size_bytes": 12
+    },
+    {
+      "name": "gate-25-scheduler-state.log",
+      "path": "artifacts/gate-25-scheduler-state.log",
+      "sha256": "0ca0103d7ca75ef4b421ceb29931d10ecffe373e8774c304e97942ae8cb3bad1",
+      "size_bytes": 388
+    }
+  ],
+  "observations": [
+    {
+      "gate": "gate-10-summary.txt"
+    },
+    {
+      "gate": "gate-10.txt"
+    },
+    {
+      "gate": "gate-11-16.txt"
+    },
+    {
+      "gate": "gate-17-18.txt"
+    },
+    {
+      "gate": "gate-23.txt"
+    },
+    {
+      "gate": "gate-24.txt"
+    },
+    {
+      "gate": "gate-25.txt"
+    }
+  ],
+  "execution_complete": true,
+  "execution_timestamp": "2026-09-29T04:49:20.389Z"
+}

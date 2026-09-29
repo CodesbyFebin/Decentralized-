@@ -315,7 +315,7 @@ CRASH_LOG="$EXECUTION_DIR/artifacts/gate-23-crash-injection.log"
     echo "Finding workload process on dh-node-1:"
 
     WORKLOAD_PS_BEFORE=$(ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -p "$NODE_1_PORT" "ubuntu@127.0.0.1" \
-        "ps aux | grep -E 'workload|java|python' | grep -v grep" 2>&1 || true)
+        "ps aux | grep -E 'workload|java|python' | grep -v grep" 2>/dev/null || true)
 
     echo "ps_output_before_crash:"
     echo "$WORKLOAD_PS_BEFORE"
@@ -335,7 +335,7 @@ CRASH_LOG="$EXECUTION_DIR/artifacts/gate-23-crash-injection.log"
         # Observation 2: Verify workload is responding
         echo "Testing workload HTTP response before crash:"
         HTTP_SUCCESS_BEFORE=$(ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -p "$NODE_1_PORT" "ubuntu@127.0.0.1" \
-            "curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/health 2>&1 || echo '000'" || echo "000")
+            "curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/health 2>&1 || echo '000'" 2>/dev/null || echo "000")
 
         echo "http_response_before=$HTTP_SUCCESS_BEFORE"
 
@@ -353,7 +353,7 @@ CRASH_LOG="$EXECUTION_DIR/artifacts/gate-23-crash-injection.log"
 
         KILL_EXIT=0
         KILL_OUTPUT=$(ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -p "$NODE_1_PORT" "ubuntu@127.0.0.1" \
-            "kill -9 $WORKLOAD_PID 2>&1" || true)
+            "kill -9 $WORKLOAD_PID 2>&1" 2>/dev/null || true)
 
         echo "kill_command_output: $KILL_OUTPUT"
         echo ""
@@ -364,7 +364,7 @@ CRASH_LOG="$EXECUTION_DIR/artifacts/gate-23-crash-injection.log"
         # Observation 4: Verify process is gone
         echo "Verifying process is gone:"
         WORKLOAD_PS_AFTER=$(ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -p "$NODE_1_PORT" "ubuntu@127.0.0.1" \
-            "ps -p $WORKLOAD_PID -o pid,state,cmd 2>&1 || echo 'no process'" || echo "")
+            "ps -p $WORKLOAD_PID -o pid,state,cmd 2>&1 || echo 'no process'" 2>/dev/null || echo "")
 
         echo "ps_output_after_kill: $WORKLOAD_PS_AFTER"
 
@@ -422,7 +422,7 @@ RECOVERY_LOG="$EXECUTION_DIR/artifacts/gate-24-recovery-measurement.log"
 
             # Check if new workload process exists
             NEW_PROCESS=$(ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -p "$NODE_1_PORT" "ubuntu@127.0.0.1" \
-                "ps aux | grep -E 'workload|java|python' | grep -v grep | head -1 | awk '{print \$2}'" 2>&1 || echo "")
+                "ps aux | grep -E 'workload|java|python' | grep -v grep | head -1 | awk '{print \$2}'" 2>/dev/null || echo "")
 
             if [ -n "$NEW_PROCESS" ] && [ "$NEW_PROCESS" != "$ORIGINAL_PID" ]; then
                 RECOVERY_END=$(timestamp_ns)
@@ -449,7 +449,7 @@ RECOVERY_LOG="$EXECUTION_DIR/artifacts/gate-24-recovery-measurement.log"
             echo ""
             echo "Verifying recovered workload responds:"
             HTTP_RESPONSE=$(ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -p "$NODE_1_PORT" "ubuntu@127.0.0.1" \
-                "curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/health 2>&1 || echo '000'" || echo "000")
+                "curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/health 2>&1 || echo '000'" 2>/dev/null || echo "000")
 
             echo "http_response_after_recovery=$HTTP_RESPONSE"
 

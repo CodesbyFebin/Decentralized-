@@ -1,0 +1,33 @@
+=== Workload Crash Injection ===
+Timestamp: 2026-09-29T04:48:50.033Z
+
+Finding workload process on dh-node-1:
+ps_output_before_crash:
+Warning: Permanently added '[127.0.0.1]:2201' (ED25519) to the list of known hosts.
+root         640  0.4  1.9  33092 18972 ?        Ss   04:41   0:01 /usr/bin/python3 /usr/bin/networkd-dispatcher --run-startup-triggers
+root         702  0.3  2.1 110172 21212 ?        Ssl  04:41   0:01 /usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal
+
+workload_pid=Permanently
+workload_process_found=true
+
+Testing workload HTTP response before crash:
+http_response_before=000000
+workload_responding_before_crash=false (code: 000000)
+
+Injecting SIGKILL to PID Permanently:
+crash_inject_timestamp_ns=1790657344371376917
+kill_command_output: bash: line 1: kill: Permanently: arguments must be process or job IDs
+
+Verifying process is gone:
+ps_output_after_kill: error: process ID list syntax error
+
+Usage:
+ ps [options]
+
+ Try 'ps --help <simple|list|output|threads|misc|all>'
+  or 'ps --help <s|l|o|t|m|a>'
+ for additional help text.
+
+For more details see ps(1).
+no process
+process_confirmed_gone=true
