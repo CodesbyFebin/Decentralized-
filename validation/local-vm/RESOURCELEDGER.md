@@ -14,6 +14,16 @@ ResourceLedger operates as a single source of truth (similar to `cluster.json` i
 
 State file: `validation/local-vm/state/resourceledger.json`
 
+**Remediation status:** Allocation, reservation, owner reserve, and release
+share a stable `resourceledger.json.lock` sidecar, validate counters and
+nonnegative availability, and commit by atomic rename. An allocation may
+consume an exact active reservation, moving the same claim from reserved to
+allocated without changing available capacity. Duplicate active workloads
+and repeat releases are rejected. Scheduler clients use unique request/result
+IDs. Local regression tests cover these transactions; the decisive Model A
+gate remains `UNKNOWN` until the QEMU host campaign captures and independently
+verifies raw before/request/after observations.
+
 ## Schema
 
 ```json
@@ -70,7 +80,7 @@ bash validation/local-vm/scripts/init-resourceledger.sh
 
 This creates `resourceledger.json` with:
 - Cluster topology from `cluster.json`
-- Per-node resource capacities (1 CPU, 1024 MB RAM, 8 GB disk per node)
+- Per-node resource capacities from the exact `cluster.json` declaration
 - Source SHA references (cluster and ledger)
 - Empty allocations list
 
@@ -162,6 +172,10 @@ Before-/after measurements compare ResourceLedger state across failure boundarie
 | `query-resourceledger.sh [node]` | Display allocation state |
 | `allocate-resource.sh N cpu mem disk workload` | Request allocation |
 | `deallocate-resource.sh allocation-id` | Release allocation |
+| `reserve-resource.sh N cpu mem disk workload` | Reserve capacity for one workload |
+| `allocate-resource.sh N cpu mem disk workload reservation-id` | Convert exact reservation into allocation |
+| `release-reservation.sh reservation-id` | Release an unconsumed reservation |
+| `set-owner-reserve.sh N cpu mem disk` | Set owner reserve, subject to capacity |
 
 ## Error Handling
 

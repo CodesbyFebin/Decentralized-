@@ -43,6 +43,7 @@ for v in REQ_NODES REQ_CPU REQ_MEM REQ_DISK; do
   eval "val=\${$v}"
   case "$val" in ''|*[!0-9]*|0) echo "ERROR: Invalid persisted topology: $v=$val" >&2; exit 1 ;; esac
 done
+[ "$REQ_NODES" -le 254 ] || { echo "ERROR: Mesh address plan supports at most 254 nodes" >&2; exit 1; }
 
 ARCH="$(uname -m)"
 case "$ARCH" in
@@ -95,6 +96,9 @@ echo "Disk/Node: $REQ_DISK GiB"
 for ((i=1;i<=REQ_NODES;i++)); do
   NODE_DIR="$STATE_DIR/node-$i"
   NODE_NAME="dh-node-$i"
+  printf -v PRIMARY_MAC '52:54:00:10:00:%02x' "$i"
+  printf -v MESH_MAC '52:54:00:20:00:%02x' "$i"
+  MESH_IP="172.30.10.$i"
   mkdir -p "$NODE_DIR"
   DISK="$NODE_DIR/disk.qcow2"
   qemu-img create -f qcow2 -b "$UBUNTU_IMAGE" -F qcow2 "$DISK" "${REQ_DISK}G"
@@ -130,6 +134,21 @@ for ((i=1;i<=REQ_NODES;i++)); do
 instance-id: p1-local-vm-a01-node-$i
 local-hostname: $NODE_NAME
 EOF
+  cat > "$NODE_DIR/network-config" <<EOF
+version: 2
+ethernets:
+  primary:
+    match:
+      macaddress: "$PRIMARY_MAC"
+    dhcp4: true
+  mesh:
+    match:
+      macaddress: "$MESH_MAC"
+    set-name: mesh0
+    dhcp4: false
+    addresses:
+      - $MESH_IP/24
+EOF
 done
 
 CLUSTER_JSON="$STATE_DIR/cluster.json"
@@ -150,6 +169,8 @@ CURRENT_SHA="$(git -C "$REPO_ROOT" rev-parse HEAD)"
   "memory_per_node_mb": $REQ_MEM,
   "disk_per_node_gb": $REQ_DISK,
   "base_image": "$UBUNTU_IMAGE",
+  "mesh_backend": "qemu-socket-multicast",
+  "mesh_bus": "239.192.42.17:12347",
   "ssh_key_path": "$SSH_KEY_PATH",
   "state_directory": "$STATE_DIR",
   "status": "CREATED",
@@ -157,6 +178,8 @@ CURRENT_SHA="$(git -C "$REPO_ROOT" rev-parse HEAD)"
 EOF
   for ((i=1;i<=REQ_NODES;i++)); do
     comma=","; [ "$i" -eq "$REQ_NODES" ] && comma=""
+    printf -v PRIMARY_MAC '52:54:00:10:00:%02x' "$i"
+    printf -v MESH_MAC '52:54:00:20:00:%02x' "$i"
     cat <<EOF
     {
       "id": $i,
@@ -164,6 +187,9 @@ EOF
       "disk": "$STATE_DIR/node-$i/disk.qcow2",
       "cloud_init_dir": "$STATE_DIR/node-$i",
       "ssh_port": $((2200+i)),
+      "primary_mac": "$PRIMARY_MAC",
+      "mesh_mac": "$MESH_MAC",
+      "mesh_ip": "172.30.10.$i",
       "qemu_pid_file": "$STATE_DIR/node-$i/qemu.pid",
       "qemu_socket": "$STATE_DIR/node-$i/qemu.sock",
       "serial_log": "$STATE_DIR/node-$i/serial.log"
