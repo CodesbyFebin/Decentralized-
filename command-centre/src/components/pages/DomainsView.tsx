@@ -1,12 +1,39 @@
 import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Globe, Plus, Edit2, RotateCcw, Trash2, Copy, Calendar } from 'lucide-react';
+import { Globe, Plus, Edit2, RotateCcw, Trash2, Copy, Calendar, Activity, CheckCircle2 } from 'lucide-react';
 import type { CertRec, DomainRec, AppRec } from '../../types/reality';
 import { useResource } from '../../lib/useResource';
 import { useSession } from '../../lib/session';
 import { api, ApiError } from '../../lib/client';
-import { Glass, IconTile, StatusPill, PrimaryButton, GhostButton } from '../common/ui';
-import { Gate, Empty, Note, fmtTime, TruthTag, ErrorState, shortDigest } from '../common/states';
+import { Glass, IconTile, StatusPill, PrimaryButton, GhostButton, PanelHeader } from '../common/ui';
+import { Gate, Empty, Note, fmtTime, TruthTag, ErrorState, shortDigest, since } from '../common/states';
+import { TruthValue, type TruthEnvelope } from '../common/truthDisplay';
+
+interface ServiceIP {
+  address: TruthEnvelope<string>;
+  port: TruthEnvelope<number>;
+  protocol: 'TCP' | 'UDP';
+  allocatedAt: number;
+}
+
+interface ReplicaEndpoint {
+  replicaId: string;
+  nodeName: string;
+  address: TruthEnvelope<string>;
+  port: TruthEnvelope<number>;
+  healthy: TruthEnvelope<boolean>;
+  trafficPercent: TruthEnvelope<number>;
+  observedAt: number;
+}
+
+interface LoadBalancingState {
+  domainHost: string;
+  serviceIp: ServiceIP;
+  replicas: ReplicaEndpoint[];
+  algorithm: 'ROUND_ROBIN' | 'LEAST_LOADED' | 'HASH';
+  sessionAffinity: TruthEnvelope<boolean>;
+  lastUpdated: number;
+}
 
 interface AddDomainForm {
   host: string;
@@ -19,7 +46,7 @@ export default function DomainsView() {
   const { can, mode } = useSession();
   const res = useResource<{ domains: DomainRec[]; certificates: CertRec[] }>('/deployments');
   const apps = useResource<{ apps: AppRec[] }>('/apps');
-  const domains = useResource<{ domains: DomainRec[]; certificates: CertRec[] }>('/domains');
+  const domains = useResource<{ domains: DomainRec[]; certificates: CertRec[]; loadBalancingStates?: LoadBalancingState[] }>('/domains');
 
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [selectedDomain, setSelectedDomain] = useState<string | null>(null);
@@ -281,11 +308,104 @@ export default function DomainsView() {
                   </tbody>
                 </table>
               </Glass>
+
+              <ServiceDiscoverySection res={domains} />
+
               <Note>DNS is not observed: the control plane does not resolve public DNS or register names. Routing and TLS status come from edge-host observations.</Note>
             </>
           )
         }
       </Gate>
     </div>
+  );
+}
+
+function ServiceDiscoverySection({ res }: { res: ReturnType<typeof useResource<any>> }) {
+  const [expandedId, setExpandedId] = React.useState<string | null>(null);
+
+  return (
+    <Gate res={res}>
+      {(d) => {
+        if (!d.loadBalancingStates?.length) return null;
+        return (
+          <Glass className="p-4">
+            <PanelHeader icon={<IconTile tone="blue" size="sm"><Activity className="w-4 h-4" /></IconTile>} title="Service discovery & load balancing (P1)" subtitle="Distributed ingress with service IP allocation and backend endpoint tracking." />
+            <div className="mt-4 space-y-3">
+              {d.loadBalancingStates.map((lb: LoadBalancingState) => (
+                <div key={lb.domainHost} className="p-3 rounded-lg bg-slate-800/30 border border-slate-700/20">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-[12px] font-semibold text-slate-100">{lb.domainHost}</div>
+                    <div className="flex gap-2 items-center">
+                      <span className="text-[11px] text-slate-400">{lb.algorithm}</span>
+                      <span className={`text-[10px] font-mono ${lb.lastUpdated && Date.now() - lb.lastUpdated < 60000 ? 'text-emerald-400' : 'text-slate-400'}`}>
+                        {lb.lastUpdated ? since(lb.lastUpdated) : 'unknown'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="mb-3 p-2 rounded bg-slate-900/40 border border-slate-700/20">
+                    <div className="text-[10px] font-mono text-slate-300 mb-1">Service IP</div>
+                    <div className="flex items-center justify-between">
+                      <TruthValue
+                        label="Address"
+                        envelope={lb.serviceIp.address}
+                        format={(v) => `${v}:${lb.serviceIp.port.value || '?'}`}
+                        className="mb-0 py-0.5 border-0"
+                      />
+                      <span className={`text-[10px] font-mono ${lb.serviceIp.address.freshness === 'LIVE' ? 'text-emerald-400' : 'text-slate-400'}`}>
+                        {lb.serviceIp.address.freshness}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div
+                    className="cursor-pointer hover:bg-slate-800/20 rounded p-2 transition-colors"
+                    onClick={() => setExpandedId(expandedId === lb.domainHost ? null : lb.domainHost)}
+                  >
+                    <div className="text-[11px] font-semibold text-slate-300 mb-2">
+                      Backend endpoints ({lb.replicas.length})
+                    </div>
+                    <div className="space-y-1">
+                      {lb.replicas.map((replica) => (
+                        <div key={replica.replicaId} className="p-1.5 rounded bg-slate-900/50 flex items-center justify-between text-[11px]">
+                          <div className="flex items-center gap-2">
+                            <div className={replica.healthy.value ? 'text-emerald-400' : 'text-rose-400'}>
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                            </div>
+                            <span className="text-slate-100 font-mono text-[10.5px]">{replica.address.value || '?'}</span>
+                            <span className="text-slate-500">{replica.nodeName}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className="text-slate-400">{replica.trafficPercent.value?.toFixed(1) || '?'}%</span>
+                            <span className={`text-[10px] font-mono ${replica.healthy.freshness === 'LIVE' ? 'text-emerald-400' : 'text-slate-400'}`}>
+                              {replica.healthy.freshness}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {expandedId === lb.domainHost && (
+                    <div className="mt-2 pt-2 border-t border-slate-700/30 space-y-2">
+                      <TruthValue
+                        label="Session affinity"
+                        envelope={lb.sessionAffinity}
+                        format={(v) => v ? 'enabled' : 'disabled'}
+                      />
+                      <div className="text-[10.5px] text-slate-400 space-y-1">
+                        <div>Load balancing algorithm distributes traffic across {lb.replicas.length} healthy endpoints</div>
+                        <div>Last update {since(lb.lastUpdated)}</div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            <Note>Service discovery allocates a virtual IP per domain, distributes traffic across replica endpoints, and tracks endpoint health and load. LIVE indicates current observation; STALE or UNKNOWN indicates measurement is old or unavailable.</Note>
+          </Glass>
+        );
+      }}
+    </Gate>
   );
 }

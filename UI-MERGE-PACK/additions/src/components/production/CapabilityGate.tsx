@@ -1,0 +1,3 @@
+import React from 'react'; import type { CapabilityMaturity } from '../../types/truth';
+const order:CapabilityMaturity[]=['PLANNED','IMPLEMENTED','TESTED','QUALIFIED','VERIFIED','SEALED','RELEASED'];
+export function CapabilityGate({name,maturity,required='RELEASED',children}:{name:string;maturity:CapabilityMaturity;required?:CapabilityMaturity;children:React.ReactNode}) { const enabled=order.indexOf(maturity)>=order.indexOf(required); return <section data-capability={name} data-maturity={maturity}><header><strong>{name}</strong> <span>{maturity}</span></header>{enabled?children:<div role="status"><p>This capability is not operational yet.</p><p>Required maturity: {required}. Current: {maturity}.</p></div>}</section>; }

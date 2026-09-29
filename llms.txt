@@ -1,0 +1,23 @@
+> Decentralized.Host — Signed-intent assignment with per-host local policy enforcement.
+>> dh/v1 conformance spec with 136 test vectors and 17 chaos scenarios.
+>
+> Language: Go
+> Focus: sovereign infrastructure, local admission control, distributed state
+>
+> Repo: https://github.com/CodesbyFebin/Decentralized-
+> Stack: Ed25519, Raft, mTLS, WireGuard, BLAKE3, Merkle anti-entropy
+>
+> Claims:
+> - Work proposed as signed intent; each host enforces local policy before execution
+> - BLAKE3 content-addressed storage with Merkle anti-entropy for data consistency
+> - Raft consensus + mTLS for control plane security
+> - Userspace WireGuard with signed key bindings
+> - dh/v1 conformance spec with 136 normative test vectors
+> - Independent Python reference implementation
+> - 17 chaos scenarios with invariant validation under traffic
+> - Explicit state model: DESIRED ≠ ADMITTED ≠ EXECUTING ≠ OBSERVED ≠ VERIFIED
+>
+> Verify: AGENTS.md | specs/dh-v1.md | pkg/conformance | tests/chaos/
+>
+> Status: Milestones M1-M8 complete (conformance passing). Chaos testing active.
+> Limitations: No silent task migration; all admission decisions are audited and host-enforced.

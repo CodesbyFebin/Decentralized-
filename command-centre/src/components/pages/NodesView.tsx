@@ -1,15 +1,17 @@
 import React, { useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Plus, ServerCog, Network, Server, Cpu, MemoryStick, HardDrive, Monitor, Terminal, Home, Cloud, CircuitBoard, Boxes, Settings2, Gpu, Box, Radio, ShieldCheck, Layers } from 'lucide-react';
-import type { ClusterRec, NodeRec, Overview } from '../../types/reality';
+import { Plus, ServerCog, Network, Server, Cpu, MemoryStick, HardDrive, Monitor, Terminal, Home, Cloud, CircuitBoard, Boxes, Settings2, Gpu, Box, Radio, ShieldCheck, Layers, MoreVertical, CheckCircle2, Pause, Play, ShieldOff } from 'lucide-react';
+import type { ClusterRec, NodeRec, Overview, NodeOperation } from '../../types/reality';
 import { useResource } from '../../lib/useResource';
 import { useSession } from '../../lib/session';
+import { api, ApiError, type MutationResult } from '../../lib/client';
 import { HoloGlobe } from '../common/HoloGlobe';
 import { SurfaceLayout, SurfaceHero, Eyebrow, regionGroups, groupMarkers, meshArcs, NoGeoNote } from '../common/CommandSurface';
 import { Glass, KpiTile, PageTabs, FilterChips, TableToolbar, RailPanel, RailItem, NetworkRow, PanelHeader, IconTile, StatusPill, Grad, PrimaryButton, GhostButton, Legend, ViewAll, Tone } from '../common/ui';
-import { Gate, FreshnessPill, fmtBytes, since, TruthTag, Unavailable, Empty, Note } from '../common/states';
+import { Gate, FreshnessPill, fmtBytes, since, TruthTag, Unavailable, Empty, Note, ErrorState } from '../common/states';
 import type { ConnectTarget } from '../common/ConnectDialog';
 import { FreshnessBadge, viewFreshness } from '../common/truth';
+import { CordonCard, type TruthEnvelope } from '../common/truthDisplay';
 
 type Tab = 'overview' | 'mine' | 'workloads' | 'contributions' | 'depin' | 'activity';
 type Chip = 'all' | 'healthy' | 'degraded' | 'offline' | 'unknown' | 'edge';
@@ -253,7 +255,7 @@ export default function NodesView() {
                       />
                     </TableToolbar>
                     <div className="overflow-x-auto">
-                      <table className="dh-table w-full min-w-[920px]">
+                      <table className="dh-table w-full min-w-[1020px]">
                         <thead>
                           <tr>
                             <th>Node</th>
@@ -265,29 +267,12 @@ export default function NodesView() {
                             <th>GPU</th>
                             <th>Workloads</th>
                             <th>Last seen</th>
+                            <th className="text-right">Actions</th>
                           </tr>
                         </thead>
                         <tbody>
                           {rows.map((n) => (
-                            <tr key={n.id}>
-                              <td>
-                                <Link to={`/nodes/${n.id}`} className="flex items-center gap-2.5 group">
-                                  <IconTile tone={n.isEdge ? 'violet' : 'blue'} size="sm">{n.isEdge ? <Radio className="w-4 h-4" /> : <Server className="w-4 h-4" />}</IconTile>
-                                  <div>
-                                    <div className="font-semibold text-slate-100 group-hover:text-cyan-300">{n.name}</div>
-                                    <div className="text-[11px] text-slate-500 font-mono">{n.id.slice(0, 14)}…</div>
-                                  </div>
-                                </Link>
-                              </td>
-                              <td><StatusPill status={n.lifecycle} dot={false} /><div className="text-[11px] text-slate-500 mt-0.5" title={n.healthReason}>{n.health.toLowerCase()} · {n.region || 'no region'}</div></td>
-                              <td><FreshnessBadge f={viewFreshness({ pageStale: stale, observation: n.observation.freshness, lost: n.health === 'OFFLINE' && n.lifecycle !== 'REVOKED' })} observedAt={n.observation.observedAt} /></td>
-                              <td className="tabular-nums text-slate-300">{n.facts ? `${n.facts.cpus} logical` : <span className="text-slate-500">not measured</span>}</td>
-                              <td className="tabular-nums text-slate-300">{n.facts?.memBytes != null ? fmtBytes(n.facts.memBytes) : <span className="text-slate-500">not measured</span>}</td>
-                              <td className="tabular-nums text-slate-300">{n.facts?.dataFs ? `${fmtBytes(n.facts.dataFs.freeBytes)} free / ${fmtBytes(n.facts.dataFs.totalBytes)}` : <span className="text-slate-500">not measured</span>}</td>
-                              <td className="text-slate-300">{n.facts?.gpus == null ? <span className="text-slate-500">not measured</span> : n.facts.gpus.length ? n.facts.gpus.map((g) => g.model || g.vendor).join(', ') : 'none'}</td>
-                              <td className="tabular-nums">{n.workloads ?? <span className="text-slate-500">unknown</span>}</td>
-                              <td className="text-slate-400" title={n.observation.observedAt ? new Date(n.observation.observedAt).toLocaleString() : undefined}>{n.observation.observedAt ? since(n.observation.observedAt) : 'never'}</td>
-                            </tr>
+                            <NodeTableRow key={n.id} node={n} canWrite={can('api.write')} canAdmin={can('api.admin')} stale={stale} onRefresh={res.refresh} />
                           ))}
                           {rows.length === 0 && (
                             <tr>
@@ -307,6 +292,158 @@ export default function NodesView() {
           }
         </Gate>
       </SurfaceLayout>
+    </>
+  );
+}
+
+function NodeTableRow({ node: n, canWrite, canAdmin, stale, onRefresh }: { node: NodeRec; canWrite: boolean; canAdmin: boolean; stale: boolean; onRefresh: () => void }) {
+  const [showMenu, setShowMenu] = useState(false);
+  const [pending, setPending] = useState<NodeOperation | null>(null);
+  const [confirm, setConfirm] = useState<NodeOperation | null>(null);
+  const [confirmText, setConfirmText] = useState('');
+  const [result, setResult] = useState<MutationResult | null>(null);
+  const [opErr, setOpErr] = useState<ApiError | null>(null);
+
+  const run = async (op: NodeOperation) => {
+    setPending(op);
+    setOpErr(null);
+    setResult(null);
+    try {
+      const r = await api.post<{ data: MutationResult }>(`/nodes/${n.id}/operations`, { type: op, ...(op === 'REVOKE' ? { confirm: confirmText } : {}) });
+      setResult(r.data);
+      setConfirm(null);
+      setConfirmText('');
+      setShowMenu(false);
+      onRefresh();
+    } catch (e) {
+      setOpErr(e as ApiError);
+    } finally {
+      setPending(null);
+    }
+  };
+
+  const ops: { op: NodeOperation; label: string; icon: React.ReactNode; show: boolean; allowed: boolean; why: string }[] = [
+    { op: 'APPROVE', label: 'Approve', icon: <CheckCircle2 className="w-4 h-4" />, show: n.lifecycle === 'PENDING_APPROVAL', allowed: canAdmin, why: 'needs api.admin' },
+    { op: 'DRAIN', label: 'Drain', icon: <Pause className="w-4 h-4" />, show: n.lifecycle === 'ACTIVE', allowed: canWrite, why: 'needs api.write' },
+    { op: 'UNDRAIN', label: 'Resume', icon: <Play className="w-4 h-4" />, show: n.lifecycle === 'DRAINING', allowed: canWrite, why: 'needs api.write' },
+    { op: 'REVOKE', label: 'Revoke identity', icon: <ShieldOff className="w-4 h-4" />, show: n.lifecycle !== 'REVOKED', allowed: canAdmin, why: 'needs api.admin' }
+  ];
+
+  const visibleOps = ops.filter((o) => o.show);
+
+  if (visibleOps.length === 0 && !result) {
+    return (
+      <tr>
+        <td>
+          <Link to={`/nodes/${n.id}`} className="flex items-center gap-2.5 group">
+            <IconTile tone={n.isEdge ? 'violet' : 'blue'} size="sm">{n.isEdge ? <Radio className="w-4 h-4" /> : <Server className="w-4 h-4" />}</IconTile>
+            <div>
+              <div className="font-semibold text-slate-100 group-hover:text-cyan-300">{n.name}</div>
+              <div className="text-[11px] text-slate-500 font-mono">{n.id.slice(0, 14)}…</div>
+            </div>
+          </Link>
+        </td>
+        <td><StatusPill status={n.lifecycle} dot={false} /><div className="text-[11px] text-slate-500 mt-0.5" title={n.healthReason}>{n.health.toLowerCase()} · {n.region || 'no region'}</div></td>
+        <td><FreshnessBadge f={viewFreshness({ pageStale: stale, observation: n.observation.freshness, lost: n.health === 'OFFLINE' && n.lifecycle !== 'REVOKED' })} observedAt={n.observation.observedAt} /></td>
+        <td className="tabular-nums text-slate-300">{n.facts ? `${n.facts.cpus} logical` : <span className="text-slate-500">not measured</span>}</td>
+        <td className="tabular-nums text-slate-300">{n.facts?.memBytes != null ? fmtBytes(n.facts.memBytes) : <span className="text-slate-500">not measured</span>}</td>
+        <td className="tabular-nums text-slate-300">{n.facts?.dataFs ? `${fmtBytes(n.facts.dataFs.freeBytes)} free / ${fmtBytes(n.facts.dataFs.totalBytes)}` : <span className="text-slate-500">not measured</span>}</td>
+        <td className="text-slate-300">{n.facts?.gpus == null ? <span className="text-slate-500">not measured</span> : n.facts.gpus.length ? n.facts.gpus.map((g) => g.model || g.vendor).join(', ') : 'none'}</td>
+        <td className="tabular-nums">{n.workloads ?? <span className="text-slate-500">unknown</span>}</td>
+        <td className="text-slate-400" title={n.observation.observedAt ? new Date(n.observation.observedAt).toLocaleString() : undefined}>{n.observation.observedAt ? since(n.observation.observedAt) : 'never'}</td>
+        <td />
+      </tr>
+    );
+  }
+
+  return (
+    <>
+      <tr>
+        <td>
+          <Link to={`/nodes/${n.id}`} className="flex items-center gap-2.5 group">
+            <IconTile tone={n.isEdge ? 'violet' : 'blue'} size="sm">{n.isEdge ? <Radio className="w-4 h-4" /> : <Server className="w-4 h-4" />}</IconTile>
+            <div>
+              <div className="font-semibold text-slate-100 group-hover:text-cyan-300">{n.name}</div>
+              <div className="text-[11px] text-slate-500 font-mono">{n.id.slice(0, 14)}…</div>
+            </div>
+          </Link>
+        </td>
+        <td><StatusPill status={n.lifecycle} dot={false} /><div className="text-[11px] text-slate-500 mt-0.5" title={n.healthReason}>{n.health.toLowerCase()} · {n.region || 'no region'}</div></td>
+        <td><FreshnessBadge f={viewFreshness({ pageStale: stale, observation: n.observation.freshness, lost: n.health === 'OFFLINE' && n.lifecycle !== 'REVOKED' })} observedAt={n.observation.observedAt} /></td>
+        <td className="tabular-nums text-slate-300">{n.facts ? `${n.facts.cpus} logical` : <span className="text-slate-500">not measured</span>}</td>
+        <td className="tabular-nums text-slate-300">{n.facts?.memBytes != null ? fmtBytes(n.facts.memBytes) : <span className="text-slate-500">not measured</span>}</td>
+        <td className="tabular-nums text-slate-300">{n.facts?.dataFs ? `${fmtBytes(n.facts.dataFs.freeBytes)} free / ${fmtBytes(n.facts.dataFs.totalBytes)}` : <span className="text-slate-500">not measured</span>}</td>
+        <td className="text-slate-300">{n.facts?.gpus == null ? <span className="text-slate-500">not measured</span> : n.facts.gpus.length ? n.facts.gpus.map((g) => g.model || g.vendor).join(', ') : 'none'}</td>
+        <td className="tabular-nums">{n.workloads ?? <span className="text-slate-500">unknown</span>}</td>
+        <td className="text-slate-400" title={n.observation.observedAt ? new Date(n.observation.observedAt).toLocaleString() : undefined}>{n.observation.observedAt ? since(n.observation.observedAt) : 'never'}</td>
+        <td className="text-right relative">
+          <button
+            onClick={() => setShowMenu(!showMenu)}
+            className="p-1.5 hover:bg-slate-800 rounded-lg transition-colors"
+            title="Node actions"
+          >
+            <MoreVertical className="w-4 h-4 text-slate-400" />
+          </button>
+          {showMenu && (
+            <div className="absolute right-0 top-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-lg z-50 min-w-[160px]">
+              {visibleOps.map((o) => (
+                <button
+                  key={o.op}
+                  onClick={() => (o.op === 'REVOKE' || o.op === 'DRAIN' ? setConfirm(o.op) : run(o.op))}
+                  disabled={!o.allowed || pending !== null}
+                  title={o.allowed ? undefined : stale ? 'data is stale' : o.why}
+                  className={`w-full px-3 py-2 text-left text-[12px] flex items-center gap-2 hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${o.op === 'REVOKE' ? 'text-rose-300' : ''}`}
+                >
+                  {o.icon} {pending === o.op ? 'Submitting…' : o.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </td>
+      </tr>
+      {confirm && (
+        <tr>
+          <td colSpan={10}>
+            <div className="m-2 rounded-lg border border-amber-400/30 bg-amber-500/10 p-3">
+              <div className="text-[12px] font-semibold text-amber-100">
+                {confirm === 'REVOKE' ? 'Revoke this host identity? This cannot be undone.' : 'Drain this host? Existing workloads continue; no new workloads will be placed.'}
+              </div>
+              {confirm === 'REVOKE' && (
+                <input
+                  value={confirmText}
+                  onChange={(e) => setConfirmText(e.target.value)}
+                  placeholder="Type node id to confirm"
+                  className="mt-2 w-full rounded-lg bg-black/40 border border-amber-400/30 px-2 py-1.5 font-mono text-[11px]"
+                />
+              )}
+              <div className="mt-2 flex gap-2">
+                <GhostButton onClick={() => run(confirm)} disabled={pending !== null || (confirm === 'REVOKE' && confirmText !== n.id)} className="!border-amber-400/50 !text-amber-300 disabled:opacity-40 text-[11px]">
+                  Confirm {confirm.toLowerCase()}
+                </GhostButton>
+                <GhostButton onClick={() => { setConfirm(null); setConfirmText(''); }} className="text-[11px]">Cancel</GhostButton>
+              </div>
+            </div>
+          </td>
+        </tr>
+      )}
+      {result && (
+        <tr>
+          <td colSpan={10}>
+            <div className={`m-2 rounded-lg p-2 text-[11px] border ${result.ok ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-100' : 'border-rose-400/30 bg-rose-500/10 text-rose-100'}`}>
+              Control plane {result.ok ? 'committed' : 'refused'}: {result.message || result.code}
+            </div>
+          </td>
+        </tr>
+      )}
+      {opErr && (
+        <tr>
+          <td colSpan={10}>
+            <div className="m-2">
+              <ErrorState error={opErr} />
+            </div>
+          </td>
+        </tr>
+      )}
     </>
   );
 }

@@ -1,11 +1,32 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Bot, Send, User, FileText, Server, Rocket, ShieldCheck, Database, Activity, Settings2, Lock, Check, X } from 'lucide-react';
+import { Bot, Send, User, FileText, Server, Rocket, ShieldCheck, Database, Activity, Settings2, Lock, Check, X, LogOut } from 'lucide-react';
 import { api, ApiError, type MutationResult } from '../../lib/client';
 import { useSession } from '../../lib/session';
 import { Glass, IconTile, StatusPill, GhostButton, PrimaryButton, PanelHeader } from '../common/ui';
-import { ErrorState, TruthTag, since } from '../common/states';
+import { ErrorState, TruthTag, since, shortDigest } from '../common/states';
+import { TruthValue, type TruthEnvelope } from '../common/truthDisplay';
 import type { TruthState } from '../../types/reality';
+
+interface AuditRecord {
+  seq: number;
+  action: string;
+  actor: string;
+  target: string;
+  result: TruthEnvelope<'SUCCESS' | 'FAILURE'>;
+  signature: string;
+  signedAt: number;
+  detail: string;
+}
+
+interface SafetyGate {
+  id: string;
+  title: string;
+  description: string;
+  check: TruthEnvelope<boolean>;
+  enforced: boolean;
+  signedBy: string;
+}
 
 interface Citation {
   type: string;
@@ -95,15 +116,89 @@ function ActionCard({ a, onDone }: { a: Proposed; onDone: (r: MutationResult | n
   );
 }
 
+function AuditTrailSection({ records }: { records: AuditRecord[] }) {
+  return (
+    <Glass className="p-4 text-[12px] text-slate-300 space-y-2">
+      <PanelHeader title="Audit Trail" />
+      <div className="space-y-1.5 max-h-[240px] overflow-y-auto">
+        {records.length === 0 ? (
+          <p className="text-slate-500">No audit records yet.</p>
+        ) : (
+          records.map((r) => (
+            <div key={r.seq} className="p-2 rounded-lg bg-white/[0.02] border border-cyan-400/15">
+              <div className="flex items-start gap-2 justify-between">
+                <div className="flex-1 min-w-0">
+                  <div className="text-[11.5px] font-mono text-cyan-300">#{r.seq} {r.action}</div>
+                  <div className="text-[11px] text-slate-400 mt-0.5">{r.actor} → {r.target}</div>
+                  <div className="text-[10.5px] text-slate-500 mt-0.5">{since(r.signedAt)}</div>
+                </div>
+                <div className="flex items-center gap-1">
+                  <TruthValue label="Result" envelope={r.result} format={(v) => v === 'SUCCESS' ? '✓' : '✗'} />
+                  <span className="text-[10px] text-slate-600" title={r.signature}>{shortDigest(r.signature)}</span>
+                </div>
+              </div>
+              {r.detail && <p className="text-[10.5px] text-slate-400 mt-1">{r.detail}</p>}
+            </div>
+          ))
+        )}
+      </div>
+    </Glass>
+  );
+}
+
+function SafetyGatesSection({ gates }: { gates: SafetyGate[] }) {
+  return (
+    <Glass className="p-4 text-[12px] text-slate-300 space-y-2">
+      <PanelHeader title="Pre-Operation Checks" />
+      <div className="space-y-1.5">
+        {gates.length === 0 ? (
+          <p className="text-slate-500">No safety gates configured.</p>
+        ) : (
+          gates.map((g) => (
+            <div key={g.id} className={`p-2 rounded-lg border ${g.enforced ? 'bg-rose-500/5 border-rose-400/20' : 'bg-white/[0.02] border-cyan-400/15'}`}>
+              <div className="flex items-start gap-2 justify-between">
+                <div className="flex-1">
+                  <div className="text-[11.5px] font-semibold text-white">{g.title}</div>
+                  <div className="text-[11px] text-slate-400 mt-0.5">{g.description}</div>
+                  <div className="text-[10.5px] text-slate-500 mt-1">Signed by {shortDigest(g.signedBy)}</div>
+                </div>
+                <div className="flex items-center gap-1">
+                  {g.enforced && <span className="text-[10px] px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-200">Enforced</span>}
+                  <TruthValue label="Check" envelope={g.check} format={(v) => v ? '✓' : '✗'} />
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </Glass>
+  );
+}
+
 export default function CopilotView() {
   const [params] = useSearchParams();
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [results, setResults] = useState<Record<string, MutationResult | 'dismissed'>>({});
+  const [auditRecords, setAuditRecords] = useState<AuditRecord[]>([]);
+  const [safetyGates, setSafetyGates] = useState<SafetyGate[]>([]);
   const { capabilities, session } = useSession();
   const bottom = useRef<HTMLDivElement>(null);
   const asked = useRef(false);
+
+  useEffect(() => {
+    const fetchAuditData = async () => {
+      try {
+        const r = await api.get<{ data: { records: AuditRecord[]; gates: SafetyGate[] } }>('/copilot/audit');
+        setAuditRecords(r.data.records || []);
+        setSafetyGates(r.data.gates || []);
+      } catch (e) {
+        // Silent fail; audit data is informational
+      }
+    };
+    fetchAuditData();
+  }, []);
 
   const ask = async (q: string) => {
     if (!q.trim()) return;
@@ -220,6 +315,8 @@ export default function CopilotView() {
             <li>Actions are proposals: approval runs them through the control plane under your identity.</li>
           </ol>
         </Glass>
+        <AuditTrailSection records={auditRecords} />
+        <SafetyGatesSection gates={safetyGates} />
         <Glass className="p-4 text-[12px] text-slate-300 space-y-1.5">
           <PanelHeader title="Model" />
           <p>{cap?.detail ?? '—'}</p>

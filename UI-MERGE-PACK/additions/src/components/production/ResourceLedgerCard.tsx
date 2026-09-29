@@ -1,0 +1,5 @@
+import React from 'react'; import type { ResourceDimension } from '../../types/truth'; import { TruthValue } from './TruthValue'; import { verifyModelA } from '../../lib/resourceLedger';
+export function ResourceLedgerCard({name,dimension}:{name:string;dimension:ResourceDimension}) { const invariant=verifyModelA(dimension); return <section aria-label={`${name} resource ledger`} className="resource-ledger-card">
+ <header><h3>{name}</h3><span>MODEL A</span></header><div className="resource-ledger-card__grid">
+ <TruthValue label="Total" envelope={dimension.total}/><TruthValue label="Owner reserve" envelope={dimension.ownerReserve}/><TruthValue label="Reserved" envelope={dimension.reserved}/><TruthValue label="Allocated" envelope={dimension.allocated}/><TruthValue label="Available" envelope={dimension.available}/></div>
+ <p>Available = Total − Owner Reserve − Reserved − Allocated</p><p data-status={invariant===true?'PASS':invariant===false?'FAIL':'UNKNOWN'}>Invariant: {invariant===true?'PASS':invariant===false?'FAIL':'UNKNOWN'}</p></section>; }

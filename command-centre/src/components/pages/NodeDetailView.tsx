@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Server, Radio, Pause, Play, CheckCircle2, ShieldOff, Terminal, KeyRound } from 'lucide-react';
+import { ArrowLeft, Server, Radio, Pause, Play, CheckCircle2, ShieldOff, Terminal, KeyRound, AlertCircle, CheckSquare } from 'lucide-react';
 import type { AuditEntryRec, NodeOperation, NodeRec, ReplicaRec, VolumeRec } from '../../types/reality';
 import { useResource } from '../../lib/useResource';
 import { useSession } from '../../lib/session';
@@ -9,6 +9,25 @@ import { Glass, PageTabs, PanelHeader, IconTile, StatusPill, GhostButton } from 
 import { LogViewer } from '../common/LogViewer';
 import { Gate, FreshnessPill, fmtBytes, fmtTime, fmtAge, since, shortDigest, ErrorState, Empty, Note, TruthTag, Unavailable } from '../common/states';
 import { Digest, FreshnessBadge, viewFreshness } from '../common/truth';
+import { TruthValue, ResourceLedgerCard, CordonCard, type TruthEnvelope, type ResourceDimension } from '../common/truthDisplay';
+
+interface PlacementConstraint {
+  id: string;
+  type: 'AFFINITY' | 'ANTI_AFFINITY' | 'TOPOLOGY_SPREAD';
+  label: string;
+  description: string;
+  enforced: TruthEnvelope<boolean>;
+  appliesTo: string[];
+  evidenceId: string | null;
+}
+
+interface FailureDomainHierarchy {
+  region: TruthEnvelope<string>;
+  zone: TruthEnvelope<string>;
+  host: TruthEnvelope<string>;
+  rack: TruthEnvelope<string | null>;
+  constraints: PlacementConstraint[];
+}
 
 interface Payload {
   node: NodeRec;
@@ -17,9 +36,10 @@ interface Payload {
   diagnostics: { subject: string; item: string; value: string; basis: string; detail: string }[];
   volumes: VolumeRec[];
   allocated: { cpuMilli: number; memBytes: number; replicas: number; undeclared: number };
+  failureDomain?: FailureDomainHierarchy;
 }
 
-type Tab = 'overview' | 'workloads' | 'resources' | 'network' | 'contribution' | 'depin' | 'security' | 'logs' | 'evidence' | 'settings';
+type Tab = 'overview' | 'workloads' | 'resources' | 'network' | 'placement' | 'contribution' | 'depin' | 'security' | 'logs' | 'evidence' | 'settings';
 const LEGACY: Record<string, Tab> = { facts: 'resources', storage: 'resources', mesh: 'network', identity: 'security', events: 'evidence' };
 
 const Row: React.FC<{ k: string; children: React.ReactNode }> = ({ k, children }) => (
@@ -141,6 +161,7 @@ export default function NodeDetailView() {
                   { id: 'workloads', label: `Workloads (${d.replicas.length})` },
                   { id: 'resources', label: 'Resources' },
                   { id: 'network', label: 'Network' },
+                  { id: 'placement', label: 'Placement (P1)' },
                   { id: 'contribution', label: 'Contribution' },
                   { id: 'depin', label: 'DePIN' },
                   { id: 'security', label: 'Security' },
@@ -179,22 +200,66 @@ export default function NodeDetailView() {
                       <Row k="Mode">{n.mode || '—'} {n.modeDetail}</Row>
                     </div>
                   </Glass>
+                  <CordonCard
+                    cordoned={false}
+                    lifecycle={n.lifecycle}
+                    disabled={true}
+                    className="md:col-span-1"
+                  />
                   <Glass className="p-4 md:col-span-2">
                     <PanelHeader title="Hardware" subtitle="Measured by the host agent and signed in its observation. Nothing here is declared or inferred." />
                     {!n.facts || n.facts.unknown === null ? (
                       <p className="text-[12.5px] text-slate-400 mt-2">{n.facts ? 'This host agent predates measured hardware facts: memory, disks and GPUs show as NOT MEASURED. Upgrade the agent.' : 'No observation yet.'}</p>
                     ) : (
                       <div className="mt-2 grid sm:grid-cols-2 gap-x-6">
-                        <Row k="CPU">{n.facts.cpus} logical{n.facts.physicalCores ? ` · ${n.facts.physicalCores} physical` : ''}{n.facts.cpuModel ? ` · ${n.facts.cpuModel}` : ''}</Row>
-                        <Row k="Measured RAM">{n.facts.memBytes != null ? fmtBytes(n.facts.memBytes) : 'NOT MEASURED'}</Row>
-                        <Row k="Swap">{n.facts.swapBytes === null ? 'NOT MEASURED' : fmtBytes(n.facts.swapBytes)}</Row>
-                        <Row k="Filesystem (agent data)">{n.facts.dataFs ? `${fmtBytes(n.facts.dataFs.freeBytes)} free of ${fmtBytes(n.facts.dataFs.totalBytes)}` : 'NOT MEASURED'}</Row>
-                        <Row k="Storage devices">
-                          {n.facts.disks === null ? 'NOT MEASURED' : n.facts.disks.length === 0 ? 'none visible' : n.facts.disks.map((x) => `${x.name} ${fmtBytes(x.sizeBytes)}${x.rotational ? ' HDD' : ''}${x.removable ? ' removable' : ''}`).join(', ')}
-                        </Row>
-                        <Row k="GPU">
-                          {n.facts.gpus === null ? 'NOT MEASURED' : n.facts.gpus.length === 0 ? 'none found' : n.facts.gpus.map((g) => `${g.vendor}${g.model ? ` ${g.model}` : ''}${g.vramBytes ? ` ${fmtBytes(g.vramBytes)}` : ''} (${g.source})`).join(', ')}
-                        </Row>
+                        <TruthValue
+                          label="CPU"
+                          envelope={{
+                            value: `${n.facts.cpus} logical${n.facts.physicalCores ? ` · ${n.facts.physicalCores} physical` : ''}${n.facts.cpuModel ? ` · ${n.facts.cpuModel}` : ''}`,
+                            freshness: stale ? 'STALE' : 'LIVE',
+                            source: 'measured'
+                          }}
+                        />
+                        <TruthValue
+                          label="Measured RAM"
+                          envelope={{
+                            value: n.facts.memBytes != null ? fmtBytes(n.facts.memBytes) : null,
+                            freshness: n.facts.memBytes != null ? (stale ? 'STALE' : 'LIVE') : 'UNKNOWN',
+                            source: 'measured'
+                          }}
+                        />
+                        <TruthValue
+                          label="Swap"
+                          envelope={{
+                            value: n.facts.swapBytes !== null ? fmtBytes(n.facts.swapBytes) : null,
+                            freshness: n.facts.swapBytes !== null ? (stale ? 'STALE' : 'LIVE') : 'UNKNOWN',
+                            source: 'measured'
+                          }}
+                        />
+                        <TruthValue
+                          label="Filesystem (agent data)"
+                          envelope={{
+                            value: n.facts.dataFs ? `${fmtBytes(n.facts.dataFs.freeBytes)} free of ${fmtBytes(n.facts.dataFs.totalBytes)}` : null,
+                            freshness: n.facts.dataFs ? (stale ? 'STALE' : 'LIVE') : 'UNKNOWN',
+                            source: 'measured'
+                          }}
+                        />
+                        <TruthValue
+                          label="Storage devices"
+                          envelope={{
+                            value: n.facts.disks === null ? null : n.facts.disks.length === 0 ? 'none visible' : n.facts.disks.map((x) => `${x.name} ${fmtBytes(x.sizeBytes)}${x.rotational ? ' HDD' : ''}${x.removable ? ' removable' : ''}`).join(', '),
+                            freshness: n.facts.disks !== null ? (stale ? 'STALE' : 'LIVE') : 'UNKNOWN',
+                            source: 'measured'
+                          }}
+                        />
+                        <TruthValue
+                          label="GPU"
+                          envelope={{
+                            value: n.facts.gpus === null ? null : n.facts.gpus.length === 0 ? 'none found' : n.facts.gpus.map((g) => `${g.vendor}${g.model ? ` ${g.model}` : ''}${g.vramBytes ? ` ${fmtBytes(g.vramBytes)}` : ''} (${g.source})`).join(', '),
+                            freshness: n.facts.gpus !== null ? (stale ? 'STALE' : 'LIVE') : 'UNKNOWN',
+                            source: 'measured'
+                          }}
+                        />
                         <Row k="Could not measure">{n.facts.unknown.length ? n.facts.unknown.join(', ') : 'nothing'}</Row>
                       </div>
                     )}
@@ -228,43 +293,65 @@ export default function NodeDetailView() {
                 ))}
 
               {tab === 'resources' && (() => {
-                // Available is bounded by what was measured and by what the host's policy admits, whichever is smaller.
-                const cap = (policy: unknown, measured: number | null) => {
-                  const p = typeof policy === 'number' && policy > 0 ? policy : null;
-                  if (p === null) return measured;
-                  return measured === null ? p : Math.min(p, measured);
+                const freshness = stale ? 'STALE' : 'LIVE';
+
+                const cpuDim: ResourceDimension = {
+                  total: {
+                    value: n.facts ? n.facts.cpus * 1000 : null,
+                    freshness: n.facts ? freshness : 'UNKNOWN',
+                    source: 'measured'
+                  },
+                  ownerReserve: {
+                    value: null,
+                    freshness: 'UNAVAILABLE',
+                    source: 'none'
+                  },
+                  reserved: {
+                    value: typeof n.policy?.maxCpuMilli === 'number' && n.policy.maxCpuMilli > 0 ? n.policy.maxCpuMilli : null,
+                    freshness: 'LIVE',
+                    source: 'policy'
+                  },
+                  allocated: {
+                    value: d.allocated.cpuMilli,
+                    freshness: freshness,
+                    source: 'derived'
+                  },
+                  unit: 'cores'
                 };
-                const cpuCeil = cap(n.policy?.maxCpuMilli, n.facts ? n.facts.cpus * 1000 : null);
-                const memCeil = cap(n.policy?.maxMemBytes, n.facts?.memBytes ?? null);
+
+                const memDim: ResourceDimension = {
+                  total: {
+                    value: n.facts?.memBytes ?? null,
+                    freshness: n.facts?.memBytes != null ? freshness : 'UNKNOWN',
+                    source: 'measured'
+                  },
+                  ownerReserve: {
+                    value: null,
+                    freshness: 'UNAVAILABLE',
+                    source: 'none'
+                  },
+                  reserved: {
+                    value: typeof n.policy?.maxMemBytes === 'number' && n.policy.maxMemBytes > 0 ? n.policy.maxMemBytes : null,
+                    freshness: 'LIVE',
+                    source: 'policy'
+                  },
+                  allocated: {
+                    value: d.allocated.memBytes,
+                    freshness: freshness,
+                    source: 'derived'
+                  },
+                  unit: 'bytes'
+                };
+
                 return (
                 <div className="grid md:grid-cols-2 gap-4 [&>*]:min-w-0">
-                  <Glass className="p-4 md:col-span-2 overflow-x-auto">
-                    <PanelHeader title="Resources" subtitle="Each column has its own source. Nothing is filled in to make the row add up." />
-                    <table className="dh-table w-full min-w-[680px] mt-2">
-                      <thead><tr><th /><th>Total (measured)</th><th>Owner reserved</th><th>Host admits (policy)</th><th>Allocated</th><th>Available</th></tr></thead>
-                      <tbody>
-                        <tr>
-                          <td className="text-slate-300">CPU</td>
-                          <td>{n.facts ? `${n.facts.cpus} logical` : 'not measured'}</td>
-                          <td className="text-slate-500">no record</td>
-                          <td>{typeof n.policy?.maxCpuMilli === 'number' && n.policy.maxCpuMilli > 0 ? <>{Number(n.policy.maxCpuMilli) / 1000} cores <TruthTag state="CONFIGURED" /></> : <span className="text-slate-500">no cap</span>}</td>
-                          <td>{d.allocated.cpuMilli / 1000} cores <TruthTag state="DERIVED" /></td>
-                          <td>{cpuCeil !== null ? <>{Math.max(0, cpuCeil - d.allocated.cpuMilli) / 1000} cores <TruthTag state="DERIVED" /></> : <span className="text-slate-500">unknown</span>}</td>
-                        </tr>
-                        <tr>
-                          <td className="text-slate-300">Memory</td>
-                          <td>{n.facts?.memBytes != null ? fmtBytes(n.facts.memBytes) : 'not measured'}</td>
-                          <td className="text-slate-500">no record</td>
-                          <td>{typeof n.policy?.maxMemBytes === 'number' && n.policy.maxMemBytes > 0 ? <>{fmtBytes(Number(n.policy.maxMemBytes))} <TruthTag state="CONFIGURED" /></> : <span className="text-slate-500">no cap</span>}</td>
-                          <td>{fmtBytes(d.allocated.memBytes)} <TruthTag state="DERIVED" /></td>
-                          <td>{memCeil !== null ? <>{fmtBytes(Math.max(0, memCeil - d.allocated.memBytes))} <TruthTag state="DERIVED" /></> : <span className="text-slate-500">unknown</span>}</td>
-                        </tr>
-                      </tbody>
-                    </table>
+                  <ResourceLedgerCard label="CPU (cores)" dimension={cpuDim} className="md:col-span-2" />
+                  <ResourceLedgerCard label="Memory (RAM)" dimension={memDim} className="md:col-span-2" />
+                  <div className="md:col-span-2">
                     <Note>
-                      Allocated is the sum of the manifest requests of the {d.allocated.replicas} replica(s) desired on this host{d.allocated.undeclared ? `; ${d.allocated.undeclared} declare no request and count as 0` : ''}. Available = the smaller of measured total and the policy limit, minus allocated. Declared capacity at enrolment: {n.declared.cpuMilli / 1000} cores, {fmtBytes(n.declared.memBytes)} (CONFIGURED). The platform has no owner-reserve record yet, so none is shown.
+                      MODEL A: AVAILABLE = TOTAL - OWNER_RESERVE - RESERVED - ALLOCATED. Allocated is the sum of manifest requests of {d.allocated.replicas} replica(s) desired on this host{d.allocated.undeclared ? `; ${d.allocated.undeclared} declare no request and count as 0` : ''}. Declared capacity at enrolment: {n.declared.cpuMilli / 1000} cores, {fmtBytes(n.declared.memBytes)} (CONFIGURED).
                     </Note>
-                  </Glass>
+                  </div>
                   <Glass className="p-4">
                     <PanelHeader title="Storage" />
                     {n.storage ? (
@@ -318,6 +405,8 @@ export default function NodeDetailView() {
                   <div className="mt-3"><Unavailable title="Interface and NAT discovery" detail="Hosts do not report network interfaces, public reachability or NAT type yet (facts.unknown lists natType)." /></div>
                 </Glass>
               )}
+
+              {tab === 'placement' && d.failureDomain && <FailureDomainsSection domain={d.failureDomain} />}
 
               {tab === 'contribution' && (
                 <Unavailable title="Contribution policy" state="PLANNED" detail="This host serves its owner only. There is no community or marketplace contribution, and nothing is contributed by default. Capacity can be shared with a peer cluster only through a root-signed federation grant, which the host's own policy (allowFederated) can still refuse." />
@@ -395,6 +484,93 @@ export default function NodeDetailView() {
           );
         }}
       </Gate>
+    </div>
+  );
+}
+
+function FailureDomainsSection({ domain }: { domain: FailureDomainHierarchy }) {
+  const [expandedConstraintId, setExpandedConstraintId] = React.useState<string | null>(null);
+
+  return (
+    <div className="space-y-4">
+      <Glass className="p-4">
+        <PanelHeader icon={<IconTile tone="blue" size="sm"><Server className="w-4 h-4" /></IconTile>} title="Failure domain hierarchy (P1)" subtitle="Logical grouping for placement constraints and affinity rules." />
+        <div className="mt-4 space-y-2">
+          <TruthValue
+            label="Region"
+            envelope={domain.region}
+            format={(v) => v}
+          />
+          <TruthValue
+            label="Zone"
+            envelope={domain.zone}
+            format={(v) => v}
+          />
+          <TruthValue
+            label="Host"
+            envelope={domain.host}
+            format={(v) => v}
+          />
+          <TruthValue
+            label="Rack"
+            envelope={domain.rack}
+            format={(v) => v || 'not assigned'}
+          />
+        </div>
+        <Note>Failure domains group nodes for placement constraints. LIVE indicates current observation; STALE or UNKNOWN indicates measurement is old or unavailable.</Note>
+      </Glass>
+
+      {domain.constraints.length > 0 && (
+        <Glass className="p-4">
+          <PanelHeader icon={<IconTile tone="emerald" size="sm"><CheckSquare className="w-4 h-4" /></IconTile>} title="Placement constraints (P1)" subtitle="Affinity and anti-affinity rules that apply to this host." />
+          <div className="mt-4 space-y-2">
+            {domain.constraints.map((constraint) => (
+              <div
+                key={constraint.id}
+                className="p-3 rounded-lg bg-slate-800/30 border border-slate-700/20 cursor-pointer hover:bg-slate-800/50 transition-colors"
+                onClick={() => setExpandedConstraintId(expandedConstraintId === constraint.id ? null : constraint.id)}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1">
+                      <div className="text-[12px] font-semibold text-slate-100">{constraint.label}</div>
+                      <div className="text-[11px] text-slate-400 mt-0.5">{constraint.description}</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <StatusPill status={constraint.type} tone={constraint.type === 'AFFINITY' ? 'blue' : constraint.type === 'ANTI_AFFINITY' ? 'amber' : 'violet'} dot={false} />
+                    <div className={`text-[10px] font-mono ${constraint.enforced.freshness === 'LIVE' ? 'text-emerald-400' : 'text-slate-400'}`}>{constraint.enforced.freshness}</div>
+                  </div>
+                </div>
+
+                {expandedConstraintId === constraint.id && (
+                  <div className="mt-3 pt-3 border-t border-slate-700/30 space-y-2">
+                    <TruthValue
+                      label="Enforced"
+                      envelope={constraint.enforced}
+                      format={(v) => v ? 'yes' : 'no'}
+                    />
+                    {constraint.appliesTo.length > 0 && (
+                      <div className="text-[11px] text-slate-400 pt-1">
+                        <div className="font-semibold text-slate-300 mb-1">Applies to:</div>
+                        <div className="space-y-0.5">
+                          {constraint.appliesTo.map((app) => (
+                            <div key={app} className="text-slate-400 ml-3">• {app}</div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {constraint.evidenceId && (
+                      <div className="text-[10px] text-slate-500 font-mono pt-1">Evidence: {shortDigest(constraint.evidenceId)}</div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+          <Note>Constraints enforce placement rules: AFFINITY keeps replicas together, ANTI_AFFINITY spreads them apart, TOPOLOGY_SPREAD distributes across failure domains.</Note>
+        </Glass>
+      )}
     </div>
   );
 }
