@@ -176,37 +176,59 @@ echo ""
 
 # Generate continuous traffic
 echo "Generating traffic to $target_node:$REMOTE_PORT..."
-TRAFFIC_TEMP_LOG="$TRAFFIC_LOG.tmp"
+TRAFFIC_JSONL="$WORKLOAD_LOG_DIR/${WORKLOAD_ID}-traffic.jsonl"
+: > "$TRAFFIC_JSONL"
 {
   deadline=$((SECONDS + DURATION))
+  request_count=0
+  failed_count=0
+  request_number=0
 
   while (( SECONDS < deadline )); do
-    # Send HTTP request to workload server
+    request_number=$((request_number + 1))
+    ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+    started_ns=$(python3 -c 'import time; print(time.monotonic_ns())')
+    stderr_file="$WORKLOAD_LOG_DIR/${WORKLOAD_ID}-request-${request_number}.stderr"
+    ssh_exit=0
     response="$(ssh -i "$SSH_KEY" -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -p "$ssh_port" "$SSH_USER@localhost" \
-      "python3 -c 'import urllib.request; print(urllib.request.urlopen(\"http://127.0.0.1:$REMOTE_PORT/\", timeout=2).read().decode())'" 2>/dev/null || true)"
-    # Check for workload_id in response (handles both compact and pretty JSON)
-    if printf '%s\n' "$response" | grep -E "\"workload_id\"[:' ]*\"$WORKLOAD_ID\"" >/dev/null 2>&1; then
-      printf '%s\n' "$response" >> "$TRAFFIC_TEMP_LOG"
+      "python3 -c 'import json,urllib.request; r=urllib.request.urlopen(\"http://127.0.0.1:$REMOTE_PORT/\",timeout=2); print(json.dumps({\"status\":r.status,\"body\":json.loads(r.read().decode())}))'" 2>"$stderr_file")" || ssh_exit=$?
+    ended_ns=$(python3 -c 'import time; print(time.monotonic_ns())')
+    latency_ms=$(( (ended_ns - started_ns) / 1000000 ))
+    status=null
+    identity=""
+    error=""
+    if (( ssh_exit != 0 )); then
+      error="SSH_OR_HTTP_EXIT_${ssh_exit}"
+    elif ! printf '%s\n' "$response" | jq -e 'type == "object" and (.status | type == "number") and (.body | type == "object")' >/dev/null 2>&1; then
+      error="INVALID_HTTP_JSON"
+    else
+      status=$(printf '%s\n' "$response" | jq -r '.status')
+      identity=$(printf '%s\n' "$response" | jq -r '.body.workload_id // empty')
+      if [[ "$status" == 200 && "$identity" == "$WORKLOAD_ID" ]]; then
+        request_count=$((request_count + 1))
+      else
+        error="HTTP_STATUS_OR_IDENTITY_MISMATCH"
+      fi
     fi
+    if [[ -n "$error" ]]; then
+      failed_count=$((failed_count + 1))
+      echo "$ts Request $request_number FAILED: $error" >> "$TRAFFIC_LOG"
+    else
+      echo "$ts Request $request_number OK: $response" >> "$TRAFFIC_LOG"
+    fi
+    jq -cn --arg timestamp "$ts" --arg request_id "$WORKLOAD_ID-$request_number" \
+      --arg workload_id "$WORKLOAD_ID" --arg node_id "$target_node" \
+      --argjson http_status "$status" --argjson latency_ms "$latency_ms" \
+      --arg response_identity "$identity" --arg error "$error" --arg raw_response "$response" \
+      '{timestamp:$timestamp,request_id:$request_id,workload_id:$workload_id,node_id:$node_id,
+        http_status:$http_status,latency_ms:$latency_ms,response_identity:$response_identity,
+        error:$error,raw_response:$raw_response}' >> "$TRAFFIC_JSONL"
 
     sleep 1
   done
 
-  # Count responses and format for final log
-  if [ -f "$TRAFFIC_TEMP_LOG" ]; then
-    request_count="$(wc -l < "$TRAFFIC_TEMP_LOG" | tr -d ' ')"
-    request_number=0
-    while IFS= read -r response; do
-      request_number=$((request_number + 1))
-      echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) Request $request_number: $response" >> "$TRAFFIC_LOG"
-    done < "$TRAFFIC_TEMP_LOG"
-    rm -f "$TRAFFIC_TEMP_LOG"
-  else
-    request_count=0
-  fi
-
-  echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) Traffic generation complete: $request_count requests" | tee -a "$TRAFFIC_LOG"
-  [ "$request_count" -gt 0 ] || exit 42
+  echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) Traffic complete: attempts=$request_number success=$request_count failed=$failed_count" | tee -a "$TRAFFIC_LOG"
+  (( request_count > 0 && failed_count == 0 )) || exit 42
 } &
 TRAFFIC_PID=$!
 
@@ -215,27 +237,34 @@ echo "Monitoring resource utilization..."
 {
   deadline=$((SECONDS + DURATION))
   sample_count=0
+  sample_failures=0
 
   while (( SECONDS < deadline )); do
     # Get system resource usage on remote node
-    ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -p "$ssh_port" "$SSH_USER@localhost" <<'REMOTE_MONITOR' 2>/dev/null
+    if ssh -i "$SSH_KEY" -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -p "$ssh_port" "$SSH_USER@localhost" >> "$RESOURCE_LOG" 2>&1 <<'REMOTE_MONITOR'
 echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) CPU: $(grep -c ^processor /proc/cpuinfo) cores, Usage: $(top -bn1 | grep Cpu | awk '{print $2}')";
 echo "Memory: $(free -m | awk 'NR==2 {printf "Used: %dM / %dM (%.1f%%)", $3, $2, $3/$2*100}')";
 echo "Disk: $(df -h / | awk 'NR==2 {printf "Used: %s / %s (%s)", $3, $2, $5}')";
 REMOTE_MONITOR
-
-    sample_count=$((sample_count + 1))
+    then
+      sample_count=$((sample_count + 1))
+    else
+      sample_failures=$((sample_failures + 1))
+      echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) RESOURCE_SAMPLE_FAILED" >> "$RESOURCE_LOG"
+    fi
     sleep 5
   done
 
-  echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) Resource monitoring complete: $sample_count samples" | tee -a "$RESOURCE_LOG"
+  echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) Resource monitoring complete: success=$sample_count failed=$sample_failures" | tee -a "$RESOURCE_LOG"
+  (( sample_count > 0 && sample_failures == 0 )) || exit 43
 } &
 MONITOR_PID=$!
 
 # Wait for workload to complete
 if ! wait $TRAFFIC_PID; then
+  wait "$MONITOR_PID" || true
   bash "$SCRIPT_DIR/deallocate-resource.sh" "$allocation_id" >/dev/null 2>&1 || true
-  jq --arg completed_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '.status = "FAILED" | .failure = "NO_TRAFFIC" | .completed_at = $completed_at' "$WORKLOAD_STATE_FILE" > "$WORKLOAD_STATE_FILE.tmp"
+  jq --arg completed_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '.status = "FAILED" | .failure = "TRAFFIC_INTEGRITY_FAILURE" | .completed_at = $completed_at' "$WORKLOAD_STATE_FILE" > "$WORKLOAD_STATE_FILE.tmp"
   mv "$WORKLOAD_STATE_FILE.tmp" "$WORKLOAD_STATE_FILE"
   die "Traffic verification failed for $WORKLOAD_ID"
 fi
@@ -244,8 +273,12 @@ sleep 1
 # Terminate server
 ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -p "$ssh_port" "$SSH_USER@localhost" "pkill -f 'workload-$WORKLOAD_ID' || true" >/dev/null 2>&1 || true
 
-# Wait for monitor
-wait $MONITOR_PID || true
+# Wait for monitor; an incomplete observation cannot become a clean baseline.
+if ! wait "$MONITOR_PID"; then
+  jq --arg completed_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '.status = "FAILED" | .failure = "RESOURCE_OBSERVATION_FAILURE" | .completed_at = $completed_at' "$WORKLOAD_STATE_FILE" > "$WORKLOAD_STATE_FILE.tmp"
+  mv "$WORKLOAD_STATE_FILE.tmp" "$WORKLOAD_STATE_FILE"
+  die "Resource observations incomplete for $WORKLOAD_ID"
+fi
 
 # Update workload state
 jq --arg completed_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '.status = "COMPLETED" | .completed_at = $completed_at' "$WORKLOAD_STATE_FILE" > "$WORKLOAD_STATE_FILE.tmp"
