@@ -23,6 +23,8 @@ jobs:
         run: bash validation/local-vm/tests/preflight-gate.sh
       - name: SSH diagnostic regression
         run: python3 validation/local-vm/tests/bootstrap-diagnostics.py
+      - name: Retired qualification scripts fail closed
+        run: bash validation/local-vm/tests/retired-gates.sh
       - name: Evidence verifier unit tests
         run: go test ./pkg/evidence
       - name: Scope declaration
