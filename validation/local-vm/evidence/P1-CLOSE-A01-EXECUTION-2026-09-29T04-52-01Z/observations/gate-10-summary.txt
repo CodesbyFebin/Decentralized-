@@ -1,1 +1,0 @@
-file_exists=true ledger_parse_exit=0 ledger_type=object 
