@@ -51,6 +51,28 @@ claims:
       - tests/chaos/invariants.go (invariant validation logic)
       - .github/workflows/chaos-test.yml (CI execution)
 
+  - statement: >
+      Qualification architecture independent of execution substrate.
+      Accepts any real Linux runtime backend (QEMU, Kubernetes, native, container,
+      hypervisor) as long as 3 independently identifiable runtime nodes with distinct
+      isolation boundaries can be established and evidence truthfully recorded.
+      Rejects simulation, hardcoding, and self-assertion at all decisive gates.
+    verify_by:
+      - validation/local-vm/RUNTIME-REMEDIATION-READINESS.md
+      - validation/local-vm/QUALIFICATION-HIERARCHY.md
+    hierarchy:
+      - P1_CORE: Distributed scheduler, placement, workload, failure detection, reconciliation (any real backend)
+      - P1_QEMU_VM: Additional VM/hypervisor isolation boundary evidence (QEMU/KVM/libvirt only)
+      - P1_KUBERNETES: Kubernetes orchestration, pod lifecycle, network policy (Kubernetes only)
+      - P2_MULTIPHYSICAL: Independent physical-host failure domains (requires ≥3 physical machines)
+      - P2_MULTIOPERATOR: Independent administrative operator domains (requires ≥2 operators)
+    implemented:
+      - Runtime backend discovery and selection
+      - Topology transparency: observed node count, container/VM/physical classification
+      - Failure-domain honesty: explicitly record DISTINCT vs SAME vs UNKNOWN boundaries
+      - Evidence binding: source SHA, runtime identity, backend classification
+      - No simulation in decisive gates; all PASS backed by observable production behavior
+
 rulesforagents:
   - Quote specifications verbatim; do not infer beyond dh/v1 conformance coverage
   - The 136 test vectors are normative; non-conformant implementations are not compatible
@@ -59,3 +81,18 @@ rulesforagents:
   - Signed intent without local policy acceptance is not executed
   - Do not present silent task migration as a feature; this system prevents it
   - BLAKE3 CAS backend is not optional; content addressing is fundamental
+
+qualification:
+  - Runtime backend neutrality: Select the strongest real backend available, not the easiest
+  - No QEMU requirement; any real Linux runtime acceptable if evidence is honest
+  - Three real nodes means three independently identifiable runtime instances with distinct isolation boundaries
+  - Topology must be observed and reported exactly: node count, container/VM/physical, filesystem separation, network path
+  - Failure domains must be classified truthfully: DISTINCT or SAME or UNKNOWN for each boundary (OS, filesystem, physical host, operator)
+  - No simulation in decisive gates (P1 01–32); all PASS claims require observable production behavior
+  - Diagnostic results (remediation host/runtime tests) MUST NOT be imported as P1 gate PASS results
+  - After diagnostics pass: integrate remediation → freeze exact source → start clean P1 campaign → 32 decisive gates → authoritative verification → tamper negative control → qualification/sealing verdict
+  - P1 qualification does not establish production readiness; production hardening is separate
+  - P2 multiphysical requires actual independent physical hosts; three VMs on one machine do not satisfy P2
+  - Evidence binding: every PASS tied to source SHA, campaign ID, timestamp, node identity, artifact digests, signer
+  - No hardcoded timing; all latencies measured from observed timestamps
+  - No manual state edits; all observations from production runtime paths
