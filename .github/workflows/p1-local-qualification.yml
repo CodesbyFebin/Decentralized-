@@ -5,6 +5,9 @@ on:
     branches:
       - p1-local-vm
       - claude/friendly-gauss-kfxoc2
+  pull_request:
+    branches:
+      - claude/friendly-gauss-kfxoc2
   workflow_dispatch:
 
 jobs:
@@ -27,6 +30,8 @@ jobs:
         run: bash validation/local-vm/tests/retired-gates.sh
       - name: Legacy verifier rejects synthetic gate claims
         run: bash validation/local-vm/tests/p1-verifier-quarantine.sh
+      - name: Network diagnostic syntax
+        run: python3 -m py_compile validation/local-vm/scripts/observe-network-fault.py
       - name: Evidence verifier unit tests
         run: go test ./pkg/evidence
       - name: Scope declaration
