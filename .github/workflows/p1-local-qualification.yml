@@ -34,6 +34,7 @@ jobs:
         run: python3 -m py_compile validation/local-vm/scripts/observe-network-fault.py
       - name: Ledger transaction and placement concurrency
         run: |
+          bash validation/local-vm/tests/resourceledger-init.sh
           bash validation/local-vm/tests/resourceledger-concurrency.sh
           bash validation/local-vm/tests/resourceledger-model-a.sh
           bash validation/local-vm/tests/placement-concurrency.sh

@@ -7,7 +7,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
-STATE_DIR="$REPO_ROOT/validation/local-vm/state"
+STATE_DIR="${DH_STATE_DIR:-$REPO_ROOT/validation/local-vm/state}"
 CLUSTER_JSON="$STATE_DIR/cluster.json"
 RESOURCELEDGER_JSON="$STATE_DIR/resourceledger.json"
 
@@ -19,6 +19,13 @@ die() { echo "ERROR: $*" >&2; exit 1; }
 NODES="$(jq -r '.nodes' "$CLUSTER_JSON")"
 CLUSTER_SOURCE_SHA="$(jq -r '.source_sha' "$CLUSTER_JSON")"
 CURRENT_SHA="$(git -C "$REPO_ROOT" rev-parse HEAD)"
+[ "$CLUSTER_SOURCE_SHA" = "$CURRENT_SHA" ] || die "Cluster source SHA differs from current source"
+cpu_capacity="$(jq -r '.cpu_per_node' "$CLUSTER_JSON")"
+memory_mb="$(jq -r '.memory_per_node_mb' "$CLUSTER_JSON")"
+disk_gb="$(jq -r '.disk_per_node_gb' "$CLUSTER_JSON")"
+for quantity in "$NODES" "$cpu_capacity" "$memory_mb" "$disk_gb"; do
+  [[ "$quantity" =~ ^[1-9][0-9]*$ ]] || die "Invalid declared cluster capacity: $quantity"
+done
 
 echo "=== P1-LOCAL-VM-A01: Initialize ResourceLedger ==="
 echo "Nodes: $NODES"
@@ -39,12 +46,6 @@ echo ""
   for ((i=1;i<=NODES;i++)); do
     idx=$((i-1))
     node_name="$(jq -r ".node_details[$idx].name" "$CLUSTER_JSON")"
-
-    # Read specs from vm-specs.json if available, else use fixed defaults
-    # VM specs: 1 CPU, 1024 MiB RAM, 8 GiB disk per node
-    cpu_capacity=1
-    memory_mb=1024
-    disk_gb=8
 
     comma=","; [ "$i" -eq "$NODES" ] && comma=""
     echo "    {"
@@ -68,15 +69,15 @@ echo ""
 
   echo "  ],"
   echo '  "summary": {'
-  echo "    \"cpu_total\": $NODES,"
+  echo "    \"cpu_total\": $((NODES * cpu_capacity)),"
   echo "    \"cpu_owner_reserve\": 0,"
   echo "    \"cpu_reserved\": 0,"
   echo "    \"cpu_allocated\": 0,"
-  echo "    \"memory_total_mb\": $((NODES * 1024)),"
+  echo "    \"memory_total_mb\": $((NODES * memory_mb)),"
   echo "    \"memory_owner_reserve_mb\": 0,"
   echo "    \"memory_reserved_mb\": 0,"
   echo "    \"memory_allocated_mb\": 0,"
-  echo "    \"disk_total_gb\": $((NODES * 8)),"
+  echo "    \"disk_total_gb\": $((NODES * disk_gb)),"
   echo "    \"disk_owner_reserve_gb\": 0,"
   echo "    \"disk_reserved_gb\": 0,"
   echo "    \"disk_allocated_gb\": 0"

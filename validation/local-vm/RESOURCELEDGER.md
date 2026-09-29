@@ -80,7 +80,7 @@ bash validation/local-vm/scripts/init-resourceledger.sh
 
 This creates `resourceledger.json` with:
 - Cluster topology from `cluster.json`
-- Per-node resource capacities (1 CPU, 1024 MB RAM, 8 GB disk per node)
+- Per-node resource capacities from the exact `cluster.json` declaration
 - Source SHA references (cluster and ledger)
 - Empty allocations list
 
