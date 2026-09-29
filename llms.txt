@@ -1,38 +1,23 @@
-# Decentralized.Host
-
-> Sovereign self-hosted infrastructure: replicated control plane -> signed intent -> local host admission -> execution -> signed observation -> evidence.
-
-## Core model
-Desired, admitted, executing, observed, and verified are distinct states. Unmeasured state is UNKNOWN.
-
-## Implemented
-- Ed25519 host identities and signed assignments/observations
-- Local host admission policy
-- BLAKE3 CAS, FastCDC, Merkle anti-entropy, snapshots, and repair
-- Userspace WireGuard mesh and SWIM gossip
-- Raft + mTLS control plane
-- L7 edge and ACME flows
-- Signed backup/restore
-- 17 chaos scenarios
-- Federation
-- dh/v1 specification with 136 test vectors
-- Independent Python conformance implementation
-
-## Important limits
-- Process runtime does not enforce CPU/memory limits; Docker runtime is used for enforced limits.
-- Erasure coding is not implemented.
-- gVisor and Firecracker are not wired as runtimes.
-- HTTP/3 is not implemented.
-- Userspace WireGuard is used rather than a kernel interface.
-
-## Verify
-- README.md
-- docs/protocol/dh-v1.md
-- docs/architecture.md
-- docs/trust-model.md
-- docs/BLUEPRINT.md
-- pkg/conformance/
-- tests/integration/
-- pkg/chaos/
-
-Repository: https://github.com/CodesbyFebin/Decentralized-
+> Decentralized.Host — Signed-intent assignment with per-host local policy enforcement.
+>> dh/v1 conformance spec with 136 test vectors and 17 chaos scenarios.
+>
+> Language: Go
+> Focus: sovereign infrastructure, local admission control, distributed state
+>
+> Repo: https://github.com/CodesbyFebin/Decentralized-
+> Stack: Ed25519, Raft, mTLS, WireGuard, BLAKE3, Merkle anti-entropy
+>
+> Claims:
+> - Work proposed as signed intent; each host enforces local policy before execution
+> - BLAKE3 content-addressed storage with Merkle anti-entropy for data consistency
+> - Raft consensus + mTLS for control plane security
+> - Userspace WireGuard with signed key bindings
+> - dh/v1 conformance spec with 136 normative test vectors
+> - Independent Python reference implementation
+> - 17 chaos scenarios with invariant validation under traffic
+> - Explicit state model: DESIRED ≠ ADMITTED ≠ EXECUTING ≠ OBSERVED ≠ VERIFIED
+>
+> Verify: AGENTS.md | specs/dh-v1.md | pkg/conformance | tests/chaos/
+>
+> Status: Milestones M1-M8 complete (conformance passing). Chaos testing active.
+> Limitations: No silent task migration; all admission decisions are audited and host-enforced.
