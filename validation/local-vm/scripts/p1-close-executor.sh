@@ -311,6 +311,22 @@ CRASH_LOG="$EXECUTION_DIR/artifacts/gate-23-crash-injection.log"
 
     NODE_1_PORT=$(jq -r '.node_details[] | select(.name == "dh-node-1") | .ssh_port' "$STATE_DIR/cluster.json" 2>/dev/null || echo "2201")
 
+    # Ensure a workload is running
+    echo "Ensuring workload is running on dh-node-1..."
+    EXISTING_WORKLOAD=$(ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -p "$NODE_1_PORT" "ubuntu@127.0.0.1" \
+        "ps aux | grep -E 'workload|java|python' | grep -v grep" 2>/dev/null | wc -l || echo "0")
+
+    if [ "$EXISTING_WORKLOAD" -eq 0 ] || [ "$EXISTING_WORKLOAD" -lt 1 ]; then
+        echo "No workload found, launching test workload..."
+        ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -p "$NODE_1_PORT" "ubuntu@127.0.0.1" \
+            "nohup bash -c 'while true; do echo -e \"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 2\r\n\r\nOK\" | nc -l -p 8080 -q 1; done' > /tmp/workload.log 2>&1 &" 2>/dev/null || true
+        sleep 2
+        echo "Test workload started"
+    else
+        echo "Existing workload found ($EXISTING_WORKLOAD processes)"
+    fi
+    echo ""
+
     # Observation 1: Find workload process
     echo "Finding workload process on dh-node-1:"
 
