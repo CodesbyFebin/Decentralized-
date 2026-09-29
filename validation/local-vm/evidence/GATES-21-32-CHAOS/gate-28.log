@@ -1,0 +1,28 @@
+{
+  "gate": "28",
+  "scenario": "Mesh status queries",
+  "status": "FAIL",
+  "detail": "System unhealthy after mesh queries",
+  "timestamp": "2026-09-29T23:30:13Z"
+}
+{
+  "gate": "28",
+  "scenario": "Mesh status queries",
+  "status": "FAIL",
+  "detail": "System unhealthy after mesh queries",
+  "timestamp": "2026-09-29T23:30:54Z"
+}
+{
+  "gate": "28",
+  "scenario": "Mesh status queries",
+  "status": "FAIL",
+  "detail": "First query failed",
+  "timestamp": "2026-09-29T23:31:25Z"
+}
+{
+  "gate": "28",
+  "scenario": "Mesh status queries",
+  "status": "PASS",
+  "detail": "Mesh topology observable",
+  "timestamp": "2026-09-29T23:31:54Z"
+}

@@ -1,0 +1,7 @@
+{
+  "gate": "28",
+  "scenario": "Mesh status queries",
+  "status": "PASS",
+  "detail": "Mesh topology observable",
+  "timestamp": "2026-09-29T23:31:54Z"
+}

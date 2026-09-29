@@ -1,0 +1,7 @@
+{
+  "gate": "31",
+  "scenario": "Node consistency",
+  "status": "PASS",
+  "detail": "Node list consistent across queries",
+  "timestamp": "2026-09-29T23:31:54Z"
+}

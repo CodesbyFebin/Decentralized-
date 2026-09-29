@@ -1,0 +1,10 @@
+{
+  "gate": "22",
+  "scenario": "Multiple nodes down",
+  "status": "PASS",
+  "latency_p50_ms": "19",
+  "latency_p99_ms": "25",
+  "error_rate": "0%",
+  "detail": "System survived 2/3 nodes being down",
+  "timestamp": "2026-09-29T23:16:08Z"
+}

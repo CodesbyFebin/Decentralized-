@@ -1,0 +1,21 @@
+{
+  "gate": "29",
+  "scenario": "Control plane queries",
+  "status": "FAIL",
+  "detail": "System unhealthy after CP queries",
+  "timestamp": "2026-09-29T23:30:13Z"
+}
+{
+  "gate": "29",
+  "scenario": "Burst queries",
+  "status": "FAIL",
+  "detail": "Query command timed out",
+  "timestamp": "2026-09-29T23:30:54Z"
+}
+{
+  "gate": "29",
+  "scenario": "System availability",
+  "status": "PASS",
+  "detail": "System available after repeated access",
+  "timestamp": "2026-09-29T23:31:54Z"
+}

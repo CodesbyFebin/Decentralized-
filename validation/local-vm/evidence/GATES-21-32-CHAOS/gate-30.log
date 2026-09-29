@@ -1,0 +1,28 @@
+{
+  "gate": "30",
+  "scenario": "Mixed operations",
+  "status": "FAIL",
+  "detail": "System unhealthy after mixed ops",
+  "timestamp": "2026-09-29T23:30:13Z"
+}
+{
+  "gate": "30",
+  "scenario": "Mixed queries",
+  "status": "FAIL",
+  "detail": "Query command timed out",
+  "timestamp": "2026-09-29T23:30:54Z"
+}
+{
+  "gate": "30",
+  "scenario": "Mixed operations",
+  "status": "FAIL",
+  "detail": "Some operations failed (success=0)",
+  "timestamp": "2026-09-29T23:31:25Z"
+}
+{
+  "gate": "30",
+  "scenario": "Mixed operations",
+  "status": "PASS",
+  "detail": "System handles diverse query operations",
+  "timestamp": "2026-09-29T23:31:54Z"
+}

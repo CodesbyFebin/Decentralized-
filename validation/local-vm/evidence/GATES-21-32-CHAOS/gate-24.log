@@ -1,0 +1,11 @@
+  Running: podman restart dh-node-1; sleep 5; podman restart dh-node-2; sleep 5; podman restart dh-node-3
+{
+  "gate": "24",
+  "scenario": "Rapid restart sequence",
+  "status": "PASS",
+  "latency_p50_ms": "16",
+  "latency_p99_ms": "23",
+  "error_rate": "0%",
+  "detail": "System recovers from node cycling",
+  "timestamp": "2026-09-29T23:16:08Z"
+}
