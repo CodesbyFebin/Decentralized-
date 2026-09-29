@@ -25,6 +25,8 @@ jobs:
         run: python3 validation/local-vm/tests/bootstrap-diagnostics.py
       - name: Retired qualification scripts fail closed
         run: bash validation/local-vm/tests/retired-gates.sh
+      - name: Legacy verifier rejects synthetic gate claims
+        run: bash validation/local-vm/tests/p1-verifier-quarantine.sh
       - name: Evidence verifier unit tests
         run: go test ./pkg/evidence
       - name: Scope declaration
