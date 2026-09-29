@@ -61,6 +61,7 @@ echo ""
     echo "      \"disk_owner_reserve_gb\": 0,"
     echo "      \"disk_reserved_gb\": 0,"
     echo "      \"disk_allocated_gb\": 0,"
+    echo "      \"reservations\": [],"
     echo "      \"allocations\": []"
     echo "    }$comma"
   done

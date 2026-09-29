@@ -12,7 +12,10 @@ cat > "$DH_RESOURCELEDGER_JSON" <<'JSON'
     "memory_mb": 1024, "memory_owner_reserve_mb": 128,
     "memory_reserved_mb": 128, "memory_allocated_mb": 0,
     "disk_gb": 8, "disk_owner_reserve_gb": 1,
-    "disk_reserved_gb": 1, "disk_allocated_gb": 0, "allocations": []
+    "disk_reserved_gb": 1, "disk_allocated_gb": 0,
+    "reservations": [{"reservation_id":"res-existing","workload_id":"reserved-existing",
+      "cpu":0.3,"memory_mb":128,"disk_gb":1,"state":"ACTIVE"}],
+    "allocations": []
   }],
   "summary": {"cpu_allocated": 0, "memory_allocated_mb": 0, "disk_allocated_gb": 0}
 }
