@@ -1,0 +1,4 @@
+gate_id="26"
+outcome="BLOCKED"
+reason="Cannot test responsiveness without successful recovery (Gate 24: BLOCKED)"
+verified_at="2026-09-29T04:29:03.612Z"

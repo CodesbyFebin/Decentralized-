@@ -15,8 +15,15 @@ REPO_ROOT="/home/user/Decentralized-"
 STATE_DIR="$REPO_ROOT/validation/local-vm/state"
 EVIDENCE_DIR="$REPO_ROOT/validation/local-vm/evidence"
 SSH_KEY="$HOME/.ssh/p1-local-vm"
-CAMPAIGN_ID=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
-EXECUTION_DIR="$EVIDENCE_DIR/P1-CLOSE-A01-EXECUTION-$CAMPAIGN_ID"
+
+# Use provided EXECUTION_DIR or create a new one
+if [ -n "$1" ]; then
+    EXECUTION_DIR="$1"
+    CAMPAIGN_ID=$(basename "$EXECUTION_DIR" | sed 's/P1-CLOSE-A01-EXECUTION-//')
+else
+    CAMPAIGN_ID=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+    EXECUTION_DIR="$EVIDENCE_DIR/P1-CLOSE-A01-EXECUTION-$CAMPAIGN_ID"
+fi
 
 mkdir -p "$EXECUTION_DIR/artifacts" "$EXECUTION_DIR/observations"
 

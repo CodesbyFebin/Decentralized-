@@ -1,0 +1,23 @@
+=== P1-CLOSE Verification Summary ===
+Execution: /home/user/Decentralized-/validation/local-vm/evidence/P1-CLOSE-A01-EXECUTION-2026-09-29T04-28-58Z
+Verified: 2026-09-29T04:29:03.670Z
+
+10: UNKNOWN
+11-16: UNKNOWN
+17-18: UNKNOWN
+19-20: BLOCKED
+23: UNKNOWN
+24: BLOCKED
+25: UNKNOWN
+26: BLOCKED
+27-28: UNKNOWN
+29: FAIL
+30: UNKNOWN
+31: UNKNOWN
+32: UNKNOWN
+
+Summary:
+  PASS=0
+  FAIL=1
+  BLOCKED=3
+  UNKNOWN=9

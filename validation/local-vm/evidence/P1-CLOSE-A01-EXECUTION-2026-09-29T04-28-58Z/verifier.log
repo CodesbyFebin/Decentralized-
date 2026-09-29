@@ -1,0 +1,53 @@
+[2026-09-29T04:29:03.547Z] === Verifying Gate 10: ResourceLedger Presence ===
+[2026-09-29T04:29:03.553Z] Gate 10: UNKNOWN (Observations missing from executor)
+[2026-09-29T04:29:03.556Z] === Verifying Gate 11-16: ResourceLedger Model A ===
+[2026-09-29T04:29:03.561Z] Gate 11-16: UNKNOWN (Model A validation file missing)
+[2026-09-29T04:29:03.564Z] === Verifying Gate 17-18: Network Partition ===
+[2026-09-29T04:29:03.570Z] Gate 17-18: UNKNOWN (Partition injection log missing)
+[2026-09-29T04:29:03.573Z] === Verifying Gate 19-20: Workload Migration ===
+[2026-09-29T04:29:03.578Z] Gate 19-20: BLOCKED (Cannot test without real partition (Gate 17-18: UNKNOWN))
+[2026-09-29T04:29:03.582Z] === Verifying Gate 23: Workload Crash Injection ===
+[2026-09-29T04:29:03.587Z] Gate 23: UNKNOWN (Crash injection log missing)
+[2026-09-29T04:29:03.590Z] === Verifying Gate 24: Workload Recovery ===
+[2026-09-29T04:29:03.595Z] Gate 24: BLOCKED (Cannot measure recovery without successful crash (Gate 23: UNKNOWN))
+[2026-09-29T04:29:03.599Z] === Verifying Gate 25: Scheduler Process State ===
+[2026-09-29T04:29:03.605Z] Gate 25: UNKNOWN (Scheduler state log missing)
+[2026-09-29T04:29:03.608Z] === Verifying Gate 26: Scheduler Responsiveness ===
+[2026-09-29T04:29:03.613Z] Gate 26: BLOCKED (Cannot test responsiveness without successful recovery (Gate 24: BLOCKED))
+[2026-09-29T04:29:03.616Z] === Verifying Gate 27-28: Control-Plane Consistency ===
+[2026-09-29T04:29:03.622Z] Gate 27-28: UNKNOWN (Requires ledger state comparison post-recovery (not implemented in this version))
+[2026-09-29T04:29:03.625Z] === Verifying Gate 29: Evidence Artifact Collection ===
+[2026-09-29T04:29:03.631Z] Gate 29: FAIL (Evidence manifest not created)
+[2026-09-29T04:29:03.634Z] === Verifying Gate 30: Cryptographic Signature ===
+[2026-09-29T04:29:03.639Z] Gate 30: UNKNOWN (Signature generation log missing)
+[2026-09-29T04:29:03.643Z] === Verifying Gate 31: ResourceLedger Consistency ===
+[2026-09-29T04:29:03.648Z] Gate 31: UNKNOWN (Consistency verification log missing)
+[2026-09-29T04:29:03.652Z] === Verifying Gate 32: Tamper Detection ===
+[2026-09-29T04:29:03.657Z] Gate 32: UNKNOWN (Tamper test log missing)
+[2026-09-29T04:29:03.660Z] 
+[2026-09-29T04:29:03.663Z] === VERIFICATION COMPLETE ===
+[2026-09-29T04:29:03.666Z] Verdict directory: /home/user/Decentralized-/validation/local-vm/evidence/P1-CLOSE-A01-EXECUTION-2026-09-29T04-28-58Z/verdicts
+=== P1-CLOSE Verification Summary ===
+Execution: /home/user/Decentralized-/validation/local-vm/evidence/P1-CLOSE-A01-EXECUTION-2026-09-29T04-28-58Z
+Verified: 2026-09-29T04:29:03.670Z
+
+10: UNKNOWN
+11-16: UNKNOWN
+17-18: UNKNOWN
+19-20: BLOCKED
+23: UNKNOWN
+24: BLOCKED
+25: UNKNOWN
+26: BLOCKED
+27-28: UNKNOWN
+29: FAIL
+30: UNKNOWN
+31: UNKNOWN
+32: UNKNOWN
+
+Summary:
+  PASS=0
+  FAIL=1
+  BLOCKED=3
+  UNKNOWN=9
+[2026-09-29T04:29:03.673Z] Verification complete

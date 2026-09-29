@@ -1,0 +1,3 @@
+resourceledger.json EXISTS at /home/user/Decentralized-/validation/local-vm/state
+ledger_parse_exit_code=0
+ledger_type=object

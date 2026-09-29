@@ -1,0 +1,11 @@
+=== Network Partition Injection ===
+Timestamp: 2026-09-29T04:28:58.934Z
+
+tc_available=false
+partition_injection_blocked=true
+reason=tc_command_not_found
+
+Blocker documentation:
+  Required: iproute2 package (provides tc)
+  Alternative: network namespace isolation
+  Impact: Cannot perform real network fault injection
