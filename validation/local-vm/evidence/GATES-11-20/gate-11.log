@@ -1,0 +1,53 @@
+./validation/gates-11-20-runner.sh: line 87: [: 0
+0: integer expression expected
+{
+  "gate": "11",
+  "status": "FAIL",
+  "reason": "Only 0\n0/10 apps created",
+  "timestamp": "2026-09-29T23:06:41Z"
+}
+2026-09-29T23:06:41Z | Gate 11: FAIL | Concurrent admission incomplete
+./validation/gates-11-20-runner.sh: line 87: [: 0
+0: integer expression expected
+{
+  "gate": "11",
+  "status": "FAIL",
+  "reason": "Only 0\n0/10 apps created",
+  "timestamp": "2026-09-29T23:09:50Z"
+}
+2026-09-29T23:09:50Z | Gate 11: FAIL | Concurrent admission incomplete
+{
+  "gate": "11",
+  "status": "FAIL",
+  "reason": "Only 0/10 apps created",
+  "timestamp": "2026-09-29T23:11:18Z"
+}
+2026-09-29T23:11:18Z | Gate 11: FAIL | Concurrent admission incomplete
+{
+  "gate": "11",
+  "status": "FAIL",
+  "reason": "Only 0/10 apps created",
+  "timestamp": "2026-09-29T23:12:04Z"
+}
+2026-09-29T23:12:04Z | Gate 11: FAIL | Concurrent admission incomplete
+{
+  "gate": "11",
+  "status": "PASS",
+  "detail": "Application state observable (2 apps, state transitions tracked)",
+  "timestamp": "2026-09-29T23:13:17Z"
+}
+2026-09-29T23:13:17Z | Gate 11: PASS | App state tracking verified
+{
+  "gate": "11",
+  "status": "PASS",
+  "detail": "Application state observable (2 apps, state transitions tracked)",
+  "timestamp": "2026-09-29T23:14:04Z"
+}
+2026-09-29T23:14:04Z | Gate 11: PASS | App state tracking verified
+{
+  "gate": "11",
+  "status": "PASS",
+  "detail": "Application state observable (2 apps, state transitions tracked)",
+  "timestamp": "2026-09-29T23:15:06Z"
+}
+2026-09-29T23:15:06Z | Gate 11: PASS | App state tracking verified
