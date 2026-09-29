@@ -21,7 +21,7 @@ jobs:
           go-version-file: go.mod
           cache: true
       - name: Shell syntax
-        run: bash -n p1-qualification-master.sh validation/local-vm/scripts/*.sh validation/local-vm/tests/*.sh
+        run: bash -n p1-qualification-master.sh deploy/kubernetes/qualify-readiness.sh validation/local-vm/scripts/*.sh validation/local-vm/tests/*.sh
       - name: Preflight gate regression
         run: bash validation/local-vm/tests/preflight-gate.sh
       - name: SSH diagnostic regression
@@ -43,4 +43,5 @@ jobs:
       - name: Scope declaration
         run: |
           echo 'These checks use CI runner processes and synthetic test inputs.'
-          echo 'P1-LOCAL-VM-A01 qualification remains UNKNOWN until actual QEMU VM and signed evidence gates pass.'
+          echo 'P1-LOCAL-VM-A01 remains UNKNOWN until the VM campaign proves it; QEMU is not a project release gate.'
+          echo 'K8S-CONTROL-A01 remains BLOCKED until runtime, quorum, host, traffic, and signed evidence checks pass.'
