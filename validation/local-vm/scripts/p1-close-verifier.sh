@@ -34,10 +34,10 @@ verdict() {
     local reason="$3"
 
     {
-        echo "gate_id=$gate_id"
-        echo "outcome=$outcome"
-        echo "reason=$reason"
-        echo "verified_at=$(date -u +'%Y-%m-%dT%H:%M:%S.%3NZ')"
+        echo "gate_id=\"$gate_id\""
+        echo "outcome=\"$outcome\""
+        echo "reason=\"$reason\""
+        echo "verified_at=\"$(date -u +'%Y-%m-%dT%H:%M:%S.%3NZ')\""
     } > "$VERDICT_DIR/gate-${gate_id}-verdict.txt"
 
     log "Gate $gate_id: $outcome ($reason)"

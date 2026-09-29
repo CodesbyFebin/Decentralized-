@@ -1,0 +1,4 @@
+[2026-09-29T04:25:34.838Z] === GATE 10: ResourceLedger Presence ===
+[2026-09-29T04:25:34.843Z] Gate 10 observation: resourceledger.json EXISTS at /home/user/Decentralized-/validation/local-vm/state (ts: 1790655934841920914)
+[2026-09-29T04:25:34.851Z] Gate 10 observation: ledger_parse_exit_code=0 (ts: 1790655934849774905)
+[2026-09-29T04:25:34.859Z] Gate 10 observation: ledger_type=object (ts: 1790655934857615468)
