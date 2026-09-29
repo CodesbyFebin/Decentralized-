@@ -36,8 +36,10 @@ echo ""
 
 # Request placement from scheduler
 echo "Requesting placement from scheduler..."
-bash "$SCRIPT_DIR/request-placement.sh" "$WORKLOAD_ID" "$CPU_REQ" "$MEMORY_REQ" "$DISK_REQ" 30 || die "Placement failed"
-PLACEMENT_RESULT_FILE="$STATE_DIR/placement-result.json"
+PLACEMENT_RESULT_FILE=$(mktemp "$WORKLOAD_LOG_DIR/.placement-${WORKLOAD_ID}.XXXXXX")
+trap 'rm -f "$PLACEMENT_RESULT_FILE"' EXIT
+bash "$SCRIPT_DIR/request-placement.sh" "$WORKLOAD_ID" "$CPU_REQ" "$MEMORY_REQ" "$DISK_REQ" 30 "$PLACEMENT_RESULT_FILE" || die "Placement failed"
+[[ $(jq -r '.workload_id' "$PLACEMENT_RESULT_FILE") == "$WORKLOAD_ID" ]] || die "Placement identity mismatch"
 allocation_id="$(jq -r '.allocation_id' "$PLACEMENT_RESULT_FILE")"
 [ -n "$allocation_id" ] && [ "$allocation_id" != "null" ] || die "Placement result missing allocation_id"
 

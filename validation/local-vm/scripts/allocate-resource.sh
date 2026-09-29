@@ -8,7 +8,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 STATE_DIR="$REPO_ROOT/validation/local-vm/state"
-RESOURCELEDGER_JSON="$STATE_DIR/resourceledger.json"
+RESOURCELEDGER_JSON="${DH_RESOURCELEDGER_JSON:-$STATE_DIR/resourceledger.json}"
 
 die() { echo "ERROR: $*" >&2; exit 1; }
 
@@ -26,16 +26,25 @@ WORKLOAD_ID="${5:-}"
 [ -n "$DISK_REQ" ] || die "Usage: $0 <node-name> <cpu> <memory-mb> <disk-gb> <workload-id>"
 [ -n "$WORKLOAD_ID" ] || die "Usage: $0 <node-name> <cpu> <memory-mb> <disk-gb> <workload-id>"
 
+# Lock a stable sidecar inode for the entire read/check/write transaction.
+# Locking resourceledger.json itself is ineffective after atomic rename.
+exec 9>"${RESOURCELEDGER_JSON}.lock"
+flock -x 9 || die "Failed to lock ResourceLedger"
+
 # Validate numbers
 for val in "$CPU_REQ" "$MEMORY_REQ" "$DISK_REQ"; do
   [[ "$val" =~ ^[0-9]+(\.[0-9]+)?$ ]] || die "Invalid numeric value: $val"
+  awk -v req="$val" 'BEGIN { exit !(req > 0) }' || die "Resource request must be positive: $val"
 done
 
 ALLOCATION_ID="alloc-$(date -u +%s)-$(od -An -N4 -tu4 /dev/urandom | tr -d ' ')"
 
 # Read current state and check availability
-node_data="$(jq ".node_capacity[] | select(.node == \"$NODE_NAME\")" "$RESOURCELEDGER_JSON")"
+node_data="$(jq --arg node "$NODE_NAME" '.node_capacity[] | select(.node == $node)' "$RESOURCELEDGER_JSON")"
 [ -n "$node_data" ] || die "Node '$NODE_NAME' not found in ResourceLedger"
+if jq -e --arg workload "$WORKLOAD_ID" '[.node_capacity[].allocations[] | select(.workload_id == $workload and .state == "ACTIVE")] | length > 0' "$RESOURCELEDGER_JSON" >/dev/null; then
+  die "Active allocation already exists for workload '$WORKLOAD_ID'"
+fi
 
 # Calculate allocated from ACTIVE allocations only
 active_allocated=$(echo "$node_data" | jq -c '
@@ -59,9 +68,9 @@ memory_reserved=$(echo "$node_data" | jq '.memory_reserved_mb')
 disk_reserved=$(echo "$node_data" | jq '.disk_reserved_gb')
 
 # Model A: AVAILABLE = TOTAL - OWNER_RESERVE - RESERVED - ALLOCATED
-cpu_available=$(echo "$cpu_total $cpu_owner_reserve $cpu_reserved $cpu_active" | awk '{printf "%.1f", $1 - $2 - $3 - $4}')
-memory_available=$(echo "$memory_total $memory_owner_reserve $memory_reserved $mem_active" | awk '{printf "%.0f", $1 - $2 - $3 - $4}')
-disk_available=$(echo "$disk_total $disk_owner_reserve $disk_reserved $disk_active" | awk '{printf "%.1f", $1 - $2 - $3 - $4}')
+cpu_available=$(echo "$cpu_total $cpu_owner_reserve $cpu_reserved $cpu_active" | awk '{print $1 - $2 - $3 - $4}')
+memory_available=$(echo "$memory_total $memory_owner_reserve $memory_reserved $mem_active" | awk '{print $1 - $2 - $3 - $4}')
+disk_available=$(echo "$disk_total $disk_owner_reserve $disk_reserved $disk_active" | awk '{print $1 - $2 - $3 - $4}')
 
 # Check allocation feasibility using awk for floating-point comparison
 if awk -v req="$CPU_REQ" -v avail="$cpu_available" 'BEGIN { exit !(req > avail) }'; then
@@ -73,6 +82,10 @@ fi
 if awk -v req="$DISK_REQ" -v avail="$disk_available" 'BEGIN { exit !(req > avail) }'; then
   die "Insufficient disk: requested $DISK_REQ GB, available $disk_available GB on $NODE_NAME"
 fi
+
+for available in "$cpu_available" "$memory_available" "$disk_available"; do
+  awk -v amount="$available" 'BEGIN { exit !(amount < 0) }' && die "Negative ledger availability on $NODE_NAME"
+done
 
 # Update ledger with new allocation
 NEW_LEDGER=$(jq \
@@ -105,10 +118,12 @@ NEW_LEDGER=$(jq \
   )' "$RESOURCELEDGER_JSON")
 
 # Write atomically
-tmp_file=$(mktemp)
+tmp_file=$(mktemp "${RESOURCELEDGER_JSON}.tmp.XXXXXX")
+trap 'rm -f "$tmp_file"' EXIT
 echo "$NEW_LEDGER" > "$tmp_file"
 jq empty "$tmp_file" || die "Invalid JSON generated"
 mv "$tmp_file" "$RESOURCELEDGER_JSON"
+trap - EXIT
 
 echo "STATUS: ALLOCATED"
 echo "Allocation ID: $ALLOCATION_ID"
@@ -117,4 +132,4 @@ echo "Resources: $CPU_REQ CPU, ${MEMORY_REQ}M RAM, ${DISK_REQ}G disk"
 echo "Workload: $WORKLOAD_ID"
 echo ""
 echo "Remaining capacity on $NODE_NAME:"
-jq ".node_capacity[] | select(.node == \"$NODE_NAME\") | \"CPU: \(.cpu_allocated)/\(.cpu_cores), Memory: \(.memory_allocated_mb)/\(.memory_mb)M, Disk: \(.disk_allocated_gb)/\(.disk_gb)G\"" -r "$RESOURCELEDGER_JSON"
+jq --arg node "$NODE_NAME" -r '.node_capacity[] | select(.node == $node) | "CPU: \(.cpu_allocated)/\(.cpu_cores), Memory: \(.memory_allocated_mb)/\(.memory_mb)M, Disk: \(.disk_allocated_gb)/\(.disk_gb)G"' "$RESOURCELEDGER_JSON"

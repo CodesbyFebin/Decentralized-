@@ -14,6 +14,15 @@ ResourceLedger operates as a single source of truth (similar to `cluster.json` i
 
 State file: `validation/local-vm/state/resourceledger.json`
 
+**Remediation status:** Allocation and release now share a stable
+`resourceledger.json.lock` sidecar, recheck capacity inside the lock, reject
+duplicate active workload IDs, and commit by atomic rename. Scheduler clients
+use unique request/result IDs. The current shell ledger still lacks an
+implemented reservation lifecycle and tested allocation-from-reservation
+transition. Its Model A fields alone do not prove the complete Model A gate;
+that gate remains `UNKNOWN` pending reservation, owner-reserve, reconciliation,
+and runtime evidence tests.
+
 ## Schema
 
 ```json
