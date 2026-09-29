@@ -1,0 +1,21 @@
+{
+  "phase": 9,
+  "phase_name": "workload-agent-node-failure-recovery",
+  "timestamp": "2026-09-29T21:53:10Z",
+  "scenarios_tested": 3,
+  "scenario_1_single_node": {
+    "node": "dh-node-3",
+    "failure_mode": "container_stop",
+    "detection_latency_ms": 13854,
+    "recovery_status": "healthy"
+  },
+  "scenario_2_rapid_cycles": {
+    "cycles": 2,
+    "recovery_status": "healthy"
+  },
+  "scenario_3_final_health": {
+    "healthy_paths": 6,
+    "total_paths": 6,
+    "cluster_status": "healthy"
+  }
+}
