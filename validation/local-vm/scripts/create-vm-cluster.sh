@@ -99,30 +99,32 @@ for ((i=1;i<=REQ_NODES;i++)); do
   DISK="$NODE_DIR/disk.qcow2"
   qemu-img create -f qcow2 -b "$UBUNTU_IMAGE" -F qcow2 "$DISK" "${REQ_DISK}G"
 
-  cat > "$NODE_DIR/user-data" <<EOF
-#cloud-config
-hostname: $NODE_NAME
-fqdn: $NODE_NAME.local
-preserve_hostname: true
-ssh_pwauth: false
-users:
-  - default
-  - name: ubuntu
-    sudo: ALL=(ALL) NOPASSWD:ALL
-    groups: [adm, sudo]
-    shell: /bin/bash
-    lock_passwd: true
-    ssh_authorized_keys:
-      - $SSH_PUBLIC_KEY
-package_update: false
-packages:
-  - openssh-server
-runcmd:
-  - systemctl enable ssh
-  - systemctl restart ssh
-  - mkdir -p /opt/decentralized-host /var/lib/decentralized-host /var/log/decentralized-host
-  - echo "P1-LOCAL-VM-A01 Node: $NODE_NAME ready" > /var/log/cloud-init-success.log
-EOF
+  # Write user-data with proper cloud-init YAML format and safe key injection
+  {
+    printf '#cloud-config\n'
+    printf 'hostname: %s\n' "$NODE_NAME"
+    printf 'fqdn: %s.local\n' "$NODE_NAME"
+    printf 'preserve_hostname: true\n'
+    printf 'ssh_pwauth: false\n'
+    printf 'users:\n'
+    printf '  - default\n'
+    printf '  - name: ubuntu\n'
+    printf '    sudo: ALL=(ALL) NOPASSWD:ALL\n'
+    printf '    groups: [adm, sudo]\n'
+    printf '    shell: /bin/bash\n'
+    printf '    lock_passwd: true\n'
+    printf '    ssh_authorized_keys:\n'
+    printf '      - %s\n' "$SSH_PUBLIC_KEY"
+    printf 'package_update: false\n'
+    printf 'packages:\n'
+    printf '  - openssh-server\n'
+    printf '  - iproute2\n'
+    printf 'runcmd:\n'
+    printf '  - systemctl enable ssh\n'
+    printf '  - systemctl restart ssh\n'
+    printf '  - mkdir -p /opt/decentralized-host /var/lib/decentralized-host /var/log/decentralized-host\n'
+    printf '  - echo "P1-LOCAL-VM-A01 Node: %s ready" > /var/log/cloud-init-success.log\n' "$NODE_NAME"
+  } > "$NODE_DIR/user-data"
 
   cat > "$NODE_DIR/meta-data" <<EOF
 instance-id: p1-local-vm-a01-node-$i
