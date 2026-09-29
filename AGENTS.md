@@ -84,15 +84,19 @@ rulesforagents:
 
 qualification:
   - Runtime backend neutrality: Select the strongest real backend available, not the easiest
+  - Runtime discovery first: Inventory available backends, then select to maximize real failure boundaries
   - No QEMU requirement; any real Linux runtime acceptable if evidence is honest
   - Three real nodes means three independently identifiable runtime instances with distinct isolation boundaries
   - Topology must be observed and reported exactly: node count, container/VM/physical, filesystem separation, network path
   - Failure domains must be classified truthfully: DISTINCT or SAME or UNKNOWN for each boundary (OS, filesystem, physical host, operator)
+  - Profile qualification is additive, not substitutive: P1_KUBERNETES_QUALIFIED does NOT imply P1_MULTIPHYSICAL_QUALIFIED; P1_CORE does NOT imply VM isolation
   - No simulation in decisive gates (P1 01–32); all PASS claims require observable production behavior
-  - Diagnostic results (remediation host/runtime tests) MUST NOT be imported as P1 gate PASS results
-  - After diagnostics pass: integrate remediation → freeze exact source → start clean P1 campaign → 32 decisive gates → authoritative verification → tamper negative control → qualification/sealing verdict
+  - Diagnostic results (remediation runtime tests) MUST NOT be imported as P1 gate PASS results
+  - After diagnostics pass: review evidence → integrate remediation → freeze exact source → start clean P1 campaign → 32 decisive gates → authoritative verification → tamper negative control → qualification/sealing verdict
+  - No candidate freeze at backend selection; only after complete diagnostic sequence passes
   - P1 qualification does not establish production readiness; production hardening is separate
   - P2 multiphysical requires actual independent physical hosts; three VMs on one machine do not satisfy P2
   - Evidence binding: every PASS tied to source SHA, campaign ID, timestamp, node identity, artifact digests, signer
   - No hardcoded timing; all latencies measured from observed timestamps
   - No manual state edits; all observations from production runtime paths
+  - Selection reason documented: why this backend was chosen over alternatives (maximizes which boundaries)
