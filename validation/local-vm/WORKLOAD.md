@@ -257,3 +257,14 @@ ResourceLedger now shows allocation as RELEASED (preserved in history for audit)
    - Resource contention tests
 
 Phase 3.3 baseline establishes the healthy operational state before measuring failure behavior.
+# Traffic observation integrity
+
+The workload launcher writes every HTTP attempt to
+`state/workload-logs/<workload-id>-traffic.jsonl`, including request ID,
+timestamp, node, HTTP status when observed, latency, response identity, raw
+response, and error. It parses JSON identity instead of matching a log string.
+Any failed attempt or incomplete remote resource sample fails the local
+workload run; the raw per-request stderr and resource log remain available.
+This local result is not a decisive P1 qualification verdict. An independent
+verifier must evaluate the 15-second smoke and 120-second baseline against
+source-bound raw artifacts from the QEMU host.

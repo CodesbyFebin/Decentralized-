@@ -5,6 +5,9 @@ on:
     branches:
       - p1-local-vm
       - claude/friendly-gauss-kfxoc2
+  pull_request:
+    branches:
+      - claude/friendly-gauss-kfxoc2
   workflow_dispatch:
 
 jobs:
@@ -18,16 +21,27 @@ jobs:
           go-version-file: go.mod
           cache: true
       - name: Shell syntax
-        run: bash -n p1-qualification-master.sh validation/local-vm/scripts/*.sh validation/local-vm/tests/*.sh
+        run: bash -n p1-qualification-master.sh deploy/kubernetes/qualify-readiness.sh validation/local-vm/scripts/*.sh validation/local-vm/tests/*.sh
       - name: Preflight gate regression
         run: bash validation/local-vm/tests/preflight-gate.sh
       - name: SSH diagnostic regression
         run: python3 validation/local-vm/tests/bootstrap-diagnostics.py
       - name: Retired qualification scripts fail closed
         run: bash validation/local-vm/tests/retired-gates.sh
+      - name: Legacy verifier rejects synthetic gate claims
+        run: bash validation/local-vm/tests/p1-verifier-quarantine.sh
+      - name: Network diagnostic syntax
+        run: python3 -m py_compile validation/local-vm/scripts/observe-network-fault.py
+      - name: Ledger transaction and placement concurrency
+        run: |
+          bash validation/local-vm/tests/resourceledger-init.sh
+          bash validation/local-vm/tests/resourceledger-concurrency.sh
+          bash validation/local-vm/tests/resourceledger-model-a.sh
+          bash validation/local-vm/tests/placement-concurrency.sh
       - name: Evidence verifier unit tests
         run: go test ./pkg/evidence
       - name: Scope declaration
         run: |
           echo 'These checks use CI runner processes and synthetic test inputs.'
-          echo 'P1-LOCAL-VM-A01 qualification remains UNKNOWN until actual QEMU VM and signed evidence gates pass.'
+          echo 'P1-LOCAL-VM-A01 remains UNKNOWN until the VM campaign proves it; QEMU is not a project release gate.'
+          echo 'K8S-CONTROL-A01 remains BLOCKED until runtime, quorum, host, traffic, and signed evidence checks pass.'

@@ -23,8 +23,16 @@ command -v jq >/dev/null 2>&1 || die "jq not found"
 AUTO_RELEASE=""
 [ "${1:-}" = "--auto-release" ] && AUTO_RELEASE=1
 
+# Reconciliation can mark allocations stale and replace the ledger. Keep the
+# same stable sidecar lock throughout observation and commit so a concurrent
+# allocator cannot write between the observation and capacity recalculation.
+if [ -n "$AUTO_RELEASE" ]; then
+  exec 9>"${RESOURCELEDGER_JSON}.lock"
+  flock -x 9 || die "Failed to lock ResourceLedger"
+fi
+
 tmpfile="$(mktemp)"
-cleanup(){ rm -f "$tmpfile"; }
+cleanup(){ rm -f "$tmpfile" "${tmp_ledger:-}" "${next:-}"; }
 trap cleanup EXIT
 
 echo "=== P1-LOCAL-VM-A01: ResourceLedger Reconciliation ==="
@@ -86,11 +94,11 @@ if [ "${#orphaned_ids[@]}" -gt 0 ] && [ -n "$AUTO_RELEASE" ]; then
   echo ""
   echo "Releasing ${#orphaned_ids[@]} orphaned allocations..."
 
-  tmp_ledger="$(mktemp)"
+  tmp_ledger="$(mktemp "${RESOURCELEDGER_JSON}.tmp.XXXXXX")"
   cp "$RESOURCELEDGER_JSON" "$tmp_ledger"
 
   for alloc_id in "${orphaned_ids[@]}"; do
-    next="$(mktemp)"
+    next="$(mktemp "${RESOURCELEDGER_JSON}.tmp.XXXXXX")"
     jq --arg id "$alloc_id" '
       .node_capacity |= map(
         .allocations |= map(
@@ -101,7 +109,7 @@ if [ "${#orphaned_ids[@]}" -gt 0 ] && [ -n "$AUTO_RELEASE" ]; then
     mv "$next" "$tmp_ledger"
   done
 
-  next="$(mktemp)"
+  next="$(mktemp "${RESOURCELEDGER_JSON}.tmp.XXXXXX")"
   jq '
     .node_capacity |= map(
       ([.allocations[] | select(.state == "ACTIVE") | .cpu] | add // 0) as $cpu |
