@@ -1,0 +1,41 @@
+[2026-09-29T04:47:24.070Z] === GATE 10: ResourceLedger Presence ===
+[2026-09-29T04:47:24.089Z] Gate 10 observation: resourceledger.json NOT FOUND at /home/user/Decentralized-/validation/local-vm/state (ts: 1790657244080496493)
+[2026-09-29T04:47:24.102Z] WARNING: Could not capture artifact ledger-pre-injection.json from /home/user/Decentralized-/validation/local-vm/state/resourceledger.json
+[2026-09-29T04:47:24.112Z] Gate 10 observations captured
+[2026-09-29T04:47:24.118Z] === GATE 11-16: ResourceLedger Model A Validation ===
+[2026-09-29T04:47:24.132Z] Gate 11-16 observation: ledger_model_a_validation_performed (ts: 1790657244131149133)
+[2026-09-29T04:47:24.135Z] Gate 11-16 observations captured
+[2026-09-29T04:47:24.138Z] === GATE 17-18: Network Partition Injection ===
+[2026-09-29T04:47:24.146Z] Gate 17-18 observation: partition_injection_observation_captured (ts: 1790657244144675616)
+[2026-09-29T04:47:24.149Z] Gate 17-18 observations captured
+[2026-09-29T04:47:24.152Z] === GATE 23: Workload Crash Injection ===
+[2026-09-29T04:47:29.258Z] Gate 23 observation: crash_injection_observation_captured (ts: 1790657249257043578)
+[2026-09-29T04:47:29.261Z] Gate 23 observations captured
+[2026-09-29T04:47:29.264Z] === GATE 24: Workload Recovery Measurement ===
+[2026-09-29T04:47:31.472Z] Gate 24 observation: recovery_measurement_captured (ts: 1790657251470045433)
+[2026-09-29T04:47:31.475Z] Gate 24 observations captured
+[2026-09-29T04:47:31.479Z] === GATE 25: Scheduler Process State ===
+[2026-09-29T04:47:31.513Z] Gate 25 observation: scheduler_state_captured (ts: 1790657251511710420)
+[2026-09-29T04:47:31.516Z] Gate 25 observations captured
+[2026-09-29T04:47:31.519Z] === GATE 29: Evidence Artifact Collection ===
+[2026-09-29T04:47:31.621Z] Gate 29 observation: evidence_manifest_created digest=d5d2c26e29160d7c6e64d7a19a5fd24b210cde2bce62242e8e171bccfbd1721e (ts: 1790657251620481963)
+[2026-09-29T04:47:31.624Z] Gate 29 observations captured
+[2026-09-29T04:47:31.627Z] === GATE 30: Cryptographic Signature ===
+[2026-09-29T04:47:31.652Z] Gate 30 observation: cryptographic_signature_captured (ts: 1790657251651277984)
+[2026-09-29T04:47:31.655Z] Gate 30 observations captured
+[2026-09-29T04:47:31.658Z] === GATE 31: ResourceLedger Consistency Verification ===
+[2026-09-29T04:47:31.665Z] Gate 31 observation: consistency_verification_captured (ts: 1790657251664059327)
+[2026-09-29T04:47:31.668Z] Gate 31 observations captured
+[2026-09-29T04:47:31.670Z] === GATE 32: Tamper Detection Negative Control ===
+[2026-09-29T04:47:31.692Z] Gate 32 observation: tamper_detection_test_executed (ts: 1790657251690958005)
+[2026-09-29T04:47:31.695Z] Gate 32 observations captured
+[2026-09-29T04:47:31.698Z] 
+[2026-09-29T04:47:31.701Z] === P1-CLOSE EXECUTION COMPLETE ===
+[2026-09-29T04:47:31.704Z] Campaign ID: 2026-09-29T04-47-24Z
+[2026-09-29T04:47:31.707Z] Execution directory: /home/user/Decentralized-/validation/local-vm/evidence/P1-CLOSE-A01-EXECUTION-2026-09-29T04-47-24Z
+[2026-09-29T04:47:31.710Z] Observations directory: /home/user/Decentralized-/validation/local-vm/evidence/P1-CLOSE-A01-EXECUTION-2026-09-29T04-47-24Z/observations
+[2026-09-29T04:47:31.713Z] Artifacts directory: /home/user/Decentralized-/validation/local-vm/evidence/P1-CLOSE-A01-EXECUTION-2026-09-29T04-47-24Z/artifacts
+[2026-09-29T04:47:31.715Z] Manifest: /home/user/Decentralized-/validation/local-vm/evidence/P1-CLOSE-A01-EXECUTION-2026-09-29T04-47-24Z/artifacts/evidence-manifest.json
+[2026-09-29T04:47:31.718Z] 
+[2026-09-29T04:47:31.721Z] NEXT: Run verifier against observations + gate contracts
+[2026-09-29T04:47:31.724Z] Command: p1-close-verifier.sh /home/user/Decentralized-/validation/local-vm/evidence/P1-CLOSE-A01-EXECUTION-2026-09-29T04-47-24Z /home/user/Decentralized-/validation/local-vm/evidence/P1-GATE-CONTRACT.md

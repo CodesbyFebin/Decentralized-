@@ -1,0 +1,4 @@
+gate_id="17-18"
+outcome="BLOCKED"
+reason="tc command not found in environment"
+verified_at="2026-09-29T04:47:31.766Z"
