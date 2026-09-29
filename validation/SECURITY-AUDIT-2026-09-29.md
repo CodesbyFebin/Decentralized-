@@ -329,17 +329,21 @@ func WrapDEK(dek [32]byte, kek [32]byte, clusterID string) ([]byte, error)
 - AAD = clusterID (prevents cross-cluster unwrap)
 - **Status**: Correct; DEK never exposed in Raft
 
-**4. Timestamp Handling [AUDIT REQUIRED]**
+**4. Timestamp Handling [VERIFIED - IMPLEMENTED]**
 ```go
 type SecretRetrievalRequest struct {
     Timestamp string  // Unix nanoseconds as decimal string (clock skew tolerance ±5s)
 }
 ```
-- Clock skew tolerance: ±5 seconds
+- Clock skew tolerance: ±5 seconds (authClockSkewTolerance = 5e9 nanoseconds)
 - Timestamp as string (JSON safe)
-- **Concern**: No expiration check visible in retrieval path
-- **Verification**: Audit SecretRetrieval handler for timestamp validation
-- **Priority**: Medium (prevents request replay across long time windows)
+- **Implementation**: Fully validated in secretRetrievalAuthorize (fsm.go:1845-1853)
+  - Parses request timestamp
+  - Compares against proposal timestamp from Raft leader
+  - Rejects if outside ±5 second window
+  - Returns "out of sync" error with details
+- **Status**: ✅ Timestamp validation implemented and tested
+- **Priority**: ✅ COMPLETED (prevents request replay across long time windows)
 
 ### Recommendations
 
@@ -471,9 +475,9 @@ type SecretRetrievalRequest struct {
 
 ### Priority: CRITICAL (for P1_CORE qualification)
 1. **Audit Trail Implementation** - Central ledger for all security events (identity, rotation, secret delivery)
-2. **Memory Clearing** - Explicit zeroing of decrypted secrets
-3. **Timestamp Validation** - Verify request timestamps in secret retrieval handler
-4. **TLS Enforcement** - Require TLS=true in control plane configuration
+2. **Memory Clearing** - ✅ IMPLEMENTED (ClearBytes utility in crypto.go)
+3. **Timestamp Validation** - ✅ VERIFIED (implemented in secretRetrievalAuthorize, fsm.go:1845-1853)
+4. **TLS Enforcement** - Require TLS=true in control plane configuration (see Production Deployment Checklist)
 
 ### Priority: HIGH (security hardening)
 1. **Bootstrap Ceremony Documentation** - Formal process for root key generation
