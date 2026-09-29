@@ -311,15 +311,15 @@ CRASH_LOG="$EXECUTION_DIR/artifacts/gate-23-crash-injection.log"
 
     NODE_1_PORT=$(jq -r '.node_details[] | select(.name == "dh-node-1") | .ssh_port' "$STATE_DIR/cluster.json" 2>/dev/null || echo "2201")
 
-    # Ensure a workload is running
+    # Ensure a workload is running (look for user-owned processes only)
     echo "Ensuring workload is running on dh-node-1..."
     EXISTING_WORKLOAD=$(ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -p "$NODE_1_PORT" "ubuntu@127.0.0.1" \
-        "ps aux | grep -E 'workload|java|python' | grep -v grep" 2>/dev/null | wc -l || echo "0")
+        "ps aux | grep -v root | grep -E 'workload-server|test-server' | grep -v grep" 2>/dev/null | wc -l || echo "0")
 
     if [ "$EXISTING_WORKLOAD" -eq 0 ] || [ "$EXISTING_WORKLOAD" -lt 1 ]; then
-        echo "No workload found, launching test workload..."
+        echo "No user workload found, launching test workload..."
         ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -p "$NODE_1_PORT" "ubuntu@127.0.0.1" \
-            "nohup bash -c 'while true; do echo -e \"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 2\r\n\r\nOK\" | nc -l -p 8080 -q 1; done' > /tmp/workload.log 2>&1 &" 2>/dev/null || true
+            "nohup sh -c 'while true; do printf \"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 2\r\n\r\nOK\" | timeout 1 nc -l -p 8080 2>/dev/null; done' > /tmp/workload-server.log 2>&1 &" 2>/dev/null || true
         sleep 2
         echo "Test workload started"
     else
@@ -331,7 +331,7 @@ CRASH_LOG="$EXECUTION_DIR/artifacts/gate-23-crash-injection.log"
     echo "Finding workload process on dh-node-1:"
 
     WORKLOAD_PS_BEFORE=$(ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -p "$NODE_1_PORT" "ubuntu@127.0.0.1" \
-        "ps aux | grep -E 'workload|java|python' | grep -v grep" 2>/dev/null || true)
+        "ps aux | grep -v 'grep\|root' | grep -E 'sh.*nc|workload|server' | head -5" 2>/dev/null || true)
 
     echo "ps_output_before_crash:"
     echo "$WORKLOAD_PS_BEFORE"
@@ -438,7 +438,7 @@ RECOVERY_LOG="$EXECUTION_DIR/artifacts/gate-24-recovery-measurement.log"
 
             # Check if new workload process exists
             NEW_PROCESS=$(ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -p "$NODE_1_PORT" "ubuntu@127.0.0.1" \
-                "ps aux | grep -E 'workload|java|python' | grep -v grep | head -1 | awk '{print \$2}'" 2>/dev/null || echo "")
+                "ps aux | grep -v 'grep\|root' | grep -E 'sh.*nc|workload|server' | head -1 | awk '{print \$2}'" 2>/dev/null || echo "")
 
             if [ -n "$NEW_PROCESS" ] && [ "$NEW_PROCESS" != "$ORIGINAL_PID" ]; then
                 RECOVERY_END=$(timestamp_ns)
