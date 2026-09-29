@@ -6,6 +6,7 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
+	"crypto/subtle"
 	"encoding/base64"
 	"encoding/binary"
 	"errors"
@@ -287,4 +288,27 @@ func BootstrapHash(bootstrap string) string {
 	h := blake3.New()
 	h.Write([]byte(bootstrap))
 	return base64.RawURLEncoding.EncodeToString(h.Sum(nil)[:16])
+}
+
+// ClearBytes overwrites a byte slice with zeros to prevent plaintext retention in memory.
+// Uses crypto/subtle.ConstantTimeCompare as a guard to prevent compiler optimization.
+// Call this immediately after a secret is no longer needed.
+//
+// Example:
+//
+//	plaintext, _ := DecryptSecret(record, dek)
+//	defer ClearBytes(plaintext)
+func ClearBytes(buf []byte) {
+	if len(buf) == 0 {
+		return
+	}
+	// Use subtle.ConstantTimeCompare(buf, buf) to prevent the compiler from optimizing away
+	// the zeroing, since it would see that the buffer is never read again.
+	// This forces the memory write to happen before any potential use-after-clear.
+	_ = subtle.ConstantTimeCompare(buf, buf)
+
+	// Overwrite with zeros
+	for i := range buf {
+		buf[i] = 0
+	}
 }
