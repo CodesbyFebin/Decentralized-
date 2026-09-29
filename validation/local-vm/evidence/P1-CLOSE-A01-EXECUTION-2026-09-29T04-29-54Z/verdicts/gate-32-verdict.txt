@@ -1,0 +1,4 @@
+gate_id="32"
+outcome="PASS"
+reason="Tamper detection negative control: tampered evidence detected via hash mismatch"
+verified_at="2026-09-29T04:29:59.438Z"

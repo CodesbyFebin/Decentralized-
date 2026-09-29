@@ -1,0 +1,4 @@
+gate_id="30"
+outcome="UNKNOWN"
+reason="Signature generation state inconclusive"
+verified_at="2026-09-29T04:29:59.415Z"

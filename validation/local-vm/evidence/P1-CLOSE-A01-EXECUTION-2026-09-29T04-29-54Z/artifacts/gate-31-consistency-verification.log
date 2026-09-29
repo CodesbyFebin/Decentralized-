@@ -1,0 +1,12 @@
+=== ResourceLedger Consistency Verification ===
+Timestamp: 2026-09-29T04:29:59.153Z
+
+ledger_accessible=true
+schema_version=1
+
+Model A Formula Verification:
+AVAILABLE = TOTAL - OWNER_RESERVE - RESERVED - ALLOCATED
+
+node=dh-node-1 total=1 owner=0 reserved=0 allocated=1 constraint_pass=true
+node=dh-node-2 total=1 owner=0 reserved=0 allocated=0.8 constraint_pass=true
+node=dh-node-3 total=1 owner=0 reserved=0 allocated=0 constraint_pass=true

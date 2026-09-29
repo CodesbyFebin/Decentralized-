@@ -1,0 +1,4 @@
+gate_id="25"
+outcome="PASS"
+reason="Scheduler process operational (state=S)"
+verified_at="2026-09-29T04:29:59.370Z"
