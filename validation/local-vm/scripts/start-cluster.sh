@@ -40,6 +40,9 @@ echo "QEMU Binary: $QEMU_BINARY"
 [ "$HYPERVISOR" = "qemu" ] || die "Backend mismatch: cluster=$HYPERVISOR expected=qemu"
 [ "$CLUSTER_SHA" = "$CURRENT_SHA" ] || die "Source SHA mismatch: cluster=$CLUSTER_SHA current=$CURRENT_SHA. Recreate cluster from current source."
 [ "$CLUSTER_STATE_DIR" = "$STATE_DIR" ] || die "State root mismatch: cluster=$CLUSTER_STATE_DIR canonical=$STATE_DIR"
+[ "$(jq -r '.mesh_backend // empty' "$CLUSTER_JSON")" = "qemu-socket-multicast" ] || die "Cluster has no supported interguest mesh topology"
+MESH_BUS="$(jq -r '.mesh_bus // empty' "$CLUSTER_JSON")"
+[[ "$MESH_BUS" =~ ^[0-9.]+:[0-9]+$ ]] || die "Invalid mesh bus"
 command -v "$QEMU_BINARY" >/dev/null || die "$QEMU_BINARY not found"
 
 if [ "$HOST_OS" = "Darwin" ]; then MACHINE_TYPE="pc"; ACCEL="hvf"; else MACHINE_TYPE="pc"; if [ -r /dev/kvm ] && [ -w /dev/kvm ]; then ACCEL="kvm"; else ACCEL="tcg"; fi; fi
@@ -54,6 +57,8 @@ for ((i=1;i<=NODES;i++)); do
   [ -f "$disk" ] || die "Missing disk for node $i: $disk"
   [ -f "$cidir/user-data" ] || die "Missing user-data for node $i"
   [ -f "$cidir/meta-data" ] || die "Missing meta-data for node $i"
+  [ -f "$cidir/network-config" ] || die "Missing network-config for node $i"
+  jq -e --arg ip "172.30.10.$i" --argjson idx "$idx" '.node_details[$idx] | .mesh_ip == $ip and (.primary_mac | type == "string") and (.mesh_mac | type == "string")' "$CLUSTER_JSON" >/dev/null || die "Missing mesh identity for node $i"
   if lsof -nP -iTCP:"$port" -sTCP:LISTEN 2>/dev/null | grep -q LISTEN; then die "SSH port $port already in use"; fi
 done
 
@@ -66,10 +71,18 @@ for ((i=1;i<=NODES;i++)); do
   DISK="$(jq -r ".node_details[$idx].disk" "$CLUSTER_JSON")"
   CLOUD_INIT_DIR="$(jq -r ".node_details[$idx].cloud_init_dir" "$CLUSTER_JSON")"
   SSH_PORT="$(jq -r ".node_details[$idx].ssh_port" "$CLUSTER_JSON")"
+  PRIMARY_MAC="$(jq -r ".node_details[$idx].primary_mac" "$CLUSTER_JSON")"
+  MESH_MAC="$(jq -r ".node_details[$idx].mesh_mac" "$CLUSTER_JSON")"
   PID_FILE="$(jq -r ".node_details[$idx].qemu_pid_file" "$CLUSTER_JSON")"
   SERIAL_LOG="$(jq -r ".node_details[$idx].serial_log" "$CLUSTER_JSON")"
   NODE_DIR="$(dirname "$DISK")"
   SEED_ISO="$NODE_DIR/seed.iso"
+  SEED_FINGERPRINT="$NODE_DIR/seed-inputs.sha256"
+  inputs_hash="$(cat "$CLOUD_INIT_DIR/user-data" "$CLOUD_INIT_DIR/meta-data" "$CLOUD_INIT_DIR/network-config" | shasum -a 256 | cut -d' ' -f1)"
+
+  if [ -e "$SEED_ISO" ] && { [ ! -s "$SEED_FINGERPRINT" ] || [ "$(cat "$SEED_FINGERPRINT")" != "$inputs_hash" ]; }; then
+    die "Existing seed for $NODE_NAME has unverified inputs; inspect before replacing it"
+  fi
 
   if [ -f "$PID_FILE" ]; then
     oldpid="$(cat "$PID_FILE" 2>/dev/null || true)"
@@ -80,25 +93,27 @@ for ((i=1;i<=NODES;i++)); do
   if [ ! -f "$SEED_ISO" ]; then
     echo "Creating cloud-init seed for $NODE_NAME..."
     if command -v cloud-localds >/dev/null 2>&1; then
-      cloud-localds "$SEED_ISO" "$CLOUD_INIT_DIR/user-data" "$CLOUD_INIT_DIR/meta-data"
+      cloud-localds --network-config="$CLOUD_INIT_DIR/network-config" "$SEED_ISO" "$CLOUD_INIT_DIR/user-data" "$CLOUD_INIT_DIR/meta-data"
     elif command -v mkisofs >/dev/null 2>&1; then
-      mkisofs -quiet -output "$SEED_ISO" -volid cidata -joliet -rock "$CLOUD_INIT_DIR/user-data" "$CLOUD_INIT_DIR/meta-data"
+      mkisofs -quiet -output "$SEED_ISO" -volid cidata -joliet -rock "$CLOUD_INIT_DIR/user-data" "$CLOUD_INIT_DIR/meta-data" "$CLOUD_INIT_DIR/network-config"
     elif [ "$HOST_OS" = "Darwin" ] && command -v hdiutil >/dev/null 2>&1; then
       seedtmp="$(mktemp -d)"
       cp "$CLOUD_INIT_DIR/user-data" "$seedtmp/user-data"
       cp "$CLOUD_INIT_DIR/meta-data" "$seedtmp/meta-data"
+      cp "$CLOUD_INIT_DIR/network-config" "$seedtmp/network-config"
       hdiutil makehybrid -quiet -iso -joliet -default-volume-name cidata -o "$SEED_ISO" "$seedtmp"
       rm -rf "$seedtmp"
     else
       die "Cannot create cloud-init seed: install cloud-localds or mkisofs"
     fi
+    printf '%s\n' "$inputs_hash" > "$SEED_FINGERPRINT"
   fi
   [ -s "$SEED_ISO" ] || die "Cloud-init seed missing/empty for $NODE_NAME"
 
   : > "$SERIAL_LOG"
   echo "Starting $NODE_NAME (SSH port $SSH_PORT)..."
   if [ "$ACCEL" = "tcg" ]; then CPU_MODEL="qemu64"; else CPU_MODEL="host"; fi
-  "$QEMU_BINARY"     -name "$NODE_NAME"     -machine "type=$MACHINE_TYPE,accel=$ACCEL"     -cpu "$CPU_MODEL"     -smp "$(jq -r '.cpu_per_node' "$CLUSTER_JSON")"     -m "$(jq -r '.memory_per_node_mb' "$CLUSTER_JSON")"     -drive "file=$DISK,format=qcow2,cache=writeback"     -drive "file=$SEED_ISO,format=raw,media=cdrom,readonly=on"     -net "user,hostfwd=tcp::${SSH_PORT}-:22"     -net "nic,model=virtio"     -display none     -daemonize     -pidfile "$PID_FILE"     -serial "file:$SERIAL_LOG" || {
+  "$QEMU_BINARY"     -name "$NODE_NAME"     -machine "type=$MACHINE_TYPE,accel=$ACCEL"     -cpu "$CPU_MODEL"     -smp "$(jq -r '.cpu_per_node' "$CLUSTER_JSON")"     -m "$(jq -r '.memory_per_node_mb' "$CLUSTER_JSON")"     -drive "file=$DISK,format=qcow2,cache=writeback"     -drive "file=$SEED_ISO,format=raw,media=cdrom,readonly=on"     -netdev "user,id=primary,hostfwd=tcp:127.0.0.1:${SSH_PORT}-:22"     -device "virtio-net-pci,netdev=primary,mac=$PRIMARY_MAC"     -netdev "socket,id=mesh,mcast=$MESH_BUS"     -device "virtio-net-pci,netdev=mesh,mac=$MESH_MAC"     -display none     -daemonize     -pidfile "$PID_FILE"     -serial "file:$SERIAL_LOG" || {
       serial_tail "$SERIAL_LOG"
       stop_started "${started_pids[@]}"
       die "$NODE_NAME QEMU launch failed"
