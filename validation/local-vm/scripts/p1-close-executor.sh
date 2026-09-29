@@ -14,6 +14,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="/home/user/Decentralized-"
 STATE_DIR="$REPO_ROOT/validation/local-vm/state"
 EVIDENCE_DIR="$REPO_ROOT/validation/local-vm/evidence"
+SSH_KEY="$HOME/.ssh/p1-local-vm"
 CAMPAIGN_ID=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
 EXECUTION_DIR="$EVIDENCE_DIR/P1-CLOSE-A01-EXECUTION-$CAMPAIGN_ID"
 
@@ -194,7 +195,7 @@ PARTITION_INJECTION_LOG="$EXECUTION_DIR/artifacts/gate-17-18-partition-injection
         NODE_2_PORT=$(jq -r '.node_details[] | select(.name == "dh-node-2") | .ssh_port' "$STATE_DIR/cluster.json" 2>/dev/null || echo "2202")
 
         PING_START=$(timestamp_ns)
-        if ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -p "$NODE_2_PORT" "root@127.0.0.1" "echo OK" 2>&1; then
+        if ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -p "$NODE_2_PORT" "root@127.0.0.1" "echo OK" 2>&1; then
             PING_END=$(timestamp_ns)
             echo "pre_partition_connectivity=success"
             echo "pre_partition_latency_ns=$((PING_END - PING_START))"
@@ -210,7 +211,7 @@ PARTITION_INJECTION_LOG="$EXECUTION_DIR/artifacts/gate-17-18-partition-injection
 
         # Capture tc command execution
         TC_INJECT_EXIT=0
-        ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -p "$NODE_2_PORT" "root@127.0.0.1" \
+        ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -p "$NODE_2_PORT" "root@127.0.0.1" \
             "tc qdisc add dev eth0 root netem loss 100%" > "$EXECUTION_DIR/artifacts/gate-17-18-tc-inject-stdout.log" 2> "$EXECUTION_DIR/artifacts/gate-17-18-tc-inject-stderr.log" || TC_INJECT_EXIT=$?
 
         echo "tc_inject_exit_code=$TC_INJECT_EXIT"
@@ -226,7 +227,7 @@ PARTITION_INJECTION_LOG="$EXECUTION_DIR/artifacts/gate-17-18-partition-injection
             echo "Verifying partition is active (negative control):"
             PARTITION_ACTIVE=false
             for attempt in {1..5}; do
-                if ! ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=2 -p "$NODE_2_PORT" "root@127.0.0.1" "echo OK" 2>&1; then
+                if ! ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=2 -p "$NODE_2_PORT" "root@127.0.0.1" "echo OK" 2>&1; then
                     echo "attempt_$attempt: no_connectivity (partition_active)"
                     PARTITION_ACTIVE=true
                 else
@@ -245,7 +246,7 @@ PARTITION_INJECTION_LOG="$EXECUTION_DIR/artifacts/gate-17-18-partition-injection
                 DETECTION_LATENCY_NS=0
 
                 for attempt in {1..30}; do
-                    if ! ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=3 -p "$NODE_2_PORT" "root@127.0.0.1" "echo OK" 2>&1; then
+                    if ! ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=3 -p "$NODE_2_PORT" "root@127.0.0.1" "echo OK" 2>&1; then
                         DETECT_END=$(timestamp_ns)
                         DETECTION_LATENCY_NS=$((DETECT_END - DETECT_START))
                         echo "detected_at_attempt=$attempt"
@@ -306,7 +307,7 @@ CRASH_LOG="$EXECUTION_DIR/artifacts/gate-23-crash-injection.log"
     # Observation 1: Find workload process
     echo "Finding workload process on dh-node-1:"
 
-    WORKLOAD_PS_BEFORE=$(ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -p "$NODE_1_PORT" "root@127.0.0.1" \
+    WORKLOAD_PS_BEFORE=$(ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -p "$NODE_1_PORT" "root@127.0.0.1" \
         "ps aux | grep -E 'workload|java|python' | grep -v grep" 2>&1 || true)
 
     echo "ps_output_before_crash:"
@@ -326,7 +327,7 @@ CRASH_LOG="$EXECUTION_DIR/artifacts/gate-23-crash-injection.log"
 
         # Observation 2: Verify workload is responding
         echo "Testing workload HTTP response before crash:"
-        HTTP_SUCCESS_BEFORE=$(ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -p "$NODE_1_PORT" "root@127.0.0.1" \
+        HTTP_SUCCESS_BEFORE=$(ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -p "$NODE_1_PORT" "root@127.0.0.1" \
             "curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/health 2>&1 || echo '000'" || echo "000")
 
         echo "http_response_before=$HTTP_SUCCESS_BEFORE"
@@ -344,7 +345,7 @@ CRASH_LOG="$EXECUTION_DIR/artifacts/gate-23-crash-injection.log"
         echo "crash_inject_timestamp_ns=$INJECT_TIME"
 
         KILL_EXIT=0
-        KILL_OUTPUT=$(ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -p "$NODE_1_PORT" "root@127.0.0.1" \
+        KILL_OUTPUT=$(ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -p "$NODE_1_PORT" "root@127.0.0.1" \
             "kill -9 $WORKLOAD_PID 2>&1" || true)
 
         echo "kill_command_output: $KILL_OUTPUT"
@@ -355,7 +356,7 @@ CRASH_LOG="$EXECUTION_DIR/artifacts/gate-23-crash-injection.log"
 
         # Observation 4: Verify process is gone
         echo "Verifying process is gone:"
-        WORKLOAD_PS_AFTER=$(ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -p "$NODE_1_PORT" "root@127.0.0.1" \
+        WORKLOAD_PS_AFTER=$(ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -p "$NODE_1_PORT" "root@127.0.0.1" \
             "ps -p $WORKLOAD_PID -o pid,state,cmd 2>&1 || echo 'no process'" || echo "")
 
         echo "ps_output_after_kill: $WORKLOAD_PS_AFTER"
@@ -413,7 +414,7 @@ RECOVERY_LOG="$EXECUTION_DIR/artifacts/gate-24-recovery-measurement.log"
             RECOVERY_ATTEMPTS=$attempt
 
             # Check if new workload process exists
-            NEW_PROCESS=$(ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -p "$NODE_1_PORT" "root@127.0.0.1" \
+            NEW_PROCESS=$(ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -p "$NODE_1_PORT" "root@127.0.0.1" \
                 "ps aux | grep -E 'workload|java|python' | grep -v grep | head -1 | awk '{print \$2}'" 2>&1 || echo "")
 
             if [ -n "$NEW_PROCESS" ] && [ "$NEW_PROCESS" != "$ORIGINAL_PID" ]; then
@@ -440,7 +441,7 @@ RECOVERY_LOG="$EXECUTION_DIR/artifacts/gate-24-recovery-measurement.log"
         if [ "$RECOVERED" = true ]; then
             echo ""
             echo "Verifying recovered workload responds:"
-            HTTP_RESPONSE=$(ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -p "$NODE_1_PORT" "root@127.0.0.1" \
+            HTTP_RESPONSE=$(ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -p "$NODE_1_PORT" "root@127.0.0.1" \
                 "curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/health 2>&1 || echo '000'" || echo "000")
 
             echo "http_response_after_recovery=$HTTP_RESPONSE"

@@ -1,0 +1,4 @@
+gate_id="10"
+outcome="UNKNOWN"
+reason="Observations missing from executor"
+verified_at="2026-09-29T04:28:06.136Z"
