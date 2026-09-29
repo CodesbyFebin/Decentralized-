@@ -23,6 +23,9 @@ DURATION="${5:-60}"
 [ -n "$CPU_REQ" ] || die "Usage: $0 <workload-id> <cpu> <memory-mb> <disk-gb> [duration-seconds]"
 [ -n "$MEMORY_REQ" ] || die "Usage: $0 <workload-id> <cpu> <memory-mb> <disk-gb> [duration-seconds]"
 [ -n "$DISK_REQ" ] || die "Usage: $0 <workload-id> <cpu> <memory-mb> <disk-gb> [duration-seconds]"
+[[ "$WORKLOAD_ID" =~ ^[A-Za-z0-9_-]{1,64}$ ]] || die "Invalid workload ID"
+[[ "$DURATION" =~ ^[1-9][0-9]*$ ]] || die "Duration must be a positive integer"
+(( DURATION <= 3600 )) || die "Duration exceeds one hour"
 
 [ -f "$CLUSTER_JSON" ] || die "Cluster not configured"
 
@@ -51,7 +54,7 @@ target_node=$(jq -r '.target_node' "$PLACEMENT_RESULT_FILE")
 [ -n "$target_node" ] || die "Could not determine target node from scheduler"
 
 # Find SSH port for this node
-ssh_port=$(jq -r ".node_details[] | select(.name == \"$target_node\") | .ssh_port" "$CLUSTER_JSON")
+ssh_port=$(jq -r --arg node "$target_node" '.node_details[] | select(.name == $node) | .ssh_port' "$CLUSTER_JSON")
 [ -n "$ssh_port" ] || die "Could not find SSH port for $target_node"
 
 echo "Target node: $target_node (port $ssh_port)"
