@@ -48,4 +48,15 @@ bash "$scripts/deallocate-resource.sh" "$allocation" >/dev/null
 unconsumed=$(bash "$scripts/reserve-resource.sh" dh-node-1 0.2 128 1 unconsumed-workload | sed -n 's/^Reservation ID: //p')
 bash "$scripts/release-reservation.sh" "$unconsumed" >/dev/null
 jq -e '.node_capacity[0] | .cpu_reserved == 0 and .cpu_allocated == 0 and .cpu_owner_reserve == 0.1' "$DH_RESOURCELEDGER_JSON" >/dev/null
+
+# A corrupt summary must be rejected before any mutation or success report.
+jq '.summary.cpu_allocated = 0.5' "$DH_RESOURCELEDGER_JSON" > "$fixture/corrupt.json"
+export DH_RESOURCELEDGER_JSON="$fixture/corrupt.json"
+before=$(sha256sum "$DH_RESOURCELEDGER_JSON" | cut -d' ' -f1)
+if bash "$scripts/allocate-resource.sh" dh-node-1 0.1 64 1 corrupt-attempt > "$fixture/corrupt-output.log" 2>&1; then
+  echo 'Corrupt summary was accepted' >&2; exit 1
+fi
+after=$(sha256sum "$DH_RESOURCELEDGER_JSON" | cut -d' ' -f1)
+[[ "$before" == "$after" ]]
+! grep -q 'STATUS: ALLOCATED' "$fixture/corrupt-output.log"
 echo 'ResourceLedger Model A reservation transfer, owner reserve, and rejection checks passed'
