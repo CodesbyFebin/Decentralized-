@@ -1,0 +1,38 @@
+# Decentralized.Host
+
+> Sovereign self-hosted infrastructure: replicated control plane -> signed intent -> local host admission -> execution -> signed observation -> evidence.
+
+## Core model
+Desired, admitted, executing, observed, and verified are distinct states. Unmeasured state is UNKNOWN.
+
+## Implemented
+- Ed25519 host identities and signed assignments/observations
+- Local host admission policy
+- BLAKE3 CAS, FastCDC, Merkle anti-entropy, snapshots, and repair
+- Userspace WireGuard mesh and SWIM gossip
+- Raft + mTLS control plane
+- L7 edge and ACME flows
+- Signed backup/restore
+- 17 chaos scenarios
+- Federation
+- dh/v1 specification with 136 test vectors
+- Independent Python conformance implementation
+
+## Important limits
+- Process runtime does not enforce CPU/memory limits; Docker runtime is used for enforced limits.
+- Erasure coding is not implemented.
+- gVisor and Firecracker are not wired as runtimes.
+- HTTP/3 is not implemented.
+- Userspace WireGuard is used rather than a kernel interface.
+
+## Verify
+- README.md
+- docs/protocol/dh-v1.md
+- docs/architecture.md
+- docs/trust-model.md
+- docs/BLUEPRINT.md
+- pkg/conformance/
+- tests/integration/
+- pkg/chaos/
+
+Repository: https://github.com/CodesbyFebin/Decentralized-
