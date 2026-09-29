@@ -1,0 +1,181 @@
+[2026-09-29T04:29:54.527Z] === GATE 10: ResourceLedger Presence ===
+[2026-09-29T04:29:54.533Z] Gate 10 observation: resourceledger.json EXISTS at /home/user/Decentralized-/validation/local-vm/state (ts: 1790656194531341192)
+[2026-09-29T04:29:54.541Z] Gate 10 observation: ledger_parse_exit_code=0 (ts: 1790656194540115619)
+[2026-09-29T04:29:54.550Z] Gate 10 observation: ledger_type=object (ts: 1790656194548582449)
+Captured: ledger-pre-injection.json
+[2026-09-29T04:29:54.555Z] Gate 10 observations captured
+[2026-09-29T04:29:54.558Z] === GATE 11-16: ResourceLedger Model A Validation ===
+=== ResourceLedger Model A Validation ===
+Timestamp: 2026-09-29T04:29:54.561Z
+Ledger: /home/user/Decentralized-/validation/local-vm/state/resourceledger.json
+
+validation_possible=true
+
+Formula: AVAILABLE = TOTAL - OWNER_RESERVE - RESERVED - ALLOCATED
+
+Node: dh-node-1
+  CPU: total=1 owner_reserve=0 reserved=0 allocated=1
+  Expected AVAILABLE: 0
+  constraint_violated=false
+
+Node: dh-node-2
+  CPU: total=1 owner_reserve=0 reserved=0 allocated=0.8
+  Expected AVAILABLE: .2
+  constraint_violated=false
+
+Node: dh-node-3
+  CPU: total=1 owner_reserve=0 reserved=0 allocated=0
+  Expected AVAILABLE: 1
+  constraint_violated=false
+
+[2026-09-29T04:29:54.625Z] Gate 11-16 observation: ledger_model_a_validation_performed (ts: 1790656194623739684)
+[2026-09-29T04:29:54.628Z] Gate 11-16 observations captured
+[2026-09-29T04:29:54.631Z] === GATE 17-18: Network Partition Injection ===
+=== Network Partition Injection ===
+Timestamp: 2026-09-29T04:29:54.635Z
+
+tc_available=false
+partition_injection_blocked=true
+reason=tc_command_not_found
+
+Blocker documentation:
+  Required: iproute2 package (provides tc)
+  Alternative: network namespace isolation
+  Impact: Cannot perform real network fault injection
+[2026-09-29T04:29:54.638Z] Gate 17-18 observation: partition_injection_observation_captured (ts: 1790656194637174191)
+[2026-09-29T04:29:54.641Z] Gate 17-18 observations captured
+[2026-09-29T04:29:54.644Z] === GATE 23: Workload Crash Injection ===
+=== Workload Crash Injection ===
+Timestamp: 2026-09-29T04:29:54.648Z
+
+Finding workload process on dh-node-1:
+ps_output_before_crash:
+Warning: Permanently added '[127.0.0.1]:2201' (ED25519) to the list of known hosts.
+root@127.0.0.1: Permission denied (publickey).
+
+workload_pid=Permanently
+workload_process_found=true
+
+Testing workload HTTP response before crash:
+Warning: Permanently added '[127.0.0.1]:2201' (ED25519) to the list of known hosts.
+root@127.0.0.1: Permission denied (publickey).
+http_response_before=000
+workload_responding_before_crash=false (code: 000)
+
+Injecting SIGKILL to PID Permanently:
+crash_inject_timestamp_ns=1790656195797141126
+Warning: Permanently added '[127.0.0.1]:2201' (ED25519) to the list of known hosts.
+root@127.0.0.1: Permission denied (publickey).
+kill_command_output: 
+
+Verifying process is gone:
+Warning: Permanently added '[127.0.0.1]:2201' (ED25519) to the list of known hosts.
+root@127.0.0.1: Permission denied (publickey).
+ps_output_after_kill: 
+process_confirmed_gone=false
+[2026-09-29T04:29:57.920Z] Gate 23 observation: crash_injection_observation_captured (ts: 1790656197918798908)
+[2026-09-29T04:29:57.923Z] Gate 23 observations captured
+[2026-09-29T04:29:57.926Z] === GATE 24: Workload Recovery Measurement ===
+=== Workload Recovery Measurement ===
+Timestamp: 2026-09-29T04:29:57.930Z
+
+Monitoring for workload restart:
+original_pid=Permanently
+measurement_start_time=1790656195797141126
+
+recovery_detected_at_attempt=1
+recovery_timestamp_ns=1790656198433446243
+recovery_time_ns=2636305117
+recovery_time_ms=2636
+new_process_pid=Warning: Permanently added '[127.0.0.1]:2201' (ED25519) to the list of known hosts.
+root@127.0.0.1: Permission denied (publickey).
+
+recovery_complete=true
+recovery_attempts=1
+recovery_timeout_exceeded=false
+
+Verifying recovered workload responds:
+Warning: Permanently added '[127.0.0.1]:2201' (ED25519) to the list of known hosts.
+root@127.0.0.1: Permission denied (publickey).
+http_response_after_recovery=000
+workload_responding_after_recovery=false
+[2026-09-29T04:29:58.934Z] Gate 24 observation: recovery_measurement_captured (ts: 1790656198932837458)
+[2026-09-29T04:29:58.937Z] Gate 24 observations captured
+[2026-09-29T04:29:58.940Z] === GATE 25: Scheduler Process State ===
+=== Scheduler Process State ===
+Timestamp: 2026-09-29T04:29:58.944Z
+
+scheduler_pid=17434
+scheduler_process_found=true
+
+ps output:
+  PID  PPID S    VSZ   RSS CMD
+17434     1 S   4468  3452 /bin/bash ./validation/local-vm/scripts/run-scheduler.sh first-fit /tmp/p1-qualification-1790636585/scheduler.log
+
+process_state_from_proc=S
+memory_rss_kb=3452
+thread_count=1
+
+open_file_descriptors=4
+[2026-09-29T04:29:58.971Z] Gate 25 observation: scheduler_state_captured (ts: 1790656198970118376)
+[2026-09-29T04:29:58.974Z] Gate 25 observations captured
+[2026-09-29T04:29:58.978Z] === GATE 29: Evidence Artifact Collection ===
+[2026-09-29T04:29:59.108Z] Gate 29 observation: evidence_manifest_created digest=65a9b4e4e25198808c49ce8a846661175bcdf24124c30344d4cf2351f0ddf800 (ts: 1790656199106755536)
+[2026-09-29T04:29:59.111Z] Gate 29 observations captured
+[2026-09-29T04:29:59.115Z] === GATE 30: Cryptographic Signature ===
+=== Cryptographic Signature Generation ===
+Timestamp: 2026-09-29T04:29:59.118Z
+
+openssl_available=true
+openssl_version:
+OpenSSL 3.0.13 30 Jan 2024 (Library: OpenSSL 3.0.13 30 Jan 2024)
+
+Generating Ed25519 keypair:
+keygen_exit_code=0
+pubkey_extract_exit_code=0
+
+Signing evidence manifest:
+sign_exit_code=1
+signature_creation_failed=true
+[2026-09-29T04:29:59.143Z] Gate 30 observation: cryptographic_signature_captured (ts: 1790656199142105056)
+[2026-09-29T04:29:59.146Z] Gate 30 observations captured
+[2026-09-29T04:29:59.149Z] === GATE 31: ResourceLedger Consistency Verification ===
+=== ResourceLedger Consistency Verification ===
+Timestamp: 2026-09-29T04:29:59.153Z
+
+ledger_accessible=true
+schema_version=1
+
+Model A Formula Verification:
+AVAILABLE = TOTAL - OWNER_RESERVE - RESERVED - ALLOCATED
+
+node=dh-node-1 total=1 owner=0 reserved=0 allocated=1 constraint_pass=true
+node=dh-node-2 total=1 owner=0 reserved=0 allocated=0.8 constraint_pass=true
+node=dh-node-3 total=1 owner=0 reserved=0 allocated=0 constraint_pass=true
+[2026-09-29T04:29:59.214Z] Gate 31 observation: consistency_verification_captured (ts: 1790656199212409986)
+[2026-09-29T04:29:59.217Z] Gate 31 observations captured
+[2026-09-29T04:29:59.221Z] === GATE 32: Tamper Detection Negative Control ===
+=== Tamper Detection Negative Control ===
+Timestamp: 2026-09-29T04:29:59.225Z
+
+Created tampered manifest: /home/user/Decentralized-/validation/local-vm/evidence/P1-CLOSE-A01-EXECUTION-2026-09-29T04-29-54Z/artifacts/evidence-manifest-tampered.json
+
+Tamper injection: Changed campaign_id to TAMPERED_CAMPAIGN
+
+Original manifest hash:  65a9b4e4e25198808c49ce8a846661175bcdf24124c30344d4cf2351f0ddf800
+Tampered manifest hash:  09b92974899c69ab7f9e6468c269ba43049a0315e8487ede5c4c970b0ea8c91c
+
+hash_mismatch_detected=true
+tamper_detection_negative_control_PASS
+[2026-09-29T04:29:59.243Z] Gate 32 observation: tamper_detection_test_executed (ts: 1790656199241706973)
+[2026-09-29T04:29:59.247Z] Gate 32 observations captured
+[2026-09-29T04:29:59.250Z] 
+[2026-09-29T04:29:59.253Z] === P1-CLOSE EXECUTION COMPLETE ===
+[2026-09-29T04:29:59.257Z] Campaign ID: 2026-09-29T04-29-54Z
+[2026-09-29T04:29:59.261Z] Execution directory: /home/user/Decentralized-/validation/local-vm/evidence/P1-CLOSE-A01-EXECUTION-2026-09-29T04-29-54Z
+[2026-09-29T04:29:59.265Z] Observations directory: /home/user/Decentralized-/validation/local-vm/evidence/P1-CLOSE-A01-EXECUTION-2026-09-29T04-29-54Z/observations
+[2026-09-29T04:29:59.268Z] Artifacts directory: /home/user/Decentralized-/validation/local-vm/evidence/P1-CLOSE-A01-EXECUTION-2026-09-29T04-29-54Z/artifacts
+[2026-09-29T04:29:59.271Z] Manifest: /home/user/Decentralized-/validation/local-vm/evidence/P1-CLOSE-A01-EXECUTION-2026-09-29T04-29-54Z/artifacts/evidence-manifest.json
+[2026-09-29T04:29:59.274Z] 
+[2026-09-29T04:29:59.277Z] NEXT: Run verifier against observations + gate contracts
+[2026-09-29T04:29:59.281Z] Command: p1-close-verifier.sh /home/user/Decentralized-/validation/local-vm/evidence/P1-CLOSE-A01-EXECUTION-2026-09-29T04-29-54Z /home/user/Decentralized-/validation/local-vm/evidence/P1-GATE-CONTRACT.md

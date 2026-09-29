@@ -1,0 +1,4 @@
+gate_id="10"
+outcome="FAIL"
+reason="ResourceLedger file not found"
+verified_at="2026-09-29T04:47:31.745Z"

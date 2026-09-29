@@ -1,0 +1,4 @@
+gate_id="32"
+outcome="UNKNOWN"
+reason="Tamper test log missing"
+verified_at="2026-09-29T04:28:06.268Z"

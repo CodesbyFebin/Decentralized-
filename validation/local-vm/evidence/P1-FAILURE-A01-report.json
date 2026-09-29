@@ -1,0 +1,64 @@
+{
+  "qualification_id": "P1-FAILURE-A01",
+  "phase": "Persistence Testing & Failure Recovery",
+  "execution_timestamp": "2026-09-28T23:42:46Z",
+  "gates": {
+    "33-36": {
+      "phase": "Workload Persistence",
+      "gates": 4,
+      "status": "PASS",
+      "results": {
+        "gate_33": "Workload data persisted to storage",
+        "gate_34": "Data survives restart (checksum: f00c72b454a1250ece6ee5497f664850)",
+        "gate_35": "Workload rescheduling verified",
+        "gate_36": "Workload resumes from checkpoint"
+      }
+    },
+    "37-40": {
+      "phase": "Ledger Persistence & Quorum",
+      "gates": 4,
+      "status": "PASS",
+      "results": {
+        "gate_37": "Ledger flushed before shutdown",
+        "gate_38": "Quorum consensus maintained (3 nodes)",
+        "gate_39": "Lost updates resolved via quorum",
+        "gate_40": "Ledger invariants verified (total: 1.8 cores)"
+      }
+    },
+    "41-44": {
+      "phase": "Evidence Immutability",
+      "gates": 4,
+      "status": "PASS",
+      "results": {
+        "gate_41": "Evidence log flushed to disk",
+        "gate_42": "Signatures valid (3 records)",
+        "gate_43": "Append-only log verified",
+        "gate_44": "Tamper detection tested (negative control)"
+      }
+    },
+    "45-48": {
+      "phase": "Cascading Failures",
+      "gates": 4,
+      "status": "PASS",
+      "results": {
+        "gate_45": "2 simultaneous node failures handled",
+        "gate_46": "Multiple workload+ledger failures recovered",
+        "gate_47": "Cascade propagation prevented",
+        "gate_48": "System reached quiescent state"
+      }
+    }
+  },
+  "summary": {
+    "total_gates": 16,
+    "gates_passed": 16,
+    "gates_failed": 0,
+    "pass_rate": "100%"
+  },
+  "evidence_artifacts": [
+    "ledger-baseline.json",
+    "workload-data-before-crash.json",
+    "evidence-manifest.json",
+    "tampered-evidence.json"
+  ],
+  "next_phase": "P1-MESH-A01"
+}

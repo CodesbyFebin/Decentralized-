@@ -1,0 +1,4 @@
+gate_id="11-16"
+outcome="UNKNOWN"
+reason="Model A validation file missing"
+verified_at="2026-09-29T04:28:06.145Z"

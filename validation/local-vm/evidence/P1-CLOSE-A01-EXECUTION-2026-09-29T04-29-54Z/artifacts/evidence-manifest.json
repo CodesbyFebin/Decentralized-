@@ -1,0 +1,32 @@
+{
+  "campaign_id": "2026-09-29T04-29-54Z",
+  "execution_directory": "/home/user/Decentralized-/validation/local-vm/evidence/P1-CLOSE-A01-EXECUTION-2026-09-29T04-29-54Z",
+  "source_sha": "dc8e9cf0b745007335829a3d687e3113f7b98967",
+  "gate_contract_version": "P1-GATE-CONTRACT.md",
+  "artifacts": [
+    {"name": "evidence-manifest.json", "path": "artifacts/evidence-manifest.json", "sha256": "a2d7f623f51fdc65f1088bf96880c2c25261c3258c8d2073698909b60b1a7afe", "size_bytes": 458},
+    {"name": "gate-10-ledger-parse-error.txt", "path": "artifacts/gate-10-ledger-parse-error.txt", "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "size_bytes": 0},
+    {"name": "gate-10-ledger-parse.json", "path": "artifacts/gate-10-ledger-parse.json", "sha256": "ecd21eb1bb411c87c3136ff5d491c740f7d455447a841f012faf4885a7bb9a06", "size_bytes": 2953},
+    {"name": "gate-10-ledger-pre-injection.json", "path": "artifacts/gate-10-ledger-pre-injection.json", "sha256": "ecd21eb1bb411c87c3136ff5d491c740f7d455447a841f012faf4885a7bb9a06", "size_bytes": 2953},
+    {"name": "gate-11-16-model-a-validation.txt", "path": "artifacts/gate-11-16-model-a-validation.txt", "sha256": "9de203b0b697afaa555b8b70ac377d301f5ee229af34c7da1621d3a96ed7737f", "size_bytes": 624},
+    {"name": "gate-17-18-partition-injection.log", "path": "artifacts/gate-17-18-partition-injection.log", "sha256": "31f9aa90bc03b5a44d827b7d333c0b175b3915ecbf414c511032b76865d34493", "size_bytes": 317},
+    {"name": "gate-23-crash-inject-timestamp.txt", "path": "artifacts/gate-23-crash-inject-timestamp.txt", "sha256": "041a33348b90af6e54c3fdc20ec1399ddcd1f11bc53e437253afcbd216e47091", "size_bytes": 20},
+    {"name": "gate-23-crash-injection.log", "path": "artifacts/gate-23-crash-injection.log", "sha256": "3c7e2a8fc1f5590875ca837bbc47ed3e623ce997463675024d0d16d7659cac82", "size_bytes": 629},
+    {"name": "gate-23-node-port.txt", "path": "artifacts/gate-23-node-port.txt", "sha256": "608e754e3b520029bd462a5da61719db49c638783fa93c63b553bc4c5769260d", "size_bytes": 5},
+    {"name": "gate-23-workload-pid.txt", "path": "artifacts/gate-23-workload-pid.txt", "sha256": "73d27f5b6fbf6b76d8e61c1302eb20c9fe4851a4d7ce6075f1a03934c7d1a435", "size_bytes": 12},
+    {"name": "gate-24-recovery-measurement.log", "path": "artifacts/gate-24-recovery-measurement.log", "sha256": "730a5c2cd5a5db5832a3f7660f298ad653c41e94face7f95194d9825d61db8cf", "size_bytes": 639},
+    {"name": "gate-24-recovery-time-ns.txt", "path": "artifacts/gate-24-recovery-time-ns.txt", "sha256": "f98469e384a7e873bdb5d8a928cd40831f203687f4e72c28e8e2b546af056669", "size_bytes": 11},
+    {"name": "gate-25-scheduler-state.log", "path": "artifacts/gate-25-scheduler-state.log", "sha256": "a315b3aaaa9ffc2a0b2978e3a293f5c2dd5e0e3fb34963e72debdb5d6c157362", "size_bytes": 388}
+  ],
+  "observations": [
+    {"gate": "gate-10-summary.txt"},
+    {"gate": "gate-10.txt"},
+    {"gate": "gate-11-16.txt"},
+    {"gate": "gate-17-18.txt"},
+    {"gate": "gate-23.txt"},
+    {"gate": "gate-24.txt"},
+    {"gate": "gate-25.txt"}
+  ],
+  "execution_complete": true,
+  "execution_timestamp": "2026-09-29T04:29:59.101Z"
+}

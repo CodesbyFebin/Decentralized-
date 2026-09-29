@@ -1,0 +1,21 @@
+=== Workload Recovery Measurement ===
+Timestamp: 2026-09-29T04:29:02.081Z
+
+Monitoring for workload restart:
+original_pid=Permanently
+measurement_start_time=1790656140033909800
+
+recovery_detected_at_attempt=1
+recovery_timestamp_ns=1790656142598837950
+recovery_time_ns=2564928150
+recovery_time_ms=2564
+new_process_pid=Warning: Permanently added '[127.0.0.1]:2201' (ED25519) to the list of known hosts.
+root@127.0.0.1: Permission denied (publickey).
+
+recovery_complete=true
+recovery_attempts=1
+recovery_timeout_exceeded=false
+
+Verifying recovered workload responds:
+http_response_after_recovery=000
+workload_responding_after_recovery=false

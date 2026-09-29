@@ -1,0 +1,6 @@
+=== ResourceLedger Model A Validation ===
+Timestamp: 2026-09-29T04:47:24.129Z
+Ledger: /home/user/Decentralized-/validation/local-vm/state/resourceledger.json
+
+ERROR: ResourceLedger not found (depends on Gate 10)
+validation_possible=false

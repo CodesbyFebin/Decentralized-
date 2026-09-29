@@ -1,0 +1,4 @@
+gate_id="11-16"
+outcome="BLOCKED"
+reason="Ledger not available (depends on Gate 10)"
+verified_at="2026-09-29T04:47:31.757Z"

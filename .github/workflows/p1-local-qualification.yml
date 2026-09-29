@@ -1,0 +1,31 @@
+name: P1 local VM tooling checks (not qualification)
+
+on:
+  push:
+    branches:
+      - p1-local-vm
+      - claude/friendly-gauss-kfxoc2
+  workflow_dispatch:
+
+jobs:
+  tooling:
+    name: Syntax and evidence verifier tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Shell syntax
+        run: bash -n p1-qualification-master.sh validation/local-vm/scripts/*.sh validation/local-vm/tests/*.sh
+      - name: Preflight gate regression
+        run: bash validation/local-vm/tests/preflight-gate.sh
+      - name: SSH diagnostic regression
+        run: python3 validation/local-vm/tests/bootstrap-diagnostics.py
+      - name: Evidence verifier unit tests
+        run: go test ./pkg/evidence
+      - name: Scope declaration
+        run: |
+          echo 'These checks use CI runner processes and synthetic test inputs.'
+          echo 'P1-LOCAL-VM-A01 qualification remains UNKNOWN until actual QEMU VM and signed evidence gates pass.'

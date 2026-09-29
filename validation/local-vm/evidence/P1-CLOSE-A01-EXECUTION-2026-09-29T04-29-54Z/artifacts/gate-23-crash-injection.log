@@ -1,0 +1,22 @@
+=== Workload Crash Injection ===
+Timestamp: 2026-09-29T04:29:54.648Z
+
+Finding workload process on dh-node-1:
+ps_output_before_crash:
+Warning: Permanently added '[127.0.0.1]:2201' (ED25519) to the list of known hosts.
+root@127.0.0.1: Permission denied (publickey).
+
+workload_pid=Permanently
+workload_process_found=true
+
+Testing workload HTTP response before crash:
+http_response_before=000
+workload_responding_before_crash=false (code: 000)
+
+Injecting SIGKILL to PID Permanently:
+crash_inject_timestamp_ns=1790656195797141126
+kill_command_output: 
+
+Verifying process is gone:
+ps_output_after_kill: 
+process_confirmed_gone=false

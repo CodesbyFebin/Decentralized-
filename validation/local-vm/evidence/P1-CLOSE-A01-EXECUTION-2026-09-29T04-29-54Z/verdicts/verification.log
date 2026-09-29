@@ -1,0 +1,30 @@
+[2026-09-29T04:29:59.299Z] === Verifying Gate 10: ResourceLedger Presence ===
+[2026-09-29T04:29:59.304Z] Gate 10: PASS (ResourceLedger exists, valid JSON, type=object)
+[2026-09-29T04:29:59.307Z] === Verifying Gate 11-16: ResourceLedger Model A ===
+[2026-09-29T04:29:59.317Z] Gate 11-16: PASS (Model A formula validated; no capacity violations)
+[2026-09-29T04:29:59.320Z] === Verifying Gate 17-18: Network Partition ===
+[2026-09-29T04:29:59.327Z] Gate 17-18: BLOCKED (tc command not found in environment)
+[2026-09-29T04:29:59.330Z] === Verifying Gate 19-20: Workload Migration ===
+[2026-09-29T04:29:59.335Z] Gate 19-20: BLOCKED (Cannot test without real partition (Gate 17-18: BLOCKED))
+[2026-09-29T04:29:59.338Z] === Verifying Gate 23: Workload Crash Injection ===
+[2026-09-29T04:29:59.351Z] Gate 23: FAIL (Process did not disappear after SIGKILL)
+[2026-09-29T04:29:59.354Z] === Verifying Gate 24: Workload Recovery ===
+[2026-09-29T04:29:59.359Z] Gate 24: BLOCKED (Cannot measure recovery without successful crash (Gate 23: FAIL))
+[2026-09-29T04:29:59.362Z] === Verifying Gate 25: Scheduler Process State ===
+[2026-09-29T04:29:59.372Z] Gate 25: PASS (Scheduler process operational (state=S))
+[2026-09-29T04:29:59.375Z] === Verifying Gate 26: Scheduler Responsiveness ===
+[2026-09-29T04:29:59.380Z] Gate 26: BLOCKED (Cannot test responsiveness without successful recovery (Gate 24: BLOCKED))
+[2026-09-29T04:29:59.383Z] === Verifying Gate 27-28: Control-Plane Consistency ===
+[2026-09-29T04:29:59.388Z] Gate 27-28: UNKNOWN (Requires ledger state comparison post-recovery (not implemented in this version))
+[2026-09-29T04:29:59.391Z] === Verifying Gate 29: Evidence Artifact Collection ===
+[2026-09-29T04:29:59.402Z] Gate 29: PASS (Evidence manifest created and valid (13 artifacts))
+[2026-09-29T04:29:59.406Z] === Verifying Gate 30: Cryptographic Signature ===
+[2026-09-29T04:29:59.417Z] Gate 30: UNKNOWN (Signature generation state inconclusive)
+[2026-09-29T04:29:59.421Z] === Verifying Gate 31: ResourceLedger Consistency ===
+[2026-09-29T04:29:59.430Z] Gate 31: PASS (ResourceLedger Model A formula verified; no violations)
+[2026-09-29T04:29:59.433Z] === Verifying Gate 32: Tamper Detection ===
+[2026-09-29T04:29:59.440Z] Gate 32: PASS (Tamper detection negative control: tampered evidence detected via hash mismatch)
+[2026-09-29T04:29:59.443Z] 
+[2026-09-29T04:29:59.446Z] === VERIFICATION COMPLETE ===
+[2026-09-29T04:29:59.449Z] Verdict directory: /home/user/Decentralized-/validation/local-vm/evidence/P1-CLOSE-A01-EXECUTION-2026-09-29T04-29-54Z/verdicts
+[2026-09-29T04:29:59.455Z] Verification complete

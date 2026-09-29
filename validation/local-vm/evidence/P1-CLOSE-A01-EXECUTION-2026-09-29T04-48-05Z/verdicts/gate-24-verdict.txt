@@ -1,0 +1,4 @@
+gate_id="24"
+outcome="BLOCKED"
+reason="Cannot measure recovery without successful crash (Gate 23: FAIL)"
+verified_at="2026-09-29T04:48:10.837Z"

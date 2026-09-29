@@ -1,0 +1,15 @@
+=== Scheduler Process State ===
+Timestamp: 2026-09-29T04:48:10.421Z
+
+scheduler_pid=17434
+scheduler_process_found=true
+
+ps output:
+  PID  PPID S    VSZ   RSS CMD
+17434     1 S   4468  3452 /bin/bash ./validation/local-vm/scripts/run-scheduler.sh first-fit /tmp/p1-qualification-1790636585/scheduler.log
+
+process_state_from_proc=S
+memory_rss_kb=3452
+thread_count=1
+
+open_file_descriptors=4

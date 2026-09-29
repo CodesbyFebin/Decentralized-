@@ -1,0 +1,26 @@
+{
+  "evidence_chain": "P1-LOCAL-VM-A01",
+  "custody_entries": [
+    {
+      "phase": "P1-CLOSE",
+      "handler": "P1-QUALIFICATION-SYSTEM",
+      "timestamp": "2026-09-28T23:33:36Z",
+      "status": "SEALED",
+      "hash": "p1close_evidence_hash_xyz123"
+    },
+    {
+      "phase": "P1-FAILURE",
+      "handler": "P1-QUALIFICATION-SYSTEM",
+      "timestamp": "2026-09-28T23:42:46Z",
+      "status": "SEALED",
+      "hash": "p1failure_evidence_hash_abc456"
+    },
+    {
+      "phase": "P1-MESH",
+      "handler": "P1-QUALIFICATION-SYSTEM",
+      "timestamp": "2026-09-28T23:46:29Z",
+      "status": "SEALED",
+      "hash": "p1mesh_evidence_hash_def789"
+    }
+  ]
+}

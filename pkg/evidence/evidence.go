@@ -370,6 +370,9 @@ func HashFiles(dir string) ([]File, error) {
 		if err != nil || d.IsDir() {
 			return err
 		}
+		if !d.Type().IsRegular() {
+			return fmt.Errorf("evidence contains non-regular artifact: %s", p)
+		}
 		rel, _ := filepath.Rel(dir, p)
 		if rel == "record.json" {
 			return nil
@@ -388,15 +391,37 @@ func HashFiles(dir string) ([]File, error) {
 // Verify checks a record's files against dir and returns problems found.
 func Verify(r Record, dir string) []string {
 	var problems []string
+	actual, err := HashFiles(dir)
+	if err != nil {
+		return []string{err.Error()}
+	}
+	want := make(map[string]File, len(r.Files))
 	for _, f := range r.Files {
-		b, err := os.ReadFile(filepath.Join(dir, filepath.FromSlash(f.Path)))
-		if err != nil {
-			problems = append(problems, fmt.Sprintf("%s: %v", f.Path, err))
+		clean := filepath.ToSlash(filepath.Clean(filepath.FromSlash(f.Path)))
+		if f.Path == "" || clean != f.Path || clean == ".." || strings.HasPrefix(clean, "../") || filepath.IsAbs(f.Path) || f.Path == "record.json" {
+			problems = append(problems, fmt.Sprintf("unsafe artifact path: %q", f.Path))
 			continue
 		}
-		if got := "b3:" + envelope.HashBytes(b); got != f.Hash {
-			problems = append(problems, fmt.Sprintf("%s: hash %s, record says %s", f.Path, got, f.Hash))
+		if _, duplicate := want[f.Path]; duplicate {
+			problems = append(problems, fmt.Sprintf("duplicate artifact: %s", f.Path))
+		}
+		want[f.Path] = f
+	}
+	seen := make(map[string]bool, len(actual))
+	for _, got := range actual {
+		seen[got.Path] = true
+		expected, ok := want[got.Path]
+		if !ok {
+			problems = append(problems, fmt.Sprintf("unlisted artifact: %s", got.Path))
+		} else if got.Hash != expected.Hash || got.Bytes != expected.Bytes {
+			problems = append(problems, fmt.Sprintf("%s: content or size differs from record", got.Path))
 		}
 	}
+	for path := range want {
+		if !seen[path] {
+			problems = append(problems, fmt.Sprintf("missing artifact: %s", path))
+		}
+	}
+	sort.Strings(problems)
 	return problems
 }

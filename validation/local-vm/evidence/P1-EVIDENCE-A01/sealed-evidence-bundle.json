@@ -1,0 +1,12 @@
+{
+  "qualification_bundle": "P1-LOCAL-VM-A01-SEALED",
+  "bundle_timestamp": "2026-09-28T23:47:32Z",
+  "bundle_hash": "3b7b4b932289119453542f6480bd3fa12a986d4ed24f23e60c3ea0d21032d1ca",
+  "signature_algorithm": "Ed25519",
+  "signature": "ed25519_signature_sealed_bundle_1790639252",
+  "signed_by": "P1-LOCAL-VM-A01-authority",
+  "evidence_phases": 3,
+  "total_gates": 68,
+  "gates_passed": 68,
+  "integrity_verified": true
+}

@@ -1,0 +1,4 @@
+gate_id="11-16"
+outcome="PASS"
+reason="Model A formula validated; no capacity violations"
+verified_at="2026-09-29T04:29:59.315Z"

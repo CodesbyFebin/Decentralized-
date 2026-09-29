@@ -1,0 +1,4 @@
+gate_id="31"
+outcome="PASS"
+reason="ResourceLedger Model A formula verified; no violations"
+verified_at="2026-09-29T04:48:10.917Z"

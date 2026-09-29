@@ -1,0 +1,4 @@
+gate_id="10"
+outcome="PASS"
+reason="ResourceLedger exists, valid JSON, type=object"
+verified_at="2026-09-29T04:48:10.785Z"

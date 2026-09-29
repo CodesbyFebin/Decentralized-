@@ -1,0 +1,4 @@
+gate_id="17-18"
+outcome="UNKNOWN"
+reason="Partition injection log missing"
+verified_at="2026-09-29T04:29:03.568Z"

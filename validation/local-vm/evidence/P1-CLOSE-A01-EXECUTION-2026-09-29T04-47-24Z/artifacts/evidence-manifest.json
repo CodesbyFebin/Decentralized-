@@ -1,0 +1,29 @@
+{
+  "campaign_id": "2026-09-29T04-47-24Z",
+  "execution_directory": "/home/user/Decentralized-/validation/local-vm/evidence/P1-CLOSE-A01-EXECUTION-2026-09-29T04-47-24Z",
+  "source_sha": "ca860b754408b773c381bdf62781ee5971d94d03",
+  "gate_contract_version": "P1-GATE-CONTRACT.md",
+  "artifacts": [
+    {"name": "evidence-manifest.json", "path": "artifacts/evidence-manifest.json", "sha256": "234cd4543c91780c41747771bb5bcd6cbd0e48e8cfcad9bedc9caaa591e47094", "size_bytes": 458},
+    {"name": "gate-11-16-model-a-validation.txt", "path": "artifacts/gate-11-16-model-a-validation.txt", "sha256": "4aae5bcfede633cce58c7c6d5405b3c94dd8871a9e6f8de90f764dcb2cef8db7", "size_bytes": 238},
+    {"name": "gate-17-18-partition-injection.log", "path": "artifacts/gate-17-18-partition-injection.log", "sha256": "c01b0f0ae691fe6f29d52fd9d83ec1f4042fe9f5da960e48a7bfb605a084979b", "size_bytes": 317},
+    {"name": "gate-23-crash-inject-timestamp.txt", "path": "artifacts/gate-23-crash-inject-timestamp.txt", "sha256": "ffd97cc552a455e60078240dd3c51ab23384f59a97b2e51b53e5f4a7750277bb", "size_bytes": 20},
+    {"name": "gate-23-crash-injection.log", "path": "artifacts/gate-23-crash-injection.log", "sha256": "102df62afa9a81479fd6f6250fbd5cb6dc17f8d8c0d06a49185bd90080a57ea9", "size_bytes": 629},
+    {"name": "gate-23-node-port.txt", "path": "artifacts/gate-23-node-port.txt", "sha256": "608e754e3b520029bd462a5da61719db49c638783fa93c63b553bc4c5769260d", "size_bytes": 5},
+    {"name": "gate-23-workload-pid.txt", "path": "artifacts/gate-23-workload-pid.txt", "sha256": "73d27f5b6fbf6b76d8e61c1302eb20c9fe4851a4d7ce6075f1a03934c7d1a435", "size_bytes": 12},
+    {"name": "gate-24-recovery-measurement.log", "path": "artifacts/gate-24-recovery-measurement.log", "sha256": "82315313b6da41943ac2037894794a18ad68d485dc2ba368f6b2831f90f8a750", "size_bytes": 639},
+    {"name": "gate-24-recovery-time-ns.txt", "path": "artifacts/gate-24-recovery-time-ns.txt", "sha256": "edc05545fe60dd96083cd820f3029012c3d283e19f41eb881a06442a8624b41c", "size_bytes": 11},
+    {"name": "gate-25-scheduler-state.log", "path": "artifacts/gate-25-scheduler-state.log", "sha256": "f73d26beddffa89ce25439d6d66c6b5b4377506bd8fb176785e062e09a6651a7", "size_bytes": 388}
+  ],
+  "observations": [
+    {"gate": "gate-10-summary.txt"},
+    {"gate": "gate-10.txt"},
+    {"gate": "gate-11-16.txt"},
+    {"gate": "gate-17-18.txt"},
+    {"gate": "gate-23.txt"},
+    {"gate": "gate-24.txt"},
+    {"gate": "gate-25.txt"}
+  ],
+  "execution_complete": true,
+  "execution_timestamp": "2026-09-29T04:47:31.614Z"
+}

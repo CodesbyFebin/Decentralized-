@@ -1,0 +1,12 @@
+=== Tamper Detection Negative Control ===
+Timestamp: 2026-09-29T04:47:31.675Z
+
+Created tampered manifest: /home/user/Decentralized-/validation/local-vm/evidence/P1-CLOSE-A01-EXECUTION-2026-09-29T04-47-24Z/artifacts/evidence-manifest-tampered.json
+
+Tamper injection: Changed campaign_id to TAMPERED_CAMPAIGN
+
+Original manifest hash:  d5d2c26e29160d7c6e64d7a19a5fd24b210cde2bce62242e8e171bccfbd1721e
+Tampered manifest hash:  8193119cb79ce2b8d299ab4c3829c6b57a08ebbfd1e69fc1beb301b6e02c81a2
+
+hash_mismatch_detected=true
+tamper_detection_negative_control_PASS

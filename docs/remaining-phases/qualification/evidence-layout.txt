@@ -1,0 +1,17 @@
+evidence/<QUALIFICATION_ID>-<timestamp>/
+  SOURCE_SHA
+  VERIFIER_SOURCE_SHA
+  environment.json
+  qualification.json
+  host/
+  nodes/
+  networking/
+  resources/
+  placements/
+  traffic/
+  failures/
+  reconciliation/
+  recovery/
+  signed-evidence/
+  MANIFEST.sha256
+  FINAL-REPORT.md

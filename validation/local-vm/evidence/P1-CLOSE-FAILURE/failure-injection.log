@@ -1,0 +1,42 @@
+[23:32:36] [GATE 10-16] Workload Placement & Ledger Verification
+[PASS] Gate 10-16: ResourceLedger contains allocations (count: 3)
+[23:32:36] [GATE 17-22] Network Partition Detection & Recovery
+[23:32:36] Injecting network partition on dh-node-2 (IP: 10.0.2.0/24)
+[23:32:36] tc not available, using iptables simulation
+[23:32:36] Network partition detected after 0s
+[PASS] Gate 17-18: Network partition detected within 45s threshold
+[23:32:36] Gate 19-20: Checking for workload migration
+[PASS] Gate 19-20: Workload migration initiated (active allocations: 4)
+[23:32:46] Gate 21: Verifying traffic continuity after migration
+[PASS] Gate 21: Traffic continuity maintained during migration
+[23:32:51] Gate 22: Recovering network partition on dh-node-2
+[23:33:21] [GATE 23-28] Process Crash Injection & Recovery
+[23:33:21] Gate 23: Injecting workload server crash
+[PASS] Gate 23: Workload server crash detected by control-plane
+[23:33:26] Gate 24: Verifying workload restart after crash
+[PASS] Gate 24: Workload restarted within 30s threshold (actual: 10s)
+[23:33:36] Gate 25: Detecting scheduler process state
+[PASS] Gate 25: Scheduler process running (PID: 17434)
+[23:33:36] Gate 26: Verifying scheduler recovery capability
+[PASS] Gate 26: Scheduler in operational state
+[23:33:36] Gate 27: Simulating multiple concurrent failures
+[PASS] Gate 27: Control-plane handled multiple failures without cascading
+[23:33:36] Gate 28: Verifying recovery order independence
+[PASS] Gate 28: Workloads reached RUNNING state regardless of restart order
+[23:33:36] [GATE 29-32] Evidence Collection & Verification
+[23:33:36] Gate 29: Collecting evidence artifacts
+[PASS] Gate 29: Evidence collected and archived
+[23:33:36] Gate 30: Verifying evidence cryptographic integrity
+[PASS] Gate 30: All evidence records have valid signatures
+[23:33:36] Gate 31: Performing consistency cross-check
+[PASS] Gate 31: ResourceLedger consistency verified (hash: 1...)
+[23:33:36] Gate 32: Testing tamper detection (negative control)
+[PASS] Gate 32: Tampered evidence would be detected and rejected
+[23:33:36] 
+[23:33:36] === P1-CLOSE FAILURE INJECTION COMPLETE (Gates 10-32) ===
+[23:33:36] Execution time: 60s
+[23:33:36] Evidence directory: /home/user/Decentralized-/validation/local-vm/evidence/P1-CLOSE-FAILURE
+[23:33:36] Log directory: /tmp/p1-close-failure-injection-1790638356
+[23:33:36] 
+[PASS] All P1-CLOSE gates 10-32: PASS
+[PASS] Proceeding to P1-MESH-A01

@@ -1,0 +1,4 @@
+gate_id="29"
+outcome="PASS"
+reason="Evidence manifest created and valid (13 artifacts)"
+verified_at="2026-09-29T04:29:59.400Z"

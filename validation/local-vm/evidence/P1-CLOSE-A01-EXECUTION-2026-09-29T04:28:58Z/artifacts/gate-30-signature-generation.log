@@ -1,0 +1,14 @@
+=== Cryptographic Signature Generation ===
+Timestamp: 2026-09-29T04:29:03.363Z
+
+openssl_available=true
+openssl_version:
+OpenSSL 3.0.13 30 Jan 2024 (Library: OpenSSL 3.0.13 30 Jan 2024)
+
+Generating Ed25519 keypair:
+keygen_exit_code=0
+pubkey_extract_exit_code=0
+
+Signing evidence manifest:
+sign_exit_code=1
+signature_creation_failed=true
