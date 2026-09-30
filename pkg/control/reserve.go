@@ -7,8 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	"decentralized/pkg/identity"
-	"decentralized/pkg/providers"
+	"decentralized.host/pkg/providers"
 )
 
 // OwnerReserve represents proof that a user owns/controls hardware

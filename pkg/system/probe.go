@@ -6,12 +6,11 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
-	"decentralized/pkg/providers"
+	"decentralized.host/pkg/providers"
 )
 
 // HardwareProfile represents the detected hardware capabilities of a node
@@ -466,7 +465,7 @@ func (p *Prober) ConvertToCapabilities(profile *HardwareProfile) []providers.Cap
 	if profile.CPU.Cores > 0 {
 		caps = append(caps, providers.Capability{
 			Name:  fmt.Sprintf("cpu-%d-core", profile.CPU.Cores),
-			Level: providers.CapabilityLevelFull,
+			Level: "full",
 			Description: fmt.Sprintf("%d-core CPU (%s, %.2f GHz)",
 				profile.CPU.Cores, profile.CPU.Model, profile.CPU.Frequency),
 		})
@@ -477,7 +476,7 @@ func (p *Prober) ConvertToCapabilities(profile *HardwareProfile) []providers.Cap
 		gbTotal := profile.Memory.TotalBytes / (1024 * 1024 * 1024)
 		caps = append(caps, providers.Capability{
 			Name:        fmt.Sprintf("memory-%dgb", gbTotal),
-			Level:       providers.CapabilityLevelFull,
+			Level:       "full",
 			Description: fmt.Sprintf("%d GB RAM", gbTotal),
 		})
 	}
@@ -487,7 +486,7 @@ func (p *Prober) ConvertToCapabilities(profile *HardwareProfile) []providers.Cap
 		gpuName := strings.ToLower(strings.ReplaceAll(gpu.Name, " ", "-"))
 		caps = append(caps, providers.Capability{
 			Name:        fmt.Sprintf("gpu-%s", gpuName),
-			Level:       providers.CapabilityLevelFull,
+			Level:       "full",
 			Description: fmt.Sprintf("%s (%s, %d GB)", gpu.Name, gpu.Type, gpu.MemoryBytes/(1024*1024*1024)),
 		})
 	}
@@ -497,7 +496,7 @@ func (p *Prober) ConvertToCapabilities(profile *HardwareProfile) []providers.Cap
 		gbTotal := profile.Disk.TotalBytes / (1024 * 1024 * 1024)
 		caps = append(caps, providers.Capability{
 			Name:        fmt.Sprintf("storage-%dgb", gbTotal),
-			Level:       providers.CapabilityLevelFull,
+			Level:       "full",
 			Description: fmt.Sprintf("%d GB storage available", gbTotal),
 		})
 	}
@@ -506,7 +505,7 @@ func (p *Prober) ConvertToCapabilities(profile *HardwareProfile) []providers.Cap
 	if len(profile.Network) > 0 {
 		caps = append(caps, providers.Capability{
 			Name:        fmt.Sprintf("network-%d-interfaces", len(profile.Network)),
-			Level:       providers.CapabilityLevelFull,
+			Level:       "full",
 			Description: fmt.Sprintf("%d network interfaces", len(profile.Network)),
 		})
 	}
