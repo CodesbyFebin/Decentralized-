@@ -1,459 +1,156 @@
-import React, { useEffect, useState } from 'react'
-import { AppLayout } from '@/layouts/AppLayout'
-import { Card } from '@/components/Card'
-import { Button } from '@/components/Button'
-import { Badge } from '@/components/Badge'
-import { Loading } from '@/components/Loading'
-import { LineChart } from '@/components/Charts/LineChart'
-import { apiClient } from '@/lib/api'
+import React, { useState } from 'react'
+import { CheckCircle, AlertCircle, XCircle } from 'lucide-react'
+import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts'
 
-interface ComplianceCheck {
+interface ComplianceControl {
   id: string
   name: string
-  framework: 'SOC2' | 'ISO27001' | 'HIPAA' | 'GDPR' | 'PCI-DSS'
-  status: 'compliant' | 'partial' | 'non-compliant'
-  score: number
-  lastAudit: string
-  nextAudit: string
-  findings: number
-  criticalFindings: number
+  framework: string
+  status: 'compliant' | 'non-compliant' | 'in-progress'
+  lastCheck: string
+  evidence: string
+  percentage: number
 }
 
-interface ComplianceReport {
-  date: string
-  score: number
-  checks: number
-  passed: number
-  failed: number
+interface ComplianceFramework {
+  name: string
+  controls: number
+  compliant: number
+  percentage: number
 }
 
-interface ComplianceEvidence {
-  id: string
-  checkId: string
-  checkName: string
-  evidenceType: string
-  status: 'verified' | 'pending' | 'failed'
-  collectedAt: string
-  expiresAt: string
-}
+const mockControls: ComplianceControl[] = [
+  { id: '1', name: 'Access Control Policy', framework: 'ISO 27001', status: 'compliant', lastCheck: '2024-01-15T10:30:00Z', evidence: 'config-audit-2024-01-15', percentage: 100 },
+  { id: '2', name: 'Data Encryption', framework: 'PCI-DSS', status: 'compliant', lastCheck: '2024-01-14T15:45:00Z', evidence: 'crypto-audit-2024-01-14', percentage: 100 },
+  { id: '3', name: 'Incident Response Plan', framework: 'NIST 800-53', status: 'compliant', lastCheck: '2024-01-10T09:20:00Z', evidence: 'incident-plan-v3.2', percentage: 100 },
+  { id: '4', name: 'Backup Retention', framework: 'GDPR', status: 'in-progress', lastCheck: '2024-01-12T14:00:00Z', evidence: 'backup-review-2024-01', percentage: 85 },
+  { id: '5', name: 'Audit Logging', framework: 'SOC 2', status: 'compliant', lastCheck: '2024-01-15T11:15:00Z', evidence: 'audit-config-verified', percentage: 100 },
+]
 
-const Compliance: React.FC = () => {
-  const [checks, setChecks] = useState<ComplianceCheck[]>([])
-  const [reports, setReports] = useState<ComplianceReport[]>([])
-  const [evidence, setEvidence] = useState<ComplianceEvidence[]>([])
-  const [loading, setLoading] = useState(true)
-  const [selectedFramework, setSelectedFramework] = useState<string>('all')
-  const [selectedReport, setSelectedReport] = useState<ComplianceReport | null>(null)
+const frameworkData: ComplianceFramework[] = [
+  { name: 'ISO 27001', controls: 14, compliant: 14, percentage: 100 },
+  { name: 'PCI-DSS', controls: 12, compliant: 11, percentage: 92 },
+  { name: 'GDPR', controls: 8, compliant: 6, percentage: 75 },
+  { name: 'NIST 800-53', controls: 20, compliant: 19, percentage: 95 },
+  { name: 'SOC 2', controls: 10, compliant: 10, percentage: 100 },
+]
 
-  const generateMockComplianceChecks = (): ComplianceCheck[] => [
-    {
-      id: 'check-1',
-      name: 'Encryption at Rest',
-      framework: 'SOC2',
-      status: 'compliant',
-      score: 100,
-      lastAudit: '2026-09-30T08:00:00Z',
-      nextAudit: '2026-10-30T08:00:00Z',
-      findings: 0,
-      criticalFindings: 0,
-    },
-    {
-      id: 'check-2',
-      name: 'Access Control Policy',
-      framework: 'ISO27001',
-      status: 'compliant',
-      score: 95,
-      lastAudit: '2026-09-29T14:30:00Z',
-      nextAudit: '2026-10-29T14:30:00Z',
-      findings: 1,
-      criticalFindings: 0,
-    },
-    {
-      id: 'check-3',
-      name: 'Audit Logging',
-      framework: 'HIPAA',
-      status: 'compliant',
-      score: 98,
-      lastAudit: '2026-09-28T10:15:00Z',
-      nextAudit: '2026-10-28T10:15:00Z',
-      findings: 0,
-      criticalFindings: 0,
-    },
-    {
-      id: 'check-4',
-      name: 'Data Processing Agreement',
-      framework: 'GDPR',
-      status: 'partial',
-      score: 75,
-      lastAudit: '2026-09-27T11:45:00Z',
-      nextAudit: '2026-10-27T11:45:00Z',
-      findings: 3,
-      criticalFindings: 1,
-    },
-    {
-      id: 'check-5',
-      name: 'Encryption in Transit',
-      framework: 'PCI-DSS',
-      status: 'compliant',
-      score: 100,
-      lastAudit: '2026-09-26T09:20:00Z',
-      nextAudit: '2026-10-26T09:20:00Z',
-      findings: 0,
-      criticalFindings: 0,
-    },
-    {
-      id: 'check-6',
-      name: 'Incident Response Plan',
-      framework: 'SOC2',
-      status: 'partial',
-      score: 80,
-      lastAudit: '2026-09-25T15:00:00Z',
-      nextAudit: '2026-10-25T15:00:00Z',
-      findings: 2,
-      criticalFindings: 0,
-    },
-  ]
+const complianceStatusData = [
+  { name: 'Compliant', value: 60, fill: '#10b981' },
+  { name: 'In Progress', value: 10, fill: '#f59e0b' },
+  { name: 'Non-Compliant', value: 5, fill: '#ef4444' },
+]
 
-  const generateMockReports = (): ComplianceReport[] => {
-    const reports: ComplianceReport[] = []
-    for (let i = 30; i >= 0; i--) {
-      const date = new Date(Date.now() - i * 86400000).toISOString().split('T')[0]
-      reports.push({
-        date,
-        score: 85 + Math.random() * 12,
-        checks: 6,
-        passed: 5 + Math.floor(Math.random() * 2),
-        failed: Math.floor(Math.random() * 2),
-      })
-    }
-    return reports
-  }
+export default function Compliance() {
+  const [expandedId, setExpandedId] = useState<string | null>(null)
 
-  const generateMockEvidence = (): ComplianceEvidence[] => [
-    {
-      id: 'evid-1',
-      checkId: 'check-1',
-      checkName: 'Encryption at Rest',
-      evidenceType: 'Configuration Audit',
-      status: 'verified',
-      collectedAt: '2026-09-30T08:00:00Z',
-      expiresAt: '2026-10-30T08:00:00Z',
-    },
-    {
-      id: 'evid-2',
-      checkId: 'check-2',
-      checkName: 'Access Control Policy',
-      evidenceType: 'Policy Document',
-      status: 'verified',
-      collectedAt: '2026-09-29T14:30:00Z',
-      expiresAt: '2026-10-29T14:30:00Z',
-    },
-    {
-      id: 'evid-3',
-      checkId: 'check-3',
-      checkName: 'Audit Logging',
-      evidenceType: 'Log Verification',
-      status: 'verified',
-      collectedAt: '2026-09-28T10:15:00Z',
-      expiresAt: '2026-10-28T10:15:00Z',
-    },
-    {
-      id: 'evid-4',
-      checkId: 'check-4',
-      checkName: 'Data Processing Agreement',
-      evidenceType: 'Legal Document',
-      status: 'pending',
-      collectedAt: '2026-09-27T11:45:00Z',
-      expiresAt: '2026-10-27T11:45:00Z',
-    },
-    {
-      id: 'evid-5',
-      checkId: 'check-5',
-      checkName: 'Encryption in Transit',
-      evidenceType: 'TLS Certificate',
-      status: 'verified',
-      collectedAt: '2026-09-26T09:20:00Z',
-      expiresAt: '2026-10-26T09:20:00Z',
-    },
-  ]
-
-  useEffect(() => {
-    const loadCompliance = async () => {
-      try {
-        setLoading(true)
-        const mockChecks = generateMockComplianceChecks()
-        const mockReports = generateMockReports()
-        const mockEvidence = generateMockEvidence()
-        setChecks(mockChecks)
-        setReports(mockReports)
-        setEvidence(mockEvidence)
-      } catch (err) {
-        console.error('Failed to load compliance data:', err)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadCompliance()
-  }, [])
-
-  const filteredChecks =
-    selectedFramework === 'all' ? checks : checks.filter((c) => c.framework === selectedFramework)
-
-  const overallScore = Math.round(
-    checks.reduce((sum, c) => sum + c.score, 0) / checks.length
-  )
-  const compliantChecks = checks.filter((c) => c.status === 'compliant').length
-  const totalCriticalFindings = checks.reduce((sum, c) => sum + c.criticalFindings, 0)
-
-  const chartData = reports.map((r) => ({
-    date: r.date.split('-').slice(1).join('-'),
-    score: Math.round(r.score * 10) / 10,
-  }))
-
-  if (loading) {
-    return (
-      <AppLayout title="Compliance" subtitle="Compliance tracking and audit reports">
-        <Loading message="Loading compliance data..." />
-      </AppLayout>
-    )
-  }
+  const overallCompliance = Math.round((60 / 75) * 100)
 
   return (
-    <AppLayout
-      title="Compliance"
-      subtitle={`${overallScore}% overall score • ${compliantChecks}/${checks.length} frameworks compliant`}
-    >
-      <div className="space-y-6">
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card variant="glass">
-            <div className="p-4">
-              <p className="text-neutral-400 text-sm mb-2">Overall Score</p>
-              <span className="text-3xl font-bold text-primary-500">{overallScore}%</span>
-              <p className="text-xs text-neutral-500 mt-2">compliance rating</p>
-            </div>
-          </Card>
-
-          <Card variant="glass">
-            <div className="p-4">
-              <p className="text-neutral-400 text-sm mb-2">Compliant Checks</p>
-              <span className="text-3xl font-bold text-success-500">
-                {compliantChecks}/{checks.length}
-              </span>
-              <p className="text-xs text-neutral-500 mt-2">frameworks</p>
-            </div>
-          </Card>
-
-          <Card variant="glass">
-            <div className="p-4">
-              <p className="text-neutral-400 text-sm mb-2">Critical Findings</p>
-              <span className="text-3xl font-bold text-error-500">{totalCriticalFindings}</span>
-              <p className="text-xs text-neutral-500 mt-2">issues</p>
-            </div>
-          </Card>
-
-          <Card variant="glass">
-            <div className="p-4">
-              <p className="text-neutral-400 text-sm mb-2">Total Evidence</p>
-              <span className="text-3xl font-bold text-info-500">{evidence.length}</span>
-              <p className="text-xs text-neutral-500 mt-2">artifacts</p>
-            </div>
-          </Card>
+    <div className="flex-1 overflow-auto">
+      <div className="p-8 space-y-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-white">Compliance Dashboard</h1>
+            <p className="text-neutral-400 mt-1">Monitor regulatory compliance across frameworks and controls</p>
+          </div>
         </div>
 
-        {/* Compliance Score Trend */}
-        <Card variant="glass">
-          <div className="p-6 border-b border-neutral-700">
-            <h3 className="text-lg font-semibold text-white">Compliance Score Trend (30d)</h3>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-4">
+            <p className="text-neutral-400 text-sm">Overall Compliance</p>
+            <p className="text-2xl font-bold text-green-500 mt-2">{overallCompliance}%</p>
           </div>
-          <div className="p-6">
-            <LineChart
-              data={chartData}
-              dataKey="score"
-              name="Compliance Score"
-              stroke="#00D9FF"
-              height={250}
-              xAxisKey="date"
-            />
+          <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-4">
+            <p className="text-neutral-400 text-sm">Compliant Controls</p>
+            <p className="text-2xl font-bold text-green-500 mt-2">60</p>
           </div>
-        </Card>
+          <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-4">
+            <p className="text-neutral-400 text-sm">In Progress</p>
+            <p className="text-2xl font-bold text-yellow-500 mt-2">10</p>
+          </div>
+          <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-4">
+            <p className="text-neutral-400 text-sm">Non-Compliant</p>
+            <p className="text-2xl font-bold text-red-500 mt-2">5</p>
+          </div>
+        </div>
 
-        {/* Compliance Checks */}
-        <Card variant="glass">
-          <div className="p-6 border-b border-neutral-700">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-white">Compliance Checks</h3>
-              <select
-                value={selectedFramework}
-                onChange={(e) => setSelectedFramework(e.target.value)}
-                className="px-3 py-2 bg-neutral-700 border border-neutral-600 rounded-lg text-white text-sm focus:border-primary-500 focus:outline-none"
-              >
-                <option value="all">All Frameworks</option>
-                <option value="SOC2">SOC2</option>
-                <option value="ISO27001">ISO 27001</option>
-                <option value="HIPAA">HIPAA</option>
-                <option value="GDPR">GDPR</option>
-                <option value="PCI-DSS">PCI-DSS</option>
-              </select>
-            </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-6">
+            <h3 className="text-lg font-semibold text-white mb-4">Compliance Status</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie data={complianceStatusData} cx="50%" cy="50%" labelLine={false} label={({ name, value }) => `${name} (${value})`} outerRadius={100} fill="#8884d8" dataKey="value">
+                  {complianceStatusData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                  ))}
+                </Pie>
+                <Tooltip contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #404040', borderRadius: '8px' }} />
+              </PieChart>
+            </ResponsiveContainer>
           </div>
 
-          <div className="divide-y divide-neutral-700">
-            {filteredChecks.map((check) => (
-              <div key={check.id} className="p-6 hover:bg-neutral-800/20 transition">
-                <div className="flex justify-between items-start gap-4 mb-3">
+          <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-6">
+            <h3 className="text-lg font-semibold text-white mb-4">Framework Compliance</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={frameworkData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#404040" />
+                <XAxis dataKey="name" stroke="#737373" angle={-45} textAnchor="end" height={80} />
+                <YAxis stroke="#737373" />
+                <Tooltip contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #404040', borderRadius: '8px', color: '#e5e5e5' }} />
+                <Bar dataKey="percentage" fill="#10b981" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-6">
+          <h3 className="text-lg font-semibold text-white mb-6">Control Status</h3>
+          <div className="space-y-3">
+            {mockControls.map((control) => (
+              <div key={control.id} className="border border-neutral-800 rounded-lg p-4 hover:border-neutral-700 transition-colors">
+                <div className="flex items-start gap-4">
+                  <div className="mt-1">
+                    {control.status === 'compliant' && <CheckCircle className="w-5 h-5 text-green-500" />}
+                    {control.status === 'in-progress' && <AlertCircle className="w-5 h-5 text-yellow-500" />}
+                    {control.status === 'non-compliant' && <XCircle className="w-5 h-5 text-red-500" />}
+                  </div>
                   <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <p className="text-white font-medium text-base">{check.name}</p>
-                      <Badge
-                        status={
-                          check.status === 'compliant'
-                            ? 'success'
-                            : check.status === 'partial'
-                              ? 'warning'
-                              : 'error'
-                        }
-                      >
-                        {check.status === 'compliant'
-                          ? 'Compliant'
-                          : check.status === 'partial'
-                            ? 'Partial'
-                            : 'Non-Compliant'}
-                      </Badge>
-                    </div>
-                    <p className="text-xs text-neutral-500 mb-3">
-                      Framework: <span className="text-neutral-400">{check.framework}</span>
-                    </p>
-
-                    {/* Score Bar */}
-                    <div className="mb-3">
-                      <div className="flex justify-between mb-1">
-                        <span className="text-xs text-neutral-400">Compliance Score</span>
-                        <span className="text-sm font-medium text-white">{check.score}%</span>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="font-semibold text-white">{control.name}</h4>
+                        <p className="text-sm text-neutral-400 mt-1">{control.framework}</p>
                       </div>
-                      <div className="w-full bg-neutral-700 rounded-full h-2">
-                        <div
-                          className={`h-2 rounded-full transition-all ${
-                            check.score >= 90
-                              ? 'bg-success-500'
-                              : check.score >= 75
-                                ? 'bg-warning-500'
-                                : 'bg-error-500'
-                          }`}
-                          style={{ width: `${check.score}%` }}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="flex flex-wrap gap-4 text-xs text-neutral-500">
-                      <span>Last Audit: {new Date(check.lastAudit).toLocaleDateString()}</span>
-                      <span>Next Audit: {new Date(check.nextAudit).toLocaleDateString()}</span>
-                      <span className="text-warning-400">
-                        {check.findings} finding{check.findings !== 1 ? 's' : ''}
+                      <span className={`px-3 py-1 rounded text-xs font-medium ${control.status === 'compliant' ? 'bg-green-500/20 text-green-400' : control.status === 'in-progress' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-red-500/20 text-red-400'}`}>
+                        {control.status}
                       </span>
-                      {check.criticalFindings > 0 && (
-                        <span className="text-error-400">
-                          {check.criticalFindings} critical
-                        </span>
-                      )}
                     </div>
+                    <div className="mt-3 w-full bg-neutral-800 rounded-full h-2">
+                      <div className={`h-2 rounded-full ${control.percentage === 100 ? 'bg-green-500' : 'bg-yellow-500'}`} style={{ width: `${control.percentage}%` }} />
+                    </div>
+                    <p className="text-xs text-neutral-400 mt-2">Last Check: {new Date(control.lastCheck).toLocaleString()} | Evidence: {control.evidence}</p>
                   </div>
                 </div>
               </div>
             ))}
           </div>
-        </Card>
+        </div>
 
-        {/* Evidence Collection */}
-        <Card variant="glass">
-          <div className="p-6 border-b border-neutral-700">
-            <h3 className="text-lg font-semibold text-white">Evidence Artifacts</h3>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="border-b border-neutral-700">
-                <tr>
-                  <th className="px-6 py-3 text-left text-neutral-400 font-medium">Check</th>
-                  <th className="px-6 py-3 text-left text-neutral-400 font-medium">Evidence Type</th>
-                  <th className="px-6 py-3 text-left text-neutral-400 font-medium">Status</th>
-                  <th className="px-6 py-3 text-left text-neutral-400 font-medium">Collected</th>
-                  <th className="px-6 py-3 text-left text-neutral-400 font-medium">Expires</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-neutral-700">
-                {evidence.map((evid) => (
-                  <tr key={evid.id} className="hover:bg-neutral-800/30">
-                    <td className="px-6 py-3 text-neutral-100 font-medium text-sm">
-                      {evid.checkName}
-                    </td>
-                    <td className="px-6 py-3 text-neutral-400 text-xs">{evid.evidenceType}</td>
-                    <td className="px-6 py-3">
-                      <Badge
-                        status={
-                          evid.status === 'verified'
-                            ? 'success'
-                            : evid.status === 'pending'
-                              ? 'warning'
-                              : 'error'
-                        }
-                      >
-                        {evid.status === 'verified'
-                          ? 'Verified'
-                          : evid.status === 'pending'
-                            ? 'Pending'
-                            : 'Failed'}
-                      </Badge>
-                    </td>
-                    <td className="px-6 py-3 text-neutral-500 text-xs">
-                      {new Date(evid.collectedAt).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-3 text-neutral-500 text-xs">
-                      {new Date(evid.expiresAt).toLocaleDateString()}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-
-        {/* Compliance Reports */}
-        <Card variant="glass">
-          <div className="p-6 border-b border-neutral-700">
-            <h3 className="text-lg font-semibold text-white">Recent Reports</h3>
-          </div>
-          <div className="divide-y divide-neutral-700">
-            {reports.slice(-7).reverse().map((report, idx) => (
-              <button
-                key={idx}
-                onClick={() => setSelectedReport(report)}
-                className="w-full text-left p-6 hover:bg-neutral-800/20 transition flex justify-between items-center"
-              >
-                <div>
-                  <p className="text-white font-medium">{report.date}</p>
-                  <p className="text-xs text-neutral-500 mt-1">
-                    {report.passed}/{report.checks} checks passed
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className={`text-2xl font-bold ${
-                    report.score >= 90
-                      ? 'text-success-500'
-                      : report.score >= 75
-                        ? 'text-warning-500'
-                        : 'text-error-500'
-                  }`}>
-                    {Math.round(report.score)}%
-                  </p>
-                </div>
-              </button>
+        <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-6">
+          <h3 className="text-lg font-semibold text-white mb-4">Compliance Reports</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[{ name: 'Annual Compliance Report', date: '2024-01-15', status: 'ready' }, { name: 'PCI-DSS Assessment', date: '2024-01-10', status: 'in-progress' }, { name: 'GDPR Data Processing Audit', date: '2024-01-01', status: 'ready' }].map((report, idx) => (
+              <div key={idx} className="border border-neutral-800 rounded-lg p-4">
+                <p className="font-medium text-white">{report.name}</p>
+                <p className="text-sm text-neutral-400 mt-1">Generated: {report.date}</p>
+                <span className={`inline-block px-2 py-1 rounded text-xs font-medium mt-3 ${report.status === 'ready' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}`}>
+                  {report.status === 'ready' ? 'Ready' : 'In Progress'}
+                </span>
+              </div>
             ))}
           </div>
-        </Card>
+        </div>
       </div>
-    </AppLayout>
+    </div>
   )
 }
-
-export default Compliance

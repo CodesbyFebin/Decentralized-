@@ -1,299 +1,151 @@
-import React, { useEffect, useState, useRef } from 'react'
-import { AppLayout } from '@/layouts/AppLayout'
-import { Card } from '@/components/Card'
-import { Button } from '@/components/Button'
-import { Loading } from '@/components/Loading'
-import { apiClient } from '@/lib/api'
+import React, { useState } from 'react'
+import { Send, Lightbulb } from 'lucide-react'
 
 interface Message {
   id: string
-  role: 'user' | 'assistant'
+  type: 'user' | 'assistant'
   content: string
   timestamp: string
-  sources?: string[]
 }
 
-interface ChatSession {
+interface Suggestion {
   id: string
+  type: 'optimization' | 'security' | 'performance' | 'cost'
   title: string
-  created: string
-  messageCount: number
+  description: string
+  impact: string
+  effort: 'low' | 'medium' | 'high'
+  action: string
 }
 
-const Copilot: React.FC = () => {
-  const [messages, setMessages] = useState<Message[]>([])
-  const [sessions, setSessions] = useState<ChatSession[]>([])
-  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null)
+const mockSuggestions: Suggestion[] = [
+  { id: '1', type: 'cost', title: 'Optimize Reserved Instance Usage', description: 'Currently using on-demand instances for non-critical workloads. Reserved instances could save 40% on compute costs.', impact: 'Reduce monthly costs by $2,400', effort: 'low', action: 'Apply' },
+  { id: '2', type: 'performance', title: 'Enable Query Result Caching', description: 'Database query patterns show 60% cache-eligible queries. Implementing caching layer could reduce query latency by 45%.', impact: 'Reduce API latency from 250ms to 140ms', effort: 'medium', action: 'Implement' },
+  { id: '3', type: 'security', title: 'Enable MFA for Admin Accounts', description: '3 admin accounts are still using single-factor authentication. MFA is recommended for all privileged accounts.', impact: 'Eliminate single-factor auth risk', effort: 'low', action: 'Enable' },
+  { id: '4', type: 'optimization', title: 'Scale Down Non-Peak Instances', description: 'Usage patterns show 70% CPU utilization is only reached during 8-10am daily. Auto-scaling rules could optimize resource allocation.', impact: 'Reduce idle capacity waste by 35%', effort: 'medium', action: 'Configure' },
+]
+
+export default function Copilot() {
+  const [messages, setMessages] = useState<Message[]>([
+    { id: '1', type: 'assistant', content: 'Hello! I\'m your infrastructure copilot. I can help you optimize costs, improve security, enhance performance, and provide recommendations based on your system patterns. How can I assist you today?', timestamp: new Date().toISOString() },
+  ])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
-  const [thinking, setThinking] = useState(false)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  const suggestedQueries = [
-    'What is the current system health status?',
-    'How to optimize node resource allocation?',
-    'Show recent deployment history and status',
-    'Explain the RBAC permission model',
-    'How to create and manage API keys?',
-  ]
-
-  const generateMockSessions = (): ChatSession[] => [
-    {
-      id: 'session-1',
-      title: 'Node Performance Troubleshooting',
-      created: '2026-09-30T08:00:00Z',
-      messageCount: 12,
-    },
-    {
-      id: 'session-2',
-      title: 'Deployment Strategy Discussion',
-      created: '2026-09-28T14:30:00Z',
-      messageCount: 8,
-    },
-    {
-      id: 'session-3',
-      title: 'Security Configuration Review',
-      created: '2026-09-25T10:15:00Z',
-      messageCount: 15,
-    },
-  ]
-
-  const generateMockMessages = (): Message[] => [
-    {
-      id: 'msg-1',
-      role: 'user',
-      content: 'What is the current status of the cluster?',
-      timestamp: new Date(Date.now() - 300000).toISOString(),
-    },
-    {
-      id: 'msg-2',
-      role: 'assistant',
-      content: 'The cluster is operating normally with 23 active nodes. Current metrics:\n\n• CPU Utilization: 67.9% (630 cores used / 928 allocated)\n• Memory: 63.0% (1170 GB / 1856 GB)\n• Uptime: 99.98%\n\nAll three master nodes are healthy, 12 worker nodes are operational, and 8 edge nodes are active. No alerts or warnings at this time.',
-      timestamp: new Date(Date.now() - 290000).toISOString(),
-      sources: ['Dashboard', 'Compute Resources', 'System Health'],
-    },
-    {
-      id: 'msg-3',
-      role: 'user',
-      content: 'How can I improve memory utilization efficiency?',
-      timestamp: new Date(Date.now() - 180000).toISOString(),
-    },
-    {
-      id: 'msg-4',
-      role: 'assistant',
-      content: 'Based on current metrics, here are recommendations to improve memory utilization:\n\n1. **Container Optimization**: Review container memory limits on worker nodes. Some containers may be over-provisioned.\n\n2. **Pod Consolidation**: Consider consolidating underutilized pods to free up allocated memory blocks.\n\n3. **Cache Optimization**: Implement intelligent caching strategies on API endpoints to reduce memory pressure.\n\n4. **Scaling Strategy**: The current 63% utilization suggests room for workload consolidation before scaling up.\n\nWould you like me to generate a detailed optimization report?',
-      timestamp: new Date(Date.now() - 170000).toISOString(),
-      sources: ['Compute Resources', 'Performance Best Practices'],
-    },
-  ]
-
-  useEffect(() => {
-    const initializeCopilot = () => {
-      const mockSessions = generateMockSessions()
-      setSessions(mockSessions)
-      setCurrentSessionId(mockSessions[0].id)
-      setMessages(generateMockMessages())
-    }
-
-    initializeCopilot()
-  }, [])
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
-
-  const handleSendMessage = async (query: string) => {
-    if (!query.trim()) return
+  const handleSendMessage = () => {
+    if (!input.trim()) return
 
     const userMessage: Message = {
-      id: `msg-${Date.now()}`,
-      role: 'user',
-      content: query,
+      id: String(messages.length + 1),
+      type: 'user',
+      content: input,
       timestamp: new Date().toISOString(),
     }
 
-    setMessages((prev) => [...prev, userMessage])
+    setMessages([...messages, userMessage])
     setInput('')
-    setThinking(true)
+    setLoading(true)
 
-    try {
-      await apiClient.post('/copilot/chat', {
-        sessionId: currentSessionId,
-        message: query,
-      })
-
-      // Simulate response delay
-      await new Promise((resolve) => setTimeout(resolve, 1500))
-
+    setTimeout(() => {
       const assistantMessage: Message = {
-        id: `msg-${Date.now() + 1}`,
-        role: 'assistant',
-        content: `I understand your question about "${query}". Based on the system documentation and current metrics, here are some relevant insights...\n\nThis is a simulated response. In production, this would be powered by RAG (Retrieval-Augmented Generation) to provide accurate, context-aware answers based on your infrastructure data.`,
+        id: String(messages.length + 2),
+        type: 'assistant',
+        content: 'I\'m analyzing your infrastructure based on your query. Based on current metrics, I recommend reviewing your backup retention policy and implementing the suggested cost optimizations. Would you like me to provide more details on any specific area?',
         timestamp: new Date().toISOString(),
-        sources: ['System Documentation', 'Recent Analytics', 'Configuration'],
       }
-
       setMessages((prev) => [...prev, assistantMessage])
-    } catch (err) {
-      console.error('Failed to send message:', err)
-    } finally {
-      setThinking(false)
-    }
-  }
-
-  const handleNewSession = () => {
-    const newSession: ChatSession = {
-      id: `session-${Date.now()}`,
-      title: 'New Conversation',
-      created: new Date().toISOString(),
-      messageCount: 0,
-    }
-    setSessions((prev) => [newSession, ...prev])
-    setCurrentSessionId(newSession.id)
-    setMessages([])
+      setLoading(false)
+    }, 1000)
   }
 
   return (
-    <AppLayout
-      title="RAG Copilot"
-      subtitle="AI-powered assistant with infrastructure knowledge"
-    >
-      <div className="flex gap-6 h-[calc(100vh-200px)]">
-        {/* Sidebar with Sessions */}
-        <Card variant="glass" className="w-80 flex flex-col">
-          <div className="p-6 border-b border-neutral-700">
-            <Button
-              variant="primary"
-              size="md"
-              onClick={handleNewSession}
-              className="w-full"
-            >
-              + New Chat
-            </Button>
+    <div className="flex-1 overflow-auto">
+      <div className="p-8 space-y-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-white">Copilot</h1>
+            <p className="text-neutral-400 mt-1">AI-powered infrastructure insights and recommendations</p>
           </div>
-          <div className="flex-1 overflow-y-auto p-4 space-y-2">
-            <p className="text-xs text-neutral-400 px-2 mb-3">Recent Conversations</p>
-            {sessions.map((session) => (
-              <button
-                key={session.id}
-                onClick={() => setCurrentSessionId(session.id)}
-                className={`w-full text-left px-4 py-3 rounded-lg transition ${
-                  currentSessionId === session.id
-                    ? 'bg-primary-500/20 border border-primary-500'
-                    : 'hover:bg-neutral-800/30'
-                }`}
-              >
-                <p className="text-sm font-medium text-neutral-100 truncate">{session.title}</p>
-                <p className="text-xs text-neutral-500 mt-1">{session.messageCount} messages</p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
+            <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-6 h-96 overflow-y-auto flex flex-col">
+              <div className="flex-1 space-y-4 mb-4">
+                {messages.map((msg) => (
+                  <div key={msg.id} className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`max-w-xs px-4 py-2 rounded-lg ${msg.type === 'user' ? 'bg-primary-600 text-white' : 'bg-neutral-800 text-neutral-200'}`}>
+                      {msg.content}
+                    </div>
+                  </div>
+                ))}
+                {loading && (
+                  <div className="flex justify-start">
+                    <div className="bg-neutral-800 text-neutral-200 px-4 py-2 rounded-lg">
+                      <span className="animate-pulse">Analyzing...</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                placeholder="Ask me anything about your infrastructure..."
+                className="flex-1 px-4 py-2 bg-neutral-800 border border-neutral-700 rounded-lg text-white placeholder-neutral-500 focus:outline-none focus:border-primary-500"
+              />
+              <button onClick={handleSendMessage} className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2">
+                <Send size={18} />
               </button>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+              <Lightbulb size={20} className="text-yellow-500" />
+              Quick Suggestions
+            </h3>
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {mockSuggestions.map((suggestion) => (
+                <div key={suggestion.id} className="bg-neutral-900 border border-neutral-800 rounded-lg p-3 cursor-pointer hover:border-neutral-700 transition-colors">
+                  <div className="flex items-start justify-between gap-2">
+                    <span className={`px-2 py-1 rounded text-xs font-medium whitespace-nowrap ${suggestion.type === 'cost' ? 'bg-green-500/20 text-green-400' : suggestion.type === 'security' ? 'bg-red-500/20 text-red-400' : suggestion.type === 'performance' ? 'bg-blue-500/20 text-blue-400' : 'bg-purple-500/20 text-purple-400'}`}>
+                      {suggestion.type}
+                    </span>
+                  </div>
+                  <p className="font-medium text-white text-sm mt-2">{suggestion.title}</p>
+                  <p className="text-xs text-neutral-400 mt-1">{suggestion.description}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-6">
+          <h3 className="text-lg font-semibold text-white mb-4">Recommended Actions</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {mockSuggestions.map((suggestion) => (
+              <div key={suggestion.id} className="border border-neutral-800 rounded-lg p-4">
+                <div className="flex items-start justify-between mb-3">
+                  <h4 className="font-medium text-white">{suggestion.title}</h4>
+                  <span className={`px-2 py-1 rounded text-xs font-medium ${suggestion.effort === 'low' ? 'bg-green-500/20 text-green-400' : suggestion.effort === 'medium' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-red-500/20 text-red-400'}`}>
+                    {suggestion.effort} effort
+                  </span>
+                </div>
+                <p className="text-sm text-neutral-400">{suggestion.description}</p>
+                <p className="text-sm text-primary-400 font-medium mt-2">Impact: {suggestion.impact}</p>
+                <button className="mt-3 px-3 py-1 bg-primary-600 hover:bg-primary-700 text-white rounded text-sm font-medium transition-colors">
+                  {suggestion.action}
+                </button>
+              </div>
             ))}
           </div>
-        </Card>
-
-        {/* Chat Area */}
-        <div className="flex-1 flex flex-col gap-6">
-          <Card variant="glass" className="flex-1 flex flex-col">
-            {messages.length === 0 ? (
-              <div className="flex-1 flex flex-col items-center justify-center p-12 space-y-6">
-                <div className="text-center">
-                  <h2 className="text-2xl font-bold text-neutral-100 mb-2">
-                    How can I help you today?
-                  </h2>
-                  <p className="text-neutral-400">
-                    Ask about your infrastructure, deployments, security, or system configuration
-                  </p>
-                </div>
-                <div className="grid grid-cols-1 gap-2 w-full max-w-2xl">
-                  {suggestedQueries.map((query, i) => (
-                    <button
-                      key={i}
-                      onClick={() => handleSendMessage(query)}
-                      className="text-left px-4 py-3 bg-neutral-800 hover:bg-neutral-700 rounded-lg text-sm text-neutral-300 transition"
-                    >
-                      {query}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <>
-                <div className="flex-1 overflow-y-auto p-6 space-y-4">
-                  {messages.map((message) => (
-                    <div
-                      key={message.id}
-                      className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                    >
-                      <div
-                        className={`max-w-2xl px-4 py-3 rounded-lg ${
-                          message.role === 'user'
-                            ? 'bg-primary-600 text-white'
-                            : 'bg-neutral-800 text-neutral-100'
-                        }`}
-                      >
-                        <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                        {message.sources && (
-                          <div className="mt-2 flex flex-wrap gap-1">
-                            {message.sources.map((source, i) => (
-                              <span key={i} className="text-xs opacity-75 bg-neutral-700 px-2 py-1 rounded">
-                                {source}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                        <p className={`text-xs mt-1 ${
-                          message.role === 'user' ? 'opacity-75' : 'text-neutral-500'
-                        }`}>
-                          {new Date(message.timestamp).toLocaleTimeString()}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                  {thinking && (
-                    <div className="flex justify-start">
-                      <div className="bg-neutral-800 text-neutral-300 px-4 py-3 rounded-lg">
-                        <div className="flex gap-2 items-center">
-                          <div className="flex gap-1">
-                            <div className="w-2 h-2 bg-primary-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                            <div className="w-2 h-2 bg-primary-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                            <div className="w-2 h-2 bg-primary-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                          </div>
-                          <span className="text-sm">Thinking...</span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  <div ref={messagesEndRef} />
-                </div>
-
-                {/* Input Area */}
-                <div className="border-t border-neutral-700 p-6">
-                  <div className="flex gap-3">
-                    <input
-                      type="text"
-                      value={input}
-                      onChange={(e) => setInput(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && handleSendMessage(input)}
-                      placeholder="Ask anything about your infrastructure..."
-                      disabled={thinking}
-                      className="flex-1 px-4 py-2 bg-neutral-700 border border-neutral-600 rounded-lg text-white placeholder-neutral-500 focus:border-primary-500 focus:outline-none disabled:opacity-50"
-                    />
-                    <Button
-                      variant="primary"
-                      size="md"
-                      onClick={() => handleSendMessage(input)}
-                      disabled={!input.trim() || thinking}
-                    >
-                      Send
-                    </Button>
-                  </div>
-                </div>
-              </>
-            )}
-          </Card>
         </div>
       </div>
-    </AppLayout>
+    </div>
   )
 }
-
-export default Copilot
