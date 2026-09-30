@@ -126,10 +126,10 @@ type AdapterWithQualification struct {
 	Signer  *EvidenceQualifier
 }
 
-// QualifyResource implements QualificationAdapter
+// QualifyResource implements QualificationAdapter with full gate execution
 func (aq *AdapterWithQualification) QualifyResource(ctx context.Context, resource *Resource, signer *EvidenceQualifier) (*QualificationCampaign, error) {
 	if signer == nil {
-		return nil, nil // v0.1: Skip qualification if no signer provided
+		return nil, nil // Skip qualification if no signer provided
 	}
 
 	// Get source SHA from evidence if available
@@ -141,9 +141,15 @@ func (aq *AdapterWithQualification) QualifyResource(ctx context.Context, resourc
 		sourceSHA = "unknown"
 	}
 
-	// v0.1: Return PASSED campaign (stub)
-	// v0.2: Will implement actual gate execution
-	campaign, err := RunQualificationCampaign(resource.ID, sourceSHA, signer)
+	// Detect runtime topology for failure domain classification
+	topology, err := DetectRuntime(ctx)
+	if err != nil {
+		// Continue without topology if detection fails
+		topology = nil
+	}
+
+	// Execute all 32 P1_CORE gates with adapter and topology context
+	campaign, err := RunQualificationCampaignWithContext(ctx, resource.ID, sourceSHA, signer, aq.Adapter, nil, topology)
 	if err != nil {
 		return nil, err
 	}

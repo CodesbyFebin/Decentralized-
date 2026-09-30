@@ -1,6 +1,7 @@
 package providers
 
 import (
+	"context"
 	"crypto/ed25519"
 	"crypto/rand"
 	"encoding/hex"
@@ -197,66 +198,24 @@ var P1_CORE_Gates = []string{
 }
 
 // RunQualificationCampaign executes all 32 P1_CORE gates and produces signed evidence.
+// Deprecated: Use RunQualificationCampaignWithContext instead for full gate execution.
 func RunQualificationCampaign(resourceID string, sourceSHA string, signer *EvidenceQualifier) (*QualificationCampaign, error) {
-	campaign := &QualificationCampaign{
-		ID:         fmt.Sprintf("qual-%d", time.Now().UnixNano()),
-		ResourceID: resourceID,
-		StartTime:  time.Now(),
-		SourceSHA:  sourceSHA,
-		Status:     "RUNNING",
-		GateResults: make([]GateResult, 0, 32),
+	return RunQualificationCampaignWithContext(context.Background(), resourceID, sourceSHA, signer, nil, nil, nil)
+}
+
+// RunQualificationCampaignWithContext executes all 32 P1_CORE gates with adapter and topology context.
+func RunQualificationCampaignWithContext(ctx context.Context, resourceID string, sourceSHA string,
+	signer *EvidenceQualifier, adapter ProviderAdapter, cfg *ProviderConfig, topology *RuntimeTopology) (*QualificationCampaign, error) {
+
+	if signer == nil {
+		return nil, fmt.Errorf("signer required for evidence binding")
 	}
 
-	allPassed := true
-
-	// Run each gate (stubbed for v0.1)
-	for i := 1; i <= 32; i++ {
-		gate := GateResult{
-			Sequence:    i,
-			Name:        P1_CORE_Gates[i],
-			Description: fmt.Sprintf("P1_CORE Gate %d", i),
-			Timestamp:   time.Now(),
-		}
-
-		// v0.1: All gates pass (diagnostic phase)
-		// v0.2: Will implement actual testing
-		gate.Passed = true
-		gate.Evidence = "gate-check-passed"
-
-		if !gate.Passed {
-			allPassed = false
-		}
-
-		campaign.GateResults = append(campaign.GateResults, gate)
+	executor := NewGateExecutor(ctx, signer)
+	campaign, err := executor.ExecuteAllGates(ctx, resourceID, sourceSHA, adapter, cfg, topology)
+	if err != nil {
+		return nil, fmt.Errorf("gate execution failed: %w", err)
 	}
-
-	campaign.EndTime = time.Now()
-
-	if allPassed {
-		campaign.Status = "PASSED"
-	} else {
-		campaign.Status = "FAILED"
-	}
-
-	// Create and sign evidence
-	evidence := &QualifiedEvidence{
-		CampaignID:   campaign.ID,
-		ResourceID:   resourceID,
-		SourceSHA:    sourceSHA,
-		Timestamp:    campaign.EndTime,
-		ContentHash:  signer.HashResourceState(resourceID + sourceSHA),
-		P1_CORE_Passed: allPassed,
-		OSBoundary:   "UNKNOWN", // v0.1: To be determined by runtime backend
-		FilesystemBoundary: "UNKNOWN",
-		PhysicalBoundary:   "UNKNOWN",
-		OperatorBoundary:   "UNKNOWN",
-	}
-
-	if err := signer.SignEvidence(evidence); err != nil {
-		return nil, fmt.Errorf("failed to sign evidence: %w", err)
-	}
-
-	campaign.Evidence = evidence
 
 	return campaign, nil
 }
