@@ -7,6 +7,13 @@
 __pycache__/
 *.pyc
 
+# Node.js
+node_modules/
+package-lock.json
+npm-debug.log
+.next/
+dist/
+
 # Never commit private keys
 *.key
 identity.key
