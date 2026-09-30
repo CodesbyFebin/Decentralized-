@@ -1,0 +1,70 @@
+{
+  "kind": "chaos-report",
+  "signer": "dh1q4tmh2ofksoytlfv2jcc5n4nfj",
+  "pub": "c7lX23-stoHtcRy1zPxe4aDg8_PSJSpSULbT5rOOyxc",
+  "payload": {
+    "durationMs": 34466,
+    "environment": {
+      "arch": "amd64",
+      "cpus": "4",
+      "go": "go1.26.4",
+      "os": "linux",
+      "topology": "1 control-plane member(s), 4 host(s), 1 edge(s)"
+    },
+    "evidence": [
+      "audit chain verified: 51 entries, head 80deef71556f"
+    ],
+    "id": "network-partition-1790730285184",
+    "injection": "drop every WireGuard packet to and from one host at the fault proxies and cut its control-plane channel for 25s, then heal",
+    "invariant": "the isolated host keeps its admitted workload, gossip suspects it, the control plane marks it lost and reschedules, no request fails, and after healing the cluster converges to exactly the desired replicas",
+    "measurements": {
+      "converged_after_heal_ms": "953",
+      "gossip_suspect_ms": "0",
+      "marked_lost_ms": "9679",
+      "proxy_packets": "map[dropped:444 duplicated:0 forwarded:27793 reordered:0]",
+      "requests_failed": "0",
+      "requests_ok": "851",
+      "rescheduled_ms": "21217"
+    },
+    "observed": "gossip suspect 0s, lost 9.68s, rescheduled 21.217s; converged after heal; 851/851 requests OK",
+    "recovery": [
+      {
+        "atMs": 0,
+        "event": "starting 1 control-plane member(s), 4 host(s), 1 edge(s)"
+      },
+      {
+        "atMs": 2548,
+        "event": "cluster ready"
+      },
+      {
+        "atMs": 8512,
+        "event": "isolated edge-1 (WireGuard dropped both ways, control-plane channel cut)"
+      },
+      {
+        "atMs": 18188,
+        "event": "control plane marked edge-1 lost"
+      },
+      {
+        "atMs": 29726,
+        "event": "replica 0 running on host-a"
+      },
+      {
+        "atMs": 29727,
+        "event": "isolated host mode offline-hold, original workload alive: true"
+      },
+      {
+        "atMs": 33512,
+        "event": "partition healed"
+      },
+      {
+        "atMs": 34451,
+        "event": "old instance on edge-1 stopped by a signed stop; 3 replicas running"
+      }
+    ],
+    "scenario": "network-partition",
+    "started": 1790730285184,
+    "title": "Network partition of one host",
+    "verdict": "PASS"
+  },
+  "sig": "2h2MgCfRmoVQKD1ZCmTUt-2iJtyv9WXhC129pAB5NhEhFRLVz8E0vfVcfPZN3UE9jKgt37IysBkXffDdcUvpCQ"
+}

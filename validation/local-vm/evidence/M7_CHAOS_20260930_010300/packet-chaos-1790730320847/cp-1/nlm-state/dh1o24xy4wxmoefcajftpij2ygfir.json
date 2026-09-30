@@ -1,0 +1,15 @@
+{
+  "nodeId": "dh1o24xy4wxmoefcajftpij2ygfir",
+  "state": "DISCOVERED",
+  "desiredState": "DISCOVERED",
+  "observedAt": 1790730322014371539,
+  "lastTransition": 0,
+  "sourceId": "agent",
+  "freshness": "FRESH",
+  "cordoned": false,
+  "drainTarget": 0,
+  "lastHeartbeat": 1790730322014371630,
+  "reason": "node discovered",
+  "generation": 1,
+  "savedAt": "2026-09-30T01:05:22.01437241Z"
+}
