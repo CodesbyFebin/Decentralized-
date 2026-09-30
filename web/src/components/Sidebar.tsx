@@ -13,6 +13,8 @@ const navigation = [
   { name: 'Analytics', href: '/analytics', icon: '📈' },
   { name: 'Alerts', href: '/alerts', icon: '🔔' },
   { name: 'Logs', href: '/logs', icon: '📝' },
+  { name: 'Integrations', href: '/integrations', icon: '🔗' },
+  { name: 'Webhooks', href: '/webhooks', icon: '🪝' },
   { name: 'Team', href: '/team', icon: '👥' },
   { name: 'Settings', href: '/settings', icon: '⚙️' },
   { name: 'Copilot', href: '/copilot', icon: '🤖' },
