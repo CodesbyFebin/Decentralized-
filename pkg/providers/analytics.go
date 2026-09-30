@@ -360,3 +360,33 @@ func (ca *CampaignAnalytics) GetComplianceSummary(ctx context.Context) (*Complia
 
 	return summary, nil
 }
+
+// GetCampaignStartDate returns the earliest campaign start time.
+func (ca *CampaignAnalytics) GetCampaignStartDate(ctx context.Context) time.Time {
+	row := ca.db.QueryRowContext(ctx, `
+		SELECT MIN(start_time) FROM qualification_campaigns`)
+
+	var startTime sql.NullInt64
+	row.Scan(&startTime)
+
+	if startTime.Valid && startTime.Int64 > 0 {
+		return time.UnixMilli(startTime.Int64)
+	}
+
+	return time.Now().AddDate(-1, 0, 0)
+}
+
+// GetCampaignEndDate returns the latest campaign end time.
+func (ca *CampaignAnalytics) GetCampaignEndDate(ctx context.Context) time.Time {
+	row := ca.db.QueryRowContext(ctx, `
+		SELECT MAX(end_time) FROM qualification_campaigns`)
+
+	var endTime sql.NullInt64
+	row.Scan(&endTime)
+
+	if endTime.Valid && endTime.Int64 > 0 {
+		return time.UnixMilli(endTime.Int64)
+	}
+
+	return time.Now()
+}
