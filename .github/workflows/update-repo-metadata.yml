@@ -1,0 +1,73 @@
+name: Update Repository Metadata
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/update-repo-metadata.yml'
+
+permissions:
+  contents: read
+  repository-projects: write
+  # Note: Repository metadata (description, topics, homepage) updates require
+  # GitHub App permissions or direct access with proper scopes. The GITHUB_TOKEN
+  # from GitHub Actions has limitations on metadata updates. For production,
+  # configure a GitHub App or use personal access token with appropriate scopes.
+
+jobs:
+  update-metadata:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update Repository Description and Topics
+        continue-on-error: true
+        run: |
+          # Attempt to update repository metadata
+          # Note: This may fail with standard GITHUB_TOKEN; use GitHub App for production
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X PATCH \
+            -H "Accept: application/vnd.github+json" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}" \
+            -d '{
+              "description": "Sovereign infrastructure with signed intent, local policy enforcement, and distributed state. Cryptographic qualification system with Ed25519 identities, BLAKE3 content addressing, Raft consensus, and chaos-validated resilience.",
+              "homepage": "https://github.com/CodesbyFebin/Decentralized-",
+              "topics": [
+                "infrastructure",
+                "distributed-systems",
+                "decentralization",
+                "kubernetes",
+                "golang",
+                "cryptography",
+                "ed25519",
+                "consensus",
+                "raft",
+                "policy-enforcement",
+                "qualification-system",
+                "chaos-engineering",
+                "security",
+                "devops",
+                "cloud-native",
+                "sovereign-infrastructure",
+                "open-source",
+                "production-ready"
+              ]
+            }')
+
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+
+          echo "HTTP Status: $HTTP_CODE"
+          echo "Response: $BODY"
+
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "Note: Metadata update requires GitHub App or personal access token."
+            echo "Update repository manually via: https://github.com/CodesbyFebin/Decentralized-/settings"
+          fi
+
+      - name: Verify Update
+        run: |
+          curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}" \
+            | jq '{description, homepage, topics}'
