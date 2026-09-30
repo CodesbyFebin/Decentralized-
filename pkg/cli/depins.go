@@ -1,13 +1,13 @@
 package cli
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
-	"time"
+	"io"
+	"net/http"
 
-	"decentralized.host/pkg/control"
 	"decentralized.host/pkg/providers"
 	"decentralized.host/pkg/system"
 )
@@ -55,25 +55,22 @@ func (dc *DePINCommand) CheckDePINCompatibility(profileName string) error {
 		return fmt.Errorf("hardware probe failed: %w", err)
 	}
 
-	// Get DePIN requirements
-	requirements := providers.CommonDePINRequirements()
-	req, ok := requirements[profileName]
-	if !ok {
-		availableProfiles := []string{}
-		for name := range requirements {
-			availableProfiles = append(availableProfiles, name)
-		}
-		return fmt.Errorf("unknown profile '%s'. Available: %v", profileName, availableProfiles)
+	// Build requirement for the profile
+	req := profileRequirement(profileName)
+	if req == nil {
+		return fmt.Errorf("unknown profile '%s'", profileName)
 	}
 
-	// Convert hardware profile to simple format
+	// Convert to simple profile format
 	simpleProfile := &providers.SimpleHardwareProfile{
 		CPUCores:     hwProfile.CPU.Cores,
 		CPUModel:     hwProfile.CPU.Model,
 		MemoryBytes:  hwProfile.Memory.TotalBytes,
-		GPUs:         extractGPUTypes(hwProfile.GPU),
 		StorageBytes: hwProfile.Disk.TotalBytes,
 		NetworkCount: len(hwProfile.Network),
+	}
+	for _, gpu := range hwProfile.GPU {
+		simpleProfile.GPUs = append(simpleProfile.GPUs, gpu.Type)
 	}
 
 	// Check compatibility
@@ -99,13 +96,6 @@ func (dc *DePINCommand) CheckDePINCompatibility(profileName string) error {
 		}
 	}
 
-	if len(score.Warnings) > 0 {
-		fmt.Println("\nWarnings:")
-		for _, warning := range score.Warnings {
-			fmt.Printf("  ⚠️  %s\n", warning)
-		}
-	}
-
 	fmt.Println("\nDetected Hardware:")
 	fmt.Printf("  CPU:           %d cores @ %.2f GHz (%s)\n", hwProfile.CPU.Cores, hwProfile.CPU.Frequency, hwProfile.CPU.Model)
 	fmt.Printf("  Memory:        %d GB\n", hwProfile.Memory.TotalBytes/(1024*1024*1024))
@@ -123,80 +113,204 @@ func (dc *DePINCommand) CheckDePINCompatibility(profileName string) error {
 	return nil
 }
 
-// RegisterOwnerReserve verifies ownership and creates a reserve token
-func (dc *DePINCommand) RegisterOwnerReserve(ownerID string, hostID string) error {
-	if ownerID == "" || hostID == "" {
-		return fmt.Errorf("owner_id and host_id are required")
+// ListAvailableProfiles shows all available DePIN hardware profiles from control plane
+func (dc *DePINCommand) ListAvailableProfiles() error {
+	if dc.operator == nil || len(dc.operator.Cfg.Endpoints) == 0 {
+		return fmt.Errorf("control plane not configured")
 	}
 
-	// Get hostname
-	hostname, err := os.Hostname()
+	url := fmt.Sprintf("%s://%s/api/v1/depins/profiles", dc.operator.scheme, dc.operator.Cfg.Endpoints[0])
+	resp, err := http.Get(url)
 	if err != nil {
-		hostname = "unknown"
+		return fmt.Errorf("failed to fetch profiles: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("failed to fetch profiles (status %d): %s", resp.StatusCode, string(body))
 	}
 
-	// Verify ownership (this would normally use cryptographic proof)
-	// For v0.1, we do a simplified check
-	fmt.Printf("Registering owner reserve for %s on host %s...\n", ownerID, hostID)
-
-	// In production, this would call a real validator with proper key management
-	// For now, create a placeholder reserve
-	now := time.Now()
-	reserve := &control.OwnerReserve{
-		OwnerID:    ownerID,
-		HostID:     hostID,
-		Hostname:   hostname,
-		Status:     "verified",
-		VerifiedAt: now,
-		TokenIssued: now,
-		TokenExpiry: now.Add(24 * time.Hour),
+	var result map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return fmt.Errorf("failed to parse response: %w", err)
 	}
 
-	// Get hardware profile and populate reserve
-	prober := system.NewProber()
-	profile, err := prober.Probe(dc.ctx)
-	if err != nil {
-		return fmt.Errorf("failed to probe hardware: %w", err)
-	}
-
-	reserve.CPUCores = profile.CPU.Cores
-	reserve.CPUModel = profile.CPU.Model
-	reserve.MemoryBytes = profile.Memory.TotalBytes
-	reserve.StorageBytes = profile.Disk.TotalBytes
-	reserve.GPUTypes = extractGPUTypes(profile.GPU)
-
-	// Display reserve
-	data, _ := json.MarshalIndent(reserve, "", "  ")
-	fmt.Println("Owner Reserve Created:")
+	fmt.Println("Available DePIN Hardware Profiles:")
+	fmt.Println("==================================\n")
+	data, _ := json.MarshalIndent(result, "", "  ")
 	fmt.Println(string(data))
 
 	return nil
 }
 
-// ListAvailableProfiles shows all available DePIN hardware profiles
-func (dc *DePINCommand) ListAvailableProfiles() error {
-	profiles := providers.CommonDePINRequirements()
-
-	fmt.Println("Available DePIN Hardware Profiles:")
-	fmt.Println("==================================\n")
-
-	for name, req := range profiles {
-		fmt.Printf("%s:\n", name)
-		fmt.Printf("  CPU:          %d+ cores\n", req.MinCPUCores)
-		fmt.Printf("  Memory:       %d+ GB\n", req.MinMemoryGB)
-		fmt.Printf("  Storage:      %d+ GB\n", req.MinStorageGB)
-		if req.RequiredGPU != "" {
-			fmt.Printf("  GPU:          %s (%d+ GB)\n", req.RequiredGPU, req.MinGPUMemoryGB)
-		} else {
-			fmt.Printf("  GPU:          optional\n")
-		}
-		fmt.Println()
+// GetNodeHardware retrieves a node's hardware profile from the control plane
+func (dc *DePINCommand) GetNodeHardware(nodeID string) error {
+	if dc.operator == nil || len(dc.operator.Cfg.Endpoints) == 0 {
+		return fmt.Errorf("control plane not configured")
 	}
+
+	url := fmt.Sprintf("%s://%s/api/v1/nodes/%s/hardware", dc.operator.scheme, dc.operator.Cfg.Endpoints[0], nodeID)
+	resp, err := http.Get(url)
+	if err != nil {
+		return fmt.Errorf("failed to fetch hardware: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("failed to fetch hardware (status %d): %s", resp.StatusCode, string(body))
+	}
+
+	var hwResp interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&hwResp); err != nil {
+		return fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	fmt.Printf("Hardware Profile for Node %s:\n", nodeID)
+	data, _ := json.MarshalIndent(hwResp, "", "  ")
+	fmt.Println(string(data))
+
+	return nil
+}
+
+// CheckNodeCompatibility checks a node's compatibility with a profile via the control plane
+func (dc *DePINCommand) CheckNodeCompatibility(nodeID, profileName string) error {
+	if dc.operator == nil || len(dc.operator.Cfg.Endpoints) == 0 {
+		return fmt.Errorf("control plane not configured")
+	}
+
+	url := fmt.Sprintf("%s://%s/api/v1/nodes/%s/compatibility?profile=%s", dc.operator.scheme, dc.operator.Cfg.Endpoints[0], nodeID, profileName)
+	resp, err := http.Get(url)
+	if err != nil {
+		return fmt.Errorf("failed to check compatibility: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("failed to check compatibility (status %d): %s", resp.StatusCode, string(body))
+	}
+
+	var result interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	fmt.Printf("Compatibility Report for Node %s (Profile: %s):\n", nodeID, profileName)
+	data, _ := json.MarshalIndent(result, "", "  ")
+	fmt.Println(string(data))
+
+	return nil
+}
+
+// CreateOwnerReserve creates an owner reserve for a node via the control plane
+func (dc *DePINCommand) CreateOwnerReserve(nodeID, ownerID string) error {
+	if dc.operator == nil || len(dc.operator.Cfg.Endpoints) == 0 {
+		return fmt.Errorf("control plane not configured")
+	}
+
+	reserve := map[string]string{
+		"owner_id": ownerID,
+		"host":     nodeID,
+	}
+
+	body, _ := json.Marshal(reserve)
+	url := fmt.Sprintf("%s://%s/api/v1/nodes/%s/reserve", dc.operator.scheme, dc.operator.Cfg.Endpoints[0], nodeID)
+	resp, err := http.Post(url, "application/json", bytes.NewReader(body))
+	if err != nil {
+		return fmt.Errorf("failed to create reserve: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusConflict {
+		respBody, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("failed to create reserve (status %d): %s", resp.StatusCode, string(respBody))
+	}
+
+	var result interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	fmt.Printf("Owner Reserve for %s:\n", nodeID)
+	data, _ := json.MarshalIndent(result, "", "  ")
+	fmt.Println(string(data))
+
+	return nil
+}
+
+// GetNodeReserve retrieves the owner reserve status for a node
+func (dc *DePINCommand) GetNodeReserve(nodeID string) error {
+	if dc.operator == nil || len(dc.operator.Cfg.Endpoints) == 0 {
+		return fmt.Errorf("control plane not configured")
+	}
+
+	url := fmt.Sprintf("%s://%s/api/v1/nodes/%s/reserve", dc.operator.scheme, dc.operator.Cfg.Endpoints[0], nodeID)
+	resp, err := http.Get(url)
+	if err != nil {
+		return fmt.Errorf("failed to fetch reserve: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("failed to fetch reserve (status %d): %s", resp.StatusCode, string(body))
+	}
+
+	var result interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	fmt.Printf("Owner Reserve Status for Node %s:\n", nodeID)
+	data, _ := json.MarshalIndent(result, "", "  ")
+	fmt.Println(string(data))
 
 	return nil
 }
 
 // Helper functions
+
+func profileRequirement(name string) *providers.HardwareRequirement {
+	switch name {
+	case "compute-light":
+		return &providers.HardwareRequirement{
+			MinCPUCores:  2,
+			MinMemoryGB:  4,
+			MinStorageGB: 50,
+		}
+	case "compute-standard":
+		return &providers.HardwareRequirement{
+			MinCPUCores:  4,
+			MinMemoryGB:  8,
+			MinStorageGB: 100,
+		}
+	case "compute-heavy":
+		return &providers.HardwareRequirement{
+			MinCPUCores:    8,
+			MinMemoryGB:    16,
+			MinStorageGB:   500,
+			RequiredGPU:    "nvidia",
+			MinGPUMemoryGB: 6,
+		}
+	case "gpu-optimized":
+		return &providers.HardwareRequirement{
+			MinCPUCores:    16,
+			MinMemoryGB:    32,
+			MinStorageGB:   1000,
+			RequiredGPU:    "nvidia",
+			MinGPUMemoryGB: 24,
+		}
+	case "storage-node":
+		return &providers.HardwareRequirement{
+			MinCPUCores:  2,
+			MinMemoryGB:  8,
+			MinStorageGB: 5120,
+		}
+	}
+	return nil
+}
 
 func extractGPUTypes(gpus []system.GPUInfo) []string {
 	var types []string

@@ -38,6 +38,13 @@ func (s *Server) opRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/mesh/ping", s.op(read, s.handleMeshPing))
 	mux.HandleFunc("GET /api/v1/cp/raft", s.op(read, s.handleRaftInfo))
 
+	// DePIN Discovery Surface (Phase 4a)
+	mux.HandleFunc("GET /api/v1/depins/profiles", s.op(read, s.handleDePINProfiles))
+	mux.HandleFunc("GET /api/v1/nodes/{id}/hardware", s.op(read, s.handleNodeHardware))
+	mux.HandleFunc("GET /api/v1/nodes/{id}/compatibility", s.op(read, s.handleNodeCompatibility))
+	mux.HandleFunc("GET /api/v1/nodes/{id}/reserve", s.op(read, s.handleNodeReserve))
+	mux.HandleFunc("POST /api/v1/nodes/{id}/reserve", s.opWrite(write, s.handleCreateReserve))
+
 	mux.HandleFunc("POST /api/v1/apply", s.opWrite(write, s.handleApply))
 	mux.HandleFunc("POST /api/v1/apps/{name}/scale", s.opWrite(write, s.handleScale))
 	mux.HandleFunc("POST /api/v1/apps/{name}/delete", s.opWrite(write, s.simple("delete-app", func(r *http.Request) any { return map[string]string{"app": r.PathValue("name")} })))
