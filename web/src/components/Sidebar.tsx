@@ -11,6 +11,8 @@ const navigation = [
   { name: 'Domains', href: '/domains', icon: '🌐' },
   { name: 'Security', href: '/security', icon: '🔒' },
   { name: 'Analytics', href: '/analytics', icon: '📈' },
+  { name: 'Alerts', href: '/alerts', icon: '🔔' },
+  { name: 'Logs', href: '/logs', icon: '📝' },
   { name: 'Team', href: '/team', icon: '👥' },
   { name: 'Settings', href: '/settings', icon: '⚙️' },
   { name: 'Copilot', href: '/copilot', icon: '🤖' },
