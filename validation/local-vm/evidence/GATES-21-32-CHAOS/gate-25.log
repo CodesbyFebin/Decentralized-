@@ -1,0 +1,30 @@
+  Running: for i in {1..50}; do dh get nodes &>/dev/null & done; wait
+  Running: for i in {1..10}; do dh get nodes >/dev/null & done; wait
+{
+  "gate": "25",
+  "scenario": "High query load",
+  "status": "FAIL",
+  "detail": "System unhealthy after load",
+  "timestamp": "2026-09-29T23:30:13Z"
+}
+{
+  "gate": "25",
+  "scenario": "Concurrent node queries",
+  "status": "FAIL",
+  "detail": "Query command timed out",
+  "timestamp": "2026-09-29T23:30:54Z"
+}
+{
+  "gate": "25",
+  "scenario": "Repeated node queries",
+  "status": "FAIL",
+  "detail": "First query failed",
+  "timestamp": "2026-09-29T23:31:25Z"
+}
+{
+  "gate": "25",
+  "scenario": "Repeated node queries",
+  "status": "PASS",
+  "detail": "System responds to multiple node queries",
+  "timestamp": "2026-09-29T23:31:54Z"
+}

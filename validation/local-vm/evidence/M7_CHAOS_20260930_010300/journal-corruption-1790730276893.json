@@ -1,0 +1,58 @@
+{
+  "kind": "chaos-report",
+  "signer": "dh1q4tmh2ofksoytlfv2jcc5n4nfj",
+  "pub": "c7lX23-stoHtcRy1zPxe4aDg8_PSJSpSULbT5rOOyxc",
+  "payload": {
+    "durationMs": 7275,
+    "environment": {
+      "arch": "amd64",
+      "cpus": "4",
+      "go": "go1.26.4",
+      "os": "linux",
+      "topology": "1 control-plane member(s), 2 host(s), 0 edge(s)"
+    },
+    "evidence": [
+      "audit chain verified: 24 entries, head 7fd3fbf23a49"
+    ],
+    "id": "journal-corruption-1790730276893",
+    "injection": "stop a host agent, flip bytes inside one entry of its hash-chained journal, restart it",
+    "invariant": "the host detects the named break, enters ledger-corrupt mode, keeps admitted work, refuses new work, and never appends to the broken chain; after the local operator seals the journal (kept byte-for-byte) the host admits work again and its new chain records the break",
+    "measurements": {},
+    "observed": "break named (event-hash mismatch at seq 3); new work refused with LEDGER_CORRUPT; after an operator seal the host admitted the replica",
+    "recovery": [
+      {
+        "atMs": 0,
+        "event": "starting 1 control-plane member(s), 2 host(s), 0 edge(s)"
+      },
+      {
+        "atMs": 2350,
+        "event": "cluster ready"
+      },
+      {
+        "atMs": 4476,
+        "event": "rewrote journal entry at line 3 of 4 on host-b (ledger head was 4)"
+      },
+      {
+        "atMs": 4786,
+        "event": "host-b mode ledger-corrupt: event-hash mismatch at seq 3"
+      },
+      {
+        "atMs": 5712,
+        "event": "new replica refused with LEDGER_CORRUPT"
+      },
+      {
+        "atMs": 5727,
+        "event": "operator sealed the journal: sealed /tmp/chaos-evidence/journal-corruption-1790730276893/host-b/journal.jsonl.sealed-1790730282617"
+      },
+      {
+        "atMs": 7275,
+        "event": "host-b admits work again on a new, verifying chain"
+      }
+    ],
+    "scenario": "journal-corruption",
+    "started": 1790730276893,
+    "title": "Host ledger corruption",
+    "verdict": "PASS"
+  },
+  "sig": "SUy5OM38NgeC8I3fqWs4rdYFnMx5N-yny9QejiUAj6_ZFIC_NB6_VGQR1bn4xjLNoHjVZGfOW8b_8LXCJvjDDw"
+}

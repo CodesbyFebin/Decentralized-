@@ -1,0 +1,55 @@
+{
+  "kind": "chaos-report",
+  "signer": "dh1q4tmh2ofksoytlfv2jcc5n4nfj",
+  "pub": "c7lX23-stoHtcRy1zPxe4aDg8_PSJSpSULbT5rOOyxc",
+  "payload": {
+    "durationMs": 30709,
+    "environment": {
+      "arch": "amd64",
+      "cpus": "4",
+      "go": "go1.26.4",
+      "os": "linux",
+      "topology": "1 control-plane member(s), 4 host(s), 1 edge(s)"
+    },
+    "evidence": [
+      "audit chain verified: 47 entries, head bd419e6ab876"
+    ],
+    "id": "host-crash-1790730232490",
+    "injection": "SIGKILL a host agent and all of its workloads (machine loss)",
+    "invariant": "the edge stops routing to the dead replica without failed requests, the host is marked lost, and the replica is rescheduled and observed running elsewhere",
+    "measurements": {
+      "detect_lost_ms": "7765",
+      "requests_failed": "0",
+      "requests_ok": "695",
+      "rescheduled_ms": "18158"
+    },
+    "observed": "host-d lost after 7.766s, replica running elsewhere after 18.159s; 695/695 requests OK",
+    "recovery": [
+      {
+        "atMs": 0,
+        "event": "starting 1 control-plane member(s), 4 host(s), 1 edge(s)"
+      },
+      {
+        "atMs": 2354,
+        "event": "cluster ready"
+      },
+      {
+        "atMs": 10537,
+        "event": "killed host-d and 1 workload(s)"
+      },
+      {
+        "atMs": 18296,
+        "event": "host-d marked lost"
+      },
+      {
+        "atMs": 28689,
+        "event": "replica 0 running on edge-1"
+      }
+    ],
+    "scenario": "host-crash",
+    "started": 1790730232490,
+    "title": "Host crash",
+    "verdict": "PASS"
+  },
+  "sig": "winJoQPPkld4L_K2bbSJU5-x3Jw-Tyxx4VgZwz1qn7MGOo-3XUo7VtwiCZuJtQaj-75HQTcUmYRx45TpfbCoAA"
+}

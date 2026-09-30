@@ -1,0 +1,28 @@
+{
+  "gate": "26",
+  "scenario": "App state queries",
+  "status": "FAIL",
+  "detail": "System unhealthy after app queries",
+  "timestamp": "2026-09-29T23:30:13Z"
+}
+{
+  "gate": "26",
+  "scenario": "Concurrent app queries",
+  "status": "FAIL",
+  "detail": "Query command timed out",
+  "timestamp": "2026-09-29T23:30:54Z"
+}
+{
+  "gate": "26",
+  "scenario": "Repeated app queries",
+  "status": "FAIL",
+  "detail": "First query failed",
+  "timestamp": "2026-09-29T23:31:25Z"
+}
+{
+  "gate": "26",
+  "scenario": "Repeated app queries",
+  "status": "PASS",
+  "detail": "System responds to multiple app queries",
+  "timestamp": "2026-09-29T23:31:54Z"
+}

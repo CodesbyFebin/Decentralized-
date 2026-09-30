@@ -396,3 +396,69 @@ func TestNonceUniqueness(t *testing.T) {
 		t.Errorf("Nonce uniqueness: got %d unique nonces, want 100", len(nonces))
 	}
 }
+
+func TestClearBytes(t *testing.T) {
+	// Create a buffer with known non-zero data
+	buf := make([]byte, 32)
+	for i := range buf {
+		buf[i] = byte(0xFF)
+	}
+
+	// Verify it contains non-zero data
+	for i, b := range buf {
+		if b != 0xFF {
+			t.Errorf("Before clear: buf[%d] = %d, want 255", i, b)
+		}
+	}
+
+	// Clear the buffer
+	ClearBytes(buf)
+
+	// Verify it's been zeroed
+	for i, b := range buf {
+		if b != 0 {
+			t.Errorf("After clear: buf[%d] = %d, want 0", i, b)
+		}
+	}
+}
+
+func TestClearBytesEmpty(t *testing.T) {
+	// ClearBytes should handle empty buffers gracefully
+	var buf []byte
+	ClearBytes(buf) // Should not panic
+}
+
+func TestClearBytesIntegration(t *testing.T) {
+	// Test clearing in context of decryption workflow
+	clusterID := "test-cluster"
+	secretID := "test-secret"
+	secretData := []byte("sensitive-secret-value-here")
+	dek, _ := GenerateDEK()
+
+	// Encrypt a secret
+	rec, err := EncryptSecret(secretData, secretID, 1, dek, clusterID, "test-deploy", "test-workload", "prod", "key-v1")
+	if err != nil {
+		t.Fatalf("EncryptSecret: %v", err)
+	}
+
+	// Decrypt (simulating retrieval)
+	plaintext, err := DecryptSecret(rec, dek)
+	if err != nil {
+		t.Fatalf("DecryptSecret: %v", err)
+	}
+
+	// Verify decrypted value matches original
+	if !bytes.Equal(plaintext, secretData) {
+		t.Error("Decrypted secret does not match original")
+	}
+
+	// Clear after use
+	ClearBytes(plaintext)
+
+	// Verify cleared
+	for i, b := range plaintext {
+		if b != 0 {
+			t.Errorf("After clear: plaintext[%d] = %d, want 0", i, b)
+		}
+	}
+}

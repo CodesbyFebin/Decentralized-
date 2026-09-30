@@ -1,0 +1,11 @@
+  Running: podman stop dh-node-2; sleep 60; podman start dh-node-2
+{
+  "gate": "23",
+  "scenario": "Prolonged single node stress",
+  "status": "PASS",
+  "latency_p50_ms": "16",
+  "latency_p99_ms": "24",
+  "error_rate": "0%",
+  "detail": "System remains stable under single node degradation",
+  "timestamp": "2026-09-29T23:16:08Z"
+}

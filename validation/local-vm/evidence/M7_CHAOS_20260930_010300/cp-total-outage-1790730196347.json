@@ -1,0 +1,63 @@
+{
+  "kind": "chaos-report",
+  "signer": "dh1q4tmh2ofksoytlfv2jcc5n4nfj",
+  "pub": "c7lX23-stoHtcRy1zPxe4aDg8_PSJSpSULbT5rOOyxc",
+  "payload": {
+    "durationMs": 35138,
+    "environment": {
+      "arch": "amd64",
+      "cpus": "4",
+      "go": "go1.26.4",
+      "os": "linux",
+      "topology": "1 control-plane member(s), 2 host(s), 1 edge(s)"
+    },
+    "evidence": [
+      "audit chain verified: 36 entries, head 2d0a2bd1c366"
+    ],
+    "id": "cp-total-outage-1790730196347",
+    "injection": "SIGKILL every control-plane member for 15s, then restart",
+    "invariant": "hosts enter offline-hold, admitted workloads keep running with the same PIDs, no request fails, buffered observations are delivered after recovery",
+    "measurements": {
+      "host-a_outbox": "2",
+      "host-b_outbox": "2",
+      "requests_failed": "0",
+      "requests_ok": "918"
+    },
+    "observed": "offline-hold entered, workloads untouched, 918/918 requests OK during outage, buffered observations flushed: true",
+    "recovery": [
+      {
+        "atMs": 0,
+        "event": "starting 1 control-plane member(s), 2 host(s), 1 edge(s)"
+      },
+      {
+        "atMs": 2017,
+        "event": "cluster ready"
+      },
+      {
+        "atMs": 10016,
+        "event": "SIGKILL cp-1"
+      },
+      {
+        "atMs": 20908,
+        "event": "host-a entered offline-hold: control plane unreachable or stale: control plane unreachable: Post \"http://127.0.0.1:3200…"
+      },
+      {
+        "atMs": 30915,
+        "event": "workloads verified running with unchanged PIDs during the outage"
+      },
+      {
+        "atMs": 30919,
+        "event": "cp-1 restarted"
+      },
+      {
+        "atMs": 33132,
+        "event": "hosts reporting again"
+      }
+    ],
+    "scenario": "cp-total-outage",
+    "started": 1790730196347,
+    "title": "Total control-plane outage",
+    "verdict": "PASS"
+  },
+  "sig": "iVyTiyULCVS5iPNSx_YxfeOGlSo4NT2dueKPviN4CNH2LKJMW-g86aU0Zciz_wX54h1GZSiHMMw5GjmQ5je2CA"
+}

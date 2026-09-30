@@ -1,0 +1,28 @@
+{
+  "gate": "31",
+  "scenario": "Sustained access",
+  "status": "FAIL",
+  "detail": "System degraded under load",
+  "timestamp": "2026-09-29T23:30:13Z"
+}
+{
+  "gate": "31",
+  "scenario": "Rapid queries",
+  "status": "FAIL",
+  "detail": "Query command timed out",
+  "timestamp": "2026-09-29T23:30:54Z"
+}
+{
+  "gate": "31",
+  "scenario": "Node consistency",
+  "status": "FAIL",
+  "detail": "Node list inconsistent (0 vs 0)",
+  "timestamp": "2026-09-29T23:31:25Z"
+}
+{
+  "gate": "31",
+  "scenario": "Node consistency",
+  "status": "PASS",
+  "detail": "Node list consistent across queries",
+  "timestamp": "2026-09-29T23:31:54Z"
+}
