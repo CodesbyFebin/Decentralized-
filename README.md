@@ -1,12 +1,21 @@
 # Decentralized.Host (dh) — Sovereign Infrastructure with Signed Intent
 
+[![Go Version](https://img.shields.io/badge/go-1.21+-blue.svg)](https://golang.org/)
+[![License](https://img.shields.io/badge/license-MIT%2FApache%202.0-blue.svg)](LICENSE)
+[![GitHub Stars](https://img.shields.io/github/stars/CodesbyFebin/Decentralized-.svg?style=social)](https://github.com/CodesbyFebin/Decentralized-)
+[![GitHub Forks](https://img.shields.io/github/forks/CodesbyFebin/Decentralized-.svg?style=social)](https://github.com/CodesbyFebin/Decentralized-)
+[![Contribute](https://img.shields.io/badge/contributions-welcome-brightgreen.svg)](CONTRIBUTING.md)
+[![Sponsor](https://img.shields.io/badge/sponsor-%E2%9D%A4-ff69b4.svg)](https://github.com/sponsors/CodesbyFebin)
+
 **Status**: v0.1 Alpha — Provider Connection & Unified Graph  
 **Qualification**: Dev-cluster validation (3+3 loopback topology). Real PV1 multi-machine qualification pending.  
-**License**: MIT/Apache 2.0
+**License**: Dual-licensed under MIT and Apache 2.0
 
 > Connect your cloud. Own it over time. Start by importing GitHub, Vercel, Supabase, Docker, Kubernetes—observe them in one graph, then migrate workloads to owned infrastructure as you choose.
 
 **Current Scope**: Provider discovery, observation, and local policy enforcement. Production multi-machine qualification and settlement features coming in v0.2+.
+
+**Community**: We welcome contributions, sponsorships, and collaboration! See [CONTRIBUTING.md](CONTRIBUTING.md) to get started.
 
 ---
 
@@ -209,17 +218,53 @@ See `validation/SECURITY-AUDIT-2026-09-29.md` for dev-cluster scope findings. Re
 
 ---
 
+## Contributing
+
+We welcome contributions from the community! Whether you're fixing bugs, adding features, improving documentation, or helping with testing—your help makes Decentralized.Host better.
+
+**Get Started**:
+- 📖 Read [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines
+- 🐛 Report bugs or request features via [GitHub Issues](https://github.com/CodesbyFebin/Decentralized-/issues)
+- 💬 Join discussions at [GitHub Discussions](https://github.com/CodesbyFebin/Decentralized-/discussions)
+- ✅ Check out [good first issue](https://github.com/CodesbyFebin/Decentralized-/labels/good%20first%20issue) for beginner-friendly tasks
+
+**Code of Conduct**: We follow the [Contributor Covenant](CODE_OF_CONDUCT.md). Be respectful and inclusive.
+
 ## Support & Community
 
-- **GitHub Issues**: https://github.com/CodesbyFebin/Decentralized-/issues
-- **Discussions**: https://github.com/CodesbyFebin/Decentralized-/discussions
+- **GitHub Issues**: [Report bugs or suggest features](https://github.com/CodesbyFebin/Decentralized-/issues)
+- **GitHub Discussions**: [Ask questions and share ideas](https://github.com/CodesbyFebin/Decentralized-/discussions)
+- **Security**: [Report vulnerabilities responsibly](SECURITY.md)
+
+## Sponsorship & Support
+
+Decentralized.Host is developed with ❤️ as open source. If you find it valuable, please consider supporting the project:
+
+- 💰 **GitHub Sponsors**: [Sponsor development](https://github.com/sponsors/CodesbyFebin)
+- ☕ **Buy Me a Coffee**: [One-time support](https://buymeacoffee.com/codesbyfebin)
+- 🎁 **Patreon**: [Recurring support](https://patreon.com/CodesbyFebin)
+- 💳 **PayPal**: [Direct donation](https://paypal.me/codesbyfebin)
+
+**Sponsors help us**:
+- Accelerate development of new phases
+- Maintain infrastructure and test environments
+- Provide support and documentation
+- Build the community
 
 ---
 
 ## License
 
-Dual-licensed under MIT and Apache 2.0.
+Dual-licensed under MIT and Apache 2.0. See [LICENSE](LICENSE) for details.
 
 ---
 
 **v1.0.0** | Qualified 2026-09-30 | Production Ready
+
+---
+
+## Acknowledgments
+
+- Built with Go, PostgreSQL, Kafka, Kubernetes, and open source technology
+- Following dh/v1 conformance specification with 136 normative test vectors
+- Inspired by principles of sovereignty, transparency, and distributed systems
