@@ -186,3 +186,111 @@ type HealthStatus struct {
 	Message   string    `json:"message"`
 	Error     string    `json:"error,omitempty"`
 }
+
+// ResourceBuilder provides a fluent API for constructing Resource objects
+type ResourceBuilder struct {
+	resource *Resource
+}
+
+// NewResource creates a new resource with identity fields
+func NewResource(provider string, resourceType ResourceType, name string) *ResourceBuilder {
+	return &ResourceBuilder{
+		resource: &Resource{
+			Provider:         provider,
+			Type:             resourceType,
+			Name:             name,
+			DesiredState:     "OBSERVED",
+			VerificationState: StateOBSERVED,
+			Capabilities:     make(map[string]Capability),
+			Dependencies:     make([]Dependency, 0),
+			Dependents:       make([]string, 0),
+			Labels:           make(map[string]string),
+			Annotations:      make(map[string]string),
+			CreatedAt:        time.Now(),
+			LastObservedAt:   time.Now(),
+		},
+	}
+}
+
+// WithID sets the resource ID (usually deterministic from provider ID)
+func (rb *ResourceBuilder) WithID(id string) *ResourceBuilder {
+	rb.resource.ID = id
+	return rb
+}
+
+// WithProviderID sets the provider-specific resource ID
+func (rb *ResourceBuilder) WithProviderID(id string) *ResourceBuilder {
+	rb.resource.ProviderResourceID = id
+	return rb
+}
+
+// WithProjectID sets the project ownership
+func (rb *ResourceBuilder) WithProjectID(id string) *ResourceBuilder {
+	rb.resource.ProjectID = id
+	return rb
+}
+
+// WithDescription sets the resource description
+func (rb *ResourceBuilder) WithDescription(desc string) *ResourceBuilder {
+	rb.resource.Description = desc
+	return rb
+}
+
+// WithLocation sets the geographic/cloud location
+func (rb *ResourceBuilder) WithLocation(loc string) *ResourceBuilder {
+	rb.resource.Location = loc
+	return rb
+}
+
+// WithTrustDomain sets the data classification
+func (rb *ResourceBuilder) WithTrustDomain(domain TrustDomain) *ResourceBuilder {
+	rb.resource.TrustDomain = domain
+	return rb
+}
+
+// WithOwner sets the owner identity
+func (rb *ResourceBuilder) WithOwner(owner string) *ResourceBuilder {
+	rb.resource.Owner = owner
+	return rb
+}
+
+// WithCapability adds a capability to this resource
+func (rb *ResourceBuilder) WithCapability(name, level, description string) *ResourceBuilder {
+	if rb.resource.Capabilities == nil {
+		rb.resource.Capabilities = make(map[string]Capability)
+	}
+	rb.resource.Capabilities[name] = Capability{
+		Name:        name,
+		Level:       level,
+		Description: description,
+	}
+	return rb
+}
+
+// WithLabel adds an arbitrary label
+func (rb *ResourceBuilder) WithLabel(key, value string) *ResourceBuilder {
+	rb.resource.Labels[key] = value
+	return rb
+}
+
+// WithAnnotation adds a provider-specific annotation
+func (rb *ResourceBuilder) WithAnnotation(key, value string) *ResourceBuilder {
+	rb.resource.Annotations[key] = value
+	return rb
+}
+
+// WithDependency declares a dependency on another resource
+func (rb *ResourceBuilder) WithDependency(targetID string, targetType ResourceType, depType string) *ResourceBuilder {
+	rb.resource.Dependencies = append(rb.resource.Dependencies, Dependency{
+		TargetID:       targetID,
+		TargetType:     targetType,
+		DependencyType: depType,
+		LastChecked:    time.Now(),
+	})
+	return rb
+}
+
+// Build returns the constructed Resource
+func (rb *ResourceBuilder) Build() *Resource {
+	return rb.resource
+}

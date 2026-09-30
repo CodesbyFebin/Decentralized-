@@ -1,7 +1,7 @@
 package adapters
 
 import (
-	"decentralized/pkg/providers"
+	"decentralized.host/pkg/providers"
 )
 
 // NewRegistry creates and initializes a registry with all built-in adapters

@@ -2,20 +2,25 @@ package adapters
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"time"
 
-	"decentralized/pkg/providers"
+	"decentralized.host/pkg/providers"
 )
 
 // SupabaseAdapter implements the ProviderAdapter interface for Supabase
 type SupabaseAdapter struct {
+	client *http.Client
 	providers.BaseAdapter
 }
 
 // NewSupabaseAdapter creates a new Supabase provider adapter
 func NewSupabaseAdapter() *SupabaseAdapter {
 	return &SupabaseAdapter{
+		client: &http.Client{Timeout: 30 * time.Second},
 		BaseAdapter: providers.BaseAdapter{
 			ProviderName:    "supabase",
 			ProviderVersion: "v1",
@@ -24,7 +29,55 @@ func NewSupabaseAdapter() *SupabaseAdapter {
 }
 
 func (a *SupabaseAdapter) Discover(ctx context.Context, config *providers.ProviderConfig) ([]*providers.Resource, error) {
-	return []*providers.Resource{}, nil
+	url := "https://api.supabase.com/api/v1/projects"
+
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", config.Token))
+
+	resp, err := a.client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch projects: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("supabase api error: status %d", resp.StatusCode)
+	}
+
+	var projects []map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&projects); err != nil {
+		return nil, fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	var resources []*providers.Resource
+	for _, project := range projects {
+		resource := a.projectToResource(project, config)
+		resources = append(resources, resource)
+	}
+
+	return resources, nil
+}
+
+func (a *SupabaseAdapter) projectToResource(project map[string]interface{}, config *providers.ProviderConfig) *providers.Resource {
+	name := project["name"].(string)
+	id := project["id"].(string)
+
+	resource := providers.NewResource("supabase", providers.TypeDatabase, name).
+		WithID(fmt.Sprintf("supabase:%s", id)).
+		WithProviderID(id).
+		WithProjectID(config.ProjectID).
+		WithLocation("supabase-cloud").
+		WithTrustDomain(providers.DomainPRIVATE).
+		WithCapability("database", "full", "PostgreSQL database hosting").
+		WithCapability("realtime", "full", "Real-time subscriptions").
+		WithCapability("auth", "full", "Authentication and authorization").
+		WithLabel("provider", "supabase").
+		Build()
+
+	return resource
 }
 
 func (a *SupabaseAdapter) Import(ctx context.Context, config *providers.ProviderConfig, resourceID string) (*providers.Resource, error) {
@@ -38,12 +91,44 @@ func (a *SupabaseAdapter) Import(ctx context.Context, config *providers.Provider
 }
 
 func (a *SupabaseAdapter) Observe(ctx context.Context, config *providers.ProviderConfig, resource *providers.Resource) (providers.ObserveResult, error) {
-	return providers.ObserveResult{
-		State: "active",
+	url := fmt.Sprintf("https://api.supabase.com/api/v1/projects/%s", resource.ProviderResourceID)
+
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return providers.ObserveResult{}, fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", config.Token))
+
+	resp, err := a.client.Do(req)
+	if err != nil {
+		return providers.ObserveResult{}, fmt.Errorf("failed to fetch project: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return providers.ObserveResult{}, fmt.Errorf("supabase api error: status %d", resp.StatusCode)
+	}
+
+	var project map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&project); err != nil {
+		return providers.ObserveResult{}, fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	state := "active"
+	if status, ok := project["status"].(string); ok && status == "inactive" {
+		state = "paused"
+	}
+
+	result := providers.ObserveResult{
+		State: state,
 		Evidence: &providers.Evidence{
-			Timestamp: time.Now(),
+			Timestamp:   time.Now(),
+			ContentHash: fmt.Sprintf("%v", project["id"]),
+			SignedBy:    "supabase-adapter",
 		},
-	}, nil
+	}
+
+	return result, nil
 }
 
 func (a *SupabaseAdapter) Plan(ctx context.Context, resource *providers.Resource, targetLocation string) (*providers.MigrationPlan, error) {
@@ -81,7 +166,43 @@ func (a *SupabaseAdapter) Export(ctx context.Context, config *providers.Provider
 }
 
 func (a *SupabaseAdapter) Health(ctx context.Context, config *providers.ProviderConfig) providers.HealthStatus {
-	return providers.HealthStatus{Healthy: true, LastCheck: time.Now()}
+	req, err := http.NewRequestWithContext(ctx, "GET", "https://api.supabase.com/api/v1/projects", nil)
+	if err != nil {
+		return providers.HealthStatus{
+			Healthy:   false,
+			LastCheck: time.Now(),
+			Message:   "Failed to create request",
+			Error:     err.Error(),
+		}
+	}
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", config.Token))
+
+	resp, err := a.client.Do(req)
+	if err != nil {
+		return providers.HealthStatus{
+			Healthy:   false,
+			LastCheck: time.Now(),
+			Message:   "Failed to connect to Supabase API",
+			Error:     err.Error(),
+		}
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return providers.HealthStatus{
+			Healthy:   false,
+			LastCheck: time.Now(),
+			Message:   "Supabase API authentication failed",
+			Error:     fmt.Sprintf("status %d: %s", resp.StatusCode, string(body)),
+		}
+	}
+
+	return providers.HealthStatus{
+		Healthy:   true,
+		LastCheck: time.Now(),
+		Message:   "Connected to Supabase",
+	}
 }
 
 var _ providers.ProviderAdapter = (*SupabaseAdapter)(nil)
