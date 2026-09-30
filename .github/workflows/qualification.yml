@@ -10,10 +10,39 @@ on:
       - main
 
 jobs:
+  # Job 0: Build Frontend (required for web embed)
+  build-frontend:
+    name: Build Frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18.x'
+          cache: 'npm'
+          cache-dependency-path: 'web/package-lock.json'
+
+      - name: Install dependencies
+        working-directory: web
+        run: npm ci --legacy-peer-deps
+
+      - name: Build
+        working-directory: web
+        run: npm run build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: web-dist
+          path: web/dist/
+
   # Job 1: Build & Compilation Check
   build:
     name: Build & Compilation
     runs-on: ubuntu-latest
+    needs: build-frontend
     steps:
       - uses: actions/checkout@v7
         with:
@@ -22,6 +51,12 @@ jobs:
       - uses: actions/setup-go@v7
         with:
           go-version: '1.26'
+
+      - name: Download frontend artifacts
+        uses: actions/download-artifact@v7
+        with:
+          name: web-dist
+          path: web/dist/
 
       - name: Build binaries
         run: |
