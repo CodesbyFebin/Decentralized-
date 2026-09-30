@@ -1,63 +1,81 @@
 # Decentralized.Host (dh) — Sovereign Infrastructure with Signed Intent
 
-**Status**: v1.0.0 Production Release  
-**Qualification**: P1_CORE Approved (32/32 gates PASS)  
+**Status**: v0.1 Alpha — Provider Connection & Unified Graph  
+**Qualification**: Dev-cluster validation (3+3 loopback topology). Real PV1 multi-machine qualification pending.  
 **License**: MIT/Apache 2.0
 
-> Infrastructure where work is proposed as signed cryptographic intent, every host checks it against local policy before execution, and all state changes are immutably recorded. No silent task migration. Your cluster, your rules.
+> Connect your cloud. Own it over time. Start by importing GitHub, Vercel, Supabase, Docker, Kubernetes—observe them in one graph, then migrate workloads to owned infrastructure as you choose.
+
+**Current Scope**: Provider discovery, observation, and local policy enforcement. Production multi-machine qualification and settlement features coming in v0.2+.
 
 ---
 
 ## What This Is
 
-Decentralized.Host is a distributed workload orchestrator and sovereign developer cloud built on three core principles:
+Decentralized.Host is a provider-agnostic control plane that imports your existing cloud (GitHub, Vercel, Supabase, Docker, Kubernetes, Ollama) into a **unified resource graph**, then progressively enables migration to owned infrastructure.
 
-1. **Signed Intent**: All work is proposed as cryptographically signed requests using Ed25519 identities. No anonymous or forgeable instructions.
-2. **Local Policy Enforcement**: Every host independently evaluates incoming work against its own policy before admission. No global consensus on what runs where.
-3. **Immutable Evidence**: All state transitions are recorded in a Raft-backed audit trail with cryptographic signatures. Full deterministic replay capability.
+**v0.1 (Current)**: Provider Connection & Observation
+- `dh connect`: Discover and authenticate to GitHub, GitLab, Vercel, Railway, Supabase, Cloudflare, Docker, Kubernetes, AWS, GCP, Azure, and local Ollama/vLLM instances
+- `dh graph`: Visualize all resources (repos, deployments, databases, containers, models) in one project graph with dependency, privacy, and cost analysis
+- `dh doctor`: Scored analysis of sovereignty, portability, privacy risks, and cost per resource
+- `dh migrate <resource>`: Move workloads to owned infrastructure with before/after cryptographic proof
+- `dh prove`: Evidence-gated promotion gates (signatures, policy checks, state verification)
 
-This eliminates silent task migration, enforces operator authority at each machine, and provides irrefutable evidence of what ran and when.
+**v0.2+**: Progressive Ownership
+- Local control plane bootstrap with Ed25519 signed intent
+- Per-host policy enforcement for imported workloads
+- Multi-node mesh with WireGuard and mTLS
+- Privacy-boundary scheduling (data locality constraints)
+- Raft consensus + immutable audit trail
 
-**From a product perspective**: D.H solves **50 everyday developer problems** (Git, CI/CD, database, storage, secrets, observability, AI, agents) while enabling **50 sovereign innovations** (cryptographic proof-of-deployment, privacy-boundary scheduling, incident replay, portable capsules, agent passports, and more). See [100 Capabilities: 50 Problems + 50 Innovations](docs/100-CAPABILITIES-SOVEREIGN-INNOVATIONS.md) for the full framework.
-
----
-
-## Key Features
-
-### Cryptography First
-- **Ed25519**: Identity binding for all actors (operators, hosts, workloads)
-- **TLS 1.3**: Enforced on all operator APIs and inter-node communication
-- **AES-256-GCM**: Secrets at-rest encryption with DEK/KEK separation
-- **mTLS**: Mutual authentication on all mesh communication
-- **BLAKE3**: Content-addressed storage with Merkle anti-entropy
-
-### Explicit State Machine
-Five observable states for every workload:
-- **DESIRED** → Work proposed with signed intent
-- **ADMITTED** → Local policy approved execution
-- **EXECUTING** → Container running on host
-- **OBSERVED** → State verified by host observation
-- **VERIFIED** → State recorded in audit trail
-
-### Failure Domain Awareness
-- **Node Failures**: Detects and responds to unreachable nodes
-- **Network Partitions**: Identifies split-brain scenarios and halts execution
-- **Storage Corruption**: Validates Merkle proofs, rejects corrupted state
-- **Automatic Recovery**: Restarts failed workloads with audit trail preservation
-
-### Production Infrastructure
-- **Raft Consensus**: 3+ member control plane with leader election
-- **Mesh Networking**: Userspace WireGuard with signed key bindings
-- **TLS/mTLS**: Mandatory mutual authentication on all paths
-- **ACME Integration**: Pebble for test, standard ACME for production
+See [100 Capabilities: 50 Problems + 50 Innovations](docs/100-CAPABILITIES-SOVEREIGN-INNOVATIONS.md) for the long-term vision. v0.1 focuses on the **viral loop** (connect → graph → doctor → migrate → prove); v0.2+ adds the foundations.
 
 ---
 
-## Quick Start
+## v0.1 Architecture
+
+### Provider Adapter Pattern
+Each provider (GitHub, Vercel, Supabase, Docker, K8s, etc.) has a standardized adapter implementing:
+- **Discover()**: Find resources in the provider (repos, deployments, databases, containers)
+- **Import()**: Bring resources into the unified graph with full metadata
+- **Observe()**: Poll state continuously and detect changes
+- **Plan()**: Calculate migration steps (what to move, where, in what order)
+- **Diff()**: Compare source vs destination before/after proof
+- **Capabilities()**: Report what the provider supports (encryption, policy, scheduling)
+
+### Universal Resource Graph
+Single data model for all resources regardless of provider:
+```
+Resource {
+  id, provider, provider_resource_id, project_id
+  type (repo, deployment, database, container, model)
+  desired_state, observed_state, verification_state
+  location, owner, trust_domain
+  dependencies, capabilities
+  evidence (signatures, policy checks, state hashes)
+  last_observed_at
+}
+```
+
+### Roadmap Features (v0.2+)
+These are defined but not implemented in v0.1:
+- **Ed25519 Signed Intent**: Cryptographic binding for workload proposals
+- **Local Policy Enforcement**: Per-host admission control before execution
+- **Immutable Audit Trail**: Raft-backed evidence of all state changes
+- **Privacy-Boundary Scheduling**: Data locality constraints for sensitive workloads
+- **Evidence-Gated Promotion**: Require proof (signatures, tests, policy passes) before prod
+- **Raft Consensus**: 3+ node control plane with automatic failover
+- **WireGuard Mesh**: Encrypted node-to-node communication with signed identities
+- **TLS/mTLS**: Mandatory encryption on all APIs and inter-node paths
+
+---
+
+## Quick Start (v0.1 Alpha)
 
 ### Prerequisites
-- Linux (Kernel 5.10+) with cgroups v2
+- Linux, macOS, or Windows (with WSL2)
 - Go 1.21+ (for building from source)
+- Credentials for at least one provider (GitHub, Vercel, Supabase, Docker, etc.)
 
 ### Install
 
@@ -66,98 +84,119 @@ Five observable states for every workload:
 git clone https://github.com/CodesbyFebin/Decentralized-.git
 cd Decentralized-
 make build
-sudo cp bin/dh* /usr/local/bin/
+cp bin/dh /usr/local/bin/  # or add ./bin to PATH
 ```
 
-### Bootstrap Cluster
+### Connect & Observe
 
-**Start a local 4-node cluster** (for testing):
+**Authenticate with provider**:
 ```bash
-dh dev up
+dh connect github
+# Prompts for Personal Access Token, discovers all your repos
 ```
 
-**Check cluster health**:
+**View unified project graph**:
 ```bash
-dh get nodes
-dh cp status
+dh graph
+# Shows all connected resources: repos, deployments, databases, containers
 ```
 
-**Submit work**:
+**Analyze sovereignty & risk**:
 ```bash
-dh apply -f workload.yaml
-dh get apps
+dh doctor
+# Scored analysis: dependency lock-in, privacy, portability, cost per resource
+```
+
+**Plan migration** (coming soon):
+```bash
+dh migrate github/my-repo
+# Shows cost/privacy diff: current provider vs owned infrastructure
 ```
 
 ---
 
-## Production Deployment
+## Owned Infrastructure (v0.2+)
 
-### TLS Configuration
+**Coming in v0.2**: Bootstrap your own control plane with full cryptographic security.
 
-**Generate Bootstrap Material**:
+**TLS & Secrets** (future):
 ```bash
 dh pki root-ca > root-ca.pem
-dh pki bootstrap > bootstrap-code.txt
+dh init --bootstrap-code <code>  # Ed25519 identity setup
+dh up --nodes 3                   # Start 3-node Raft control plane with WireGuard mesh
 ```
 
-**Bootstrap Cluster**:
+**Monitoring** (future):
 ```bash
-export DECENTRALIZED_KEK_BOOTSTRAP="<bootstrap-material>"
-dh-control -data /var/lib/dh/member-0
+dh metrics
+dh logs --component scheduler
+dh audit --resource <id>  # Full immutable audit trail
 ```
 
-### Monitoring
-
-**Prometheus Metrics** (port 19090):
-```bash
-curl http://localhost:19090/metrics | grep dh_raft_leader_known
-```
-
-See `validation/MONITORING-ALERTING-CONFIG.md` for complete setup.
+See [v0.2 Roadmap](docs/ROADMAP.md) for timeline.
 
 ---
 
-## Qualification & Verification
+## Testing & Conformance
 
-### P1_CORE Qualification (v1.0.0)
+### Unit & Conformance Testing (v0.1)
 
-All 32 production gates passed on live 4-node cluster:
-
-| Category | Gates | Status |
-|----------|-------|--------|
-| Signed Intent & Policy | 01-08 | ✅ PASS |
-| State Machine | 09-16 | ✅ PASS |
-| Failure Detection | 17-24 | ✅ PASS |
-| Evidence & Verification | 25-32 | ✅ PASS |
-
-**Campaign ID**: `P1_CORE_OFFICIAL_20260930_001133`
-
-### Conformance Testing
-
-**136/136 dh/v1 test vectors PASS**
+**136/136 dh/v1 test vectors PASS** (unit tests)
 - RFC 8785 JSON normalization
 - RFC 8032 Ed25519 signatures
 - BLAKE3 content addressing
 - Merkle proof validation
+- Provider adapter discovery and import
 
 Run locally:
 ```bash
+make test
 make conformance
 ```
 
-### Security Audit
+### Dev-Cluster Validation (v0.1)
 
-**Zero critical findings**  
-See `validation/SECURITY-AUDIT-2026-09-29.md`
+**Completed**: 3+3 dev-cluster topology (loopback, single control surface)
+- All five state transitions validated (DESIRED → ADMITTED → EXECUTING → OBSERVED → VERIFIED)
+- Policy enforcement gates functional
+- Audit trail recording confirmed
+
+**Limitations**: This is **not** production qualification.
+- Uses loopback networking (no real network failure injection)
+- Single physical host (cannot test independent OS/filesystem/host failure boundaries)
+- No chaos testing of real failure domains
+
+### Real Multi-Machine Qualification (v1.0 target)
+
+**Pending**: Independent Linux hosts with distinct isolation boundaries
+- Requires ≥2 separate physical or VM hosts
+- Real network partition injection
+- Storage failure scenarios
+- Independent operator domains
+
+**Security Review**
+
+See `validation/SECURITY-AUDIT-2026-09-29.md` for dev-cluster scope findings. Real multi-machine security audit pending with v1.0 qualification.
 
 ---
 
-## Known Limitations (v1.0.0)
+## Known Limitations (v0.1)
 
-- Single-region, single-cluster deployment
-- 4-node tested topology (larger clusters supported operationally)
-- Local storage backend (distributed storage post-v1.0)
-- Post-quantum cryptography is Phase 2
+**v0.1 does NOT include:**
+- Local infrastructure bootstrap (Raft, WireGuard, policy enforcement)
+- Workload migration execution (only planning/diffing)
+- Privacy-boundary scheduling or data locality constraints
+- Multi-node coordination or consensus
+- Incident replay or chaos testing
+- Settlement or usage billing
+
+**These ship in v0.2+** as the foundation matures.
+
+**Current Scope is:**
+- Provider observation and graphing
+- Migration planning and cost analysis
+- Proof-of-deployment validation
+- Resource dependency mapping
 
 ---
 
