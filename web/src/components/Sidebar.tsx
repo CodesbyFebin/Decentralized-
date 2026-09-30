@@ -15,6 +15,8 @@ const navigation = [
   { name: 'Logs', href: '/logs', icon: '📝' },
   { name: 'Integrations', href: '/integrations', icon: '🔗' },
   { name: 'Webhooks', href: '/webhooks', icon: '🪝' },
+  { name: 'Audit', href: '/audit', icon: '📖' },
+  { name: 'Compliance', href: '/compliance', icon: '✅' },
   { name: 'Team', href: '/team', icon: '👥' },
   { name: 'Settings', href: '/settings', icon: '⚙️' },
   { name: 'Copilot', href: '/copilot', icon: '🤖' },
