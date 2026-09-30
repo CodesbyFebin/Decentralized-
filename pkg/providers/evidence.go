@@ -221,3 +221,24 @@ func RunQualificationCampaignWithContext(ctx context.Context, resourceID string,
 
 	return campaign, nil
 }
+
+// RunQualificationCampaignWithStorage executes qualification and persists results to database and audit ledger.
+func RunQualificationCampaignWithStorage(ctx context.Context, resourceID string, sourceSHA string,
+	signer *EvidenceQualifier, adapter ProviderAdapter, cfg *ProviderConfig, topology *RuntimeTopology,
+	store *CampaignStore) (*QualificationCampaign, error) {
+
+	if store == nil {
+		return nil, fmt.Errorf("campaign store required")
+	}
+
+	campaign, err := RunQualificationCampaignWithContext(ctx, resourceID, sourceSHA, signer, adapter, cfg, topology)
+	if err != nil {
+		return nil, fmt.Errorf("campaign execution failed: %w", err)
+	}
+
+	if err := store.StoreCampaign(ctx, campaign); err != nil {
+		return nil, fmt.Errorf("failed to store campaign: %w", err)
+	}
+
+	return campaign, nil
+}
