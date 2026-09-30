@@ -1,0 +1,125 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Base styles */
+html,
+body {
+  @apply bg-neutral-950 text-neutral-50;
+}
+
+* {
+  @apply border-neutral-700;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  @apply w-2 h-2;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-neutral-900;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-neutral-700 rounded hover:bg-neutral-600;
+}
+
+/* Focus ring override */
+:focus {
+  @apply outline-none ring-2 ring-primary-500 ring-offset-2 ring-offset-neutral-950;
+}
+
+/* Glass effect utilities */
+.glass {
+  @apply bg-gradient-to-br from-neutral-800/50 to-neutral-900/50 backdrop-blur-md border border-primary-500/20;
+}
+
+.glass-sm {
+  @apply bg-gradient-to-br from-neutral-800/30 to-neutral-900/30 backdrop-blur-sm border border-primary-500/10;
+}
+
+/* Text selection */
+::selection {
+  @apply bg-primary-500 text-neutral-950;
+}
+
+/* Input styles */
+input,
+textarea,
+select {
+  @apply bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-2 text-neutral-50 placeholder-neutral-500 focus:border-primary-500 focus:ring-1 focus:ring-primary-500;
+}
+
+input:disabled,
+textarea:disabled,
+select:disabled {
+  @apply opacity-50 cursor-not-allowed;
+}
+
+/* Link styles */
+a {
+  @apply text-primary-500 hover:text-primary-400 transition-colors;
+}
+
+/* Code blocks */
+code {
+  @apply bg-neutral-800 px-2 py-1 rounded font-mono text-sm;
+}
+
+pre {
+  @apply bg-neutral-900 border border-neutral-700 rounded-lg p-4 overflow-x-auto;
+}
+
+/* Table styles */
+table {
+  @apply w-full border-collapse;
+}
+
+thead {
+  @apply bg-neutral-800 border-b border-neutral-700;
+}
+
+td,
+th {
+  @apply px-4 py-3 text-left border-b border-neutral-700;
+}
+
+tbody tr:hover {
+  @apply bg-neutral-800/50;
+}
+
+/* Loading animation */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Pulse effect */
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Fade in animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-in;
+}

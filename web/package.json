@@ -1,0 +1,36 @@
+{
+  "name": "decentralized-host-command-centre",
+  "version": "1.0.0",
+  "description": "Command Centre web console for Decentralized.Host",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3000",
+    "build": "next build",
+    "start": "next start -p 3000",
+    "lint": "next lint",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "next": "^14.2.3",
+    "tailwindcss": "^3.4.1",
+    "autoprefixer": "^10.4.19",
+    "postcss": "^8.4.38",
+    "@hookform/resolvers": "^3.3.4",
+    "react-hook-form": "^7.50.1",
+    "zustand": "^4.4.7",
+    "axios": "^1.6.8",
+    "date-fns": "^3.0.0",
+    "recharts": "^2.10.4",
+    "react-feather": "^2.0.10"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3",
+    "@types/react": "^18.2.43",
+    "@types/react-dom": "^18.2.17",
+    "@types/node": "^20.10.6",
+    "eslint": "^8.56.0",
+    "eslint-config-next": "^14.2.3"
+  }
+}
