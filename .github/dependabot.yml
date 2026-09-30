@@ -1,0 +1,47 @@
+version: 2
+updates:
+  # Go dependencies
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+      time: "03:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "CodesbyFebin"
+    labels:
+      - "dependencies"
+      - "automation"
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
+
+  # Docker images
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+      time: "03:30"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "CodesbyFebin"
+    labels:
+      - "dependencies"
+      - "docker"
+      - "automation"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+      time: "04:00"
+    reviewers:
+      - "CodesbyFebin"
+    labels:
+      - "dependencies"
+      - "ci/cd"
+      - "automation"
