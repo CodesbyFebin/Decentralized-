@@ -1,398 +1,104 @@
-import React, { useEffect, useState } from 'react'
-import { AppLayout } from '@/layouts/AppLayout'
+import React, { useState, useEffect } from 'react'
+import { Sidebar } from '@/components/Sidebar'
 import { Card } from '@/components/Card'
-import { Button } from '@/components/Button'
 import { Badge } from '@/components/Badge'
-import { Loading } from '@/components/Loading'
-import { apiClient } from '@/lib/api'
 
 interface LogEntry {
   id: string
   timestamp: string
-  level: 'debug' | 'info' | 'warn' | 'error'
-  source: string
+  level: 'DEBUG' | 'INFO' | 'WARN' | 'ERROR'
+  service: string
   message: string
-  traceId?: string
-  userId?: string
-  metadata?: Record<string, string>
+  metadata?: Record<string, any>
 }
 
-interface LogStats {
-  debug: number
-  info: number
-  warn: number
-  error: number
-  total: number
-}
+const generateMockLogs = (): LogEntry[] => [
+  { id: '1', timestamp: '2026-09-30T10:35:22Z', level: 'ERROR', service: 'API Server', message: 'Database connection timeout after 5s', metadata: { duration: 5000, host: 'db-001' } },
+  { id: '2', timestamp: '2026-09-30T10:34:15Z', level: 'WARN', service: 'Cache', message: 'High memory usage detected', metadata: { memory: '85%' } },
+  { id: '3', timestamp: '2026-09-30T10:33:40Z', level: 'INFO', service: 'Deployment', message: 'Deployment completed successfully', metadata: { version: 'v2.5.1', nodes: 12 } },
+  { id: '4', timestamp: '2026-09-30T10:32:08Z', level: 'DEBUG', service: 'Scheduler', message: 'Task queued for execution', metadata: { taskId: 'task-8234' } },
+  { id: '5', timestamp: '2026-09-30T10:30:45Z', level: 'ERROR', service: 'Storage', message: 'Failed to write to bucket', metadata: { bucket: 'app-data', size: '2.5GB' } },
+]
 
-const Logs: React.FC = () => {
+export default function LogsPage() {
   const [logs, setLogs] = useState<LogEntry[]>([])
-  const [stats, setStats] = useState<LogStats>({ debug: 0, info: 0, warn: 0, error: 0, total: 0 })
-  const [loading, setLoading] = useState(true)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [selectedLevel, setSelectedLevel] = useState<'all' | 'debug' | 'info' | 'warn' | 'error'>(
-    'all'
-  )
-  const [selectedSource, setSelectedSource] = useState<string>('all')
-  const [timeRange, setTimeRange] = useState<'1h' | '6h' | '24h' | '7d'>('24h')
-
-  const generateMockLogs = (): LogEntry[] => {
-    const sources = ['api', 'scheduler', 'storage', 'network', 'auth', 'policy', 'state']
-    const messages = [
-      'Request processed successfully',
-      'Policy evaluation completed',
-      'State transition logged',
-      'Resource allocation updated',
-      'Consensus checkpoint reached',
-      'Certificate renewal scheduled',
-      'Deployment rollout initiated',
-      'Node health check passed',
-      'Storage cleanup executed',
-      'TLS handshake completed',
-      'RPC call received',
-      'Admission control evaluated',
-      'Intent validation successful',
-      'Merkle proof generated',
-      'Raft log replicated',
-    ]
-
-    const errors = [
-      'Connection timeout to peer node',
-      'Policy evaluation failed',
-      'Storage quota exceeded',
-      'Certificate validation failed',
-      'Consensus timeout',
-      'TLS certificate expired',
-      'Node unavailable',
-      'RPC call failed',
-    ]
-
-    const now = Date.now()
-    const logs: LogEntry[] = []
-
-    for (let i = 0; i < 50; i++) {
-      const isError = Math.random() > 0.85
-      const isWarn = Math.random() > 0.75 && !isError
-      const isDebug = Math.random() > 0.5 && !isError && !isWarn
-
-      const level: 'debug' | 'info' | 'warn' | 'error' = isError
-        ? 'error'
-        : isWarn
-          ? 'warn'
-          : isDebug
-            ? 'debug'
-            : 'info'
-
-      const source = sources[Math.floor(Math.random() * sources.length)]
-      const message =
-        level === 'error'
-          ? errors[Math.floor(Math.random() * errors.length)]
-          : messages[Math.floor(Math.random() * messages.length)]
-
-      logs.push({
-        id: `log-${i}`,
-        timestamp: new Date(now - Math.random() * 86400000 * 7).toISOString(),
-        level,
-        source,
-        message,
-        traceId: `trace-${Math.random().toString(36).substr(2, 9)}`,
-        userId: Math.random() > 0.3 ? `user-${Math.floor(Math.random() * 10)}` : undefined,
-        metadata: {
-          duration: `${Math.floor(Math.random() * 5000)}ms`,
-          region: ['us-east-1', 'eu-west-1', 'ap-southeast-1'][
-            Math.floor(Math.random() * 3)
-          ],
-        },
-      })
-    }
-
-    return logs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-  }
+  const [filter, setFilter] = useState<string>('all')
 
   useEffect(() => {
-    const loadLogs = async () => {
-      try {
-        setLoading(true)
-        const mockLogs = generateMockLogs()
-        setLogs(mockLogs)
-
-        const logStats: LogStats = {
-          debug: mockLogs.filter((l) => l.level === 'debug').length,
-          info: mockLogs.filter((l) => l.level === 'info').length,
-          warn: mockLogs.filter((l) => l.level === 'warn').length,
-          error: mockLogs.filter((l) => l.level === 'error').length,
-          total: mockLogs.length,
-        }
-        setStats(logStats)
-      } catch (err) {
-        console.error('Failed to load logs:', err)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadLogs()
+    setLogs(generateMockLogs())
   }, [])
 
-  const filteredLogs = logs.filter((log) => {
-    const matchesLevel = selectedLevel === 'all' || log.level === selectedLevel
-    const matchesSource = selectedSource === 'all' || log.source === selectedSource
-    const matchesSearch =
-      searchQuery === '' ||
-      log.message.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      log.source.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      log.traceId?.includes(searchQuery)
+  const filteredLogs = filter === 'all' ? logs : logs.filter(l => l.level === filter)
+  const errorCount = logs.filter(l => l.level === 'ERROR').length
+  const warnCount = logs.filter(l => l.level === 'WARN').length
 
-    return matchesLevel && matchesSource && matchesSearch
-  })
-
-  const sources = Array.from(new Set(logs.map((l) => l.source))).sort()
-
-  if (loading) {
-    return (
-      <AppLayout title="Logs & Diagnostics" subtitle="System and audit logs with search">
-        <Loading message="Loading logs..." />
-      </AppLayout>
-    )
+  const getLevelColor = (level: string) => {
+    switch (level) {
+      case 'ERROR': return 'bg-red-500/20 text-red-400 border-red-500/50'
+      case 'WARN': return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50'
+      case 'INFO': return 'bg-blue-500/20 text-blue-400 border-blue-500/50'
+      case 'DEBUG': return 'bg-neutral-700/20 text-neutral-400 border-neutral-600/50'
+      default: return 'bg-neutral-700/50 text-neutral-300 border-neutral-600/50'
+    }
   }
 
   return (
-    <AppLayout
-      title="Logs & Diagnostics"
-      subtitle={`${stats.total} logs • ${stats.error} errors • ${stats.warn} warnings`}
-    >
-      <div className="space-y-6">
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-          <Card variant="glass">
-            <div className="p-4">
-              <p className="text-neutral-400 text-sm mb-2">Total Logs</p>
-              <span className="text-3xl font-bold text-primary-500">{stats.total}</span>
-              <p className="text-xs text-neutral-500 mt-2">last 24 hours</p>
-            </div>
-          </Card>
+    <div className="flex bg-neutral-950 min-h-screen">
+      <Sidebar />
+      <div className="flex-1 ml-64 p-8">
+        <div className="space-y-8">
+          <div>
+            <h1 className="text-4xl font-bold text-white mb-2">Logs & Events</h1>
+            <p className="text-neutral-400">View system logs and events</p>
+          </div>
 
-          <Card variant="glass">
-            <div className="p-4">
-              <p className="text-neutral-400 text-sm mb-2">Debug</p>
-              <span className="text-3xl font-bold text-neutral-400">{stats.debug}</span>
-              <p className="text-xs text-neutral-500 mt-2">diagnostic logs</p>
-            </div>
-          </Card>
+          <div className="grid grid-cols-5 gap-4">
+            <Card><div className="text-neutral-400 text-sm mb-2">Total Logs</div><div className="text-3xl font-bold text-white">{logs.length}</div></Card>
+            <Card><div className="text-neutral-400 text-sm mb-2">Errors</div><div className="text-3xl font-bold text-red-400">{errorCount}</div></Card>
+            <Card><div className="text-neutral-400 text-sm mb-2">Warnings</div><div className="text-3xl font-bold text-yellow-400">{warnCount}</div></Card>
+            <Card><div className="text-neutral-400 text-sm mb-2">Info</div><div className="text-3xl font-bold text-blue-400">{logs.filter(l => l.level === 'INFO').length}</div></Card>
+            <Card><div className="text-neutral-400 text-sm mb-2">Debug</div><div className="text-3xl font-bold text-neutral-400">{logs.filter(l => l.level === 'DEBUG').length}</div></Card>
+          </div>
 
-          <Card variant="glass">
-            <div className="p-4">
-              <p className="text-neutral-400 text-sm mb-2">Info</p>
-              <span className="text-3xl font-bold text-info-500">{stats.info}</span>
-              <p className="text-xs text-neutral-500 mt-2">informational</p>
+          <Card>
+            <h2 className="text-xl font-bold text-white mb-6">System Logs</h2>
+            <div className="mb-4 flex gap-2">
+              {['all', 'ERROR', 'WARN', 'INFO', 'DEBUG'].map(level => (
+                <button
+                  key={level}
+                  onClick={() => setFilter(level)}
+                  className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
+                    filter === level
+                      ? 'bg-primary-500/30 text-primary-400 border border-primary-500/50'
+                      : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
+                  }`}
+                >
+                  {level}
+                </button>
+              ))}
             </div>
-          </Card>
-
-          <Card variant="glass">
-            <div className="p-4">
-              <p className="text-neutral-400 text-sm mb-2">Warnings</p>
-              <span className="text-3xl font-bold text-warning-500">{stats.warn}</span>
-              <p className="text-xs text-neutral-500 mt-2">warnings</p>
-            </div>
-          </Card>
-
-          <Card variant="glass">
-            <div className="p-4">
-              <p className="text-neutral-400 text-sm mb-2">Errors</p>
-              <span className="text-3xl font-bold text-error-500">{stats.error}</span>
-              <p className="text-xs text-neutral-500 mt-2">error logs</p>
+            <div className="space-y-2 max-h-96 overflow-y-auto">
+              {filteredLogs.map((log) => (
+                <div key={log.id} className="p-3 bg-neutral-900 rounded border border-neutral-700">
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <Badge className={getLevelColor(log.level)}>{log.level}</Badge>
+                      <span className="text-neutral-400 text-sm font-mono">{log.service}</span>
+                    </div>
+                    <span className="text-neutral-500 text-xs">{new Date(log.timestamp).toLocaleTimeString()}</span>
+                  </div>
+                  <div className="text-white text-sm">{log.message}</div>
+                  {log.metadata && (
+                    <div className="text-xs text-neutral-500 mt-2 font-mono">
+                      {JSON.stringify(log.metadata)}
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           </Card>
         </div>
-
-        {/* Log Viewer */}
-        <Card variant="glass">
-          <div className="p-6 border-b border-neutral-700">
-            <h3 className="text-lg font-semibold text-white mb-4">Log Viewer</h3>
-
-            <div className="space-y-4">
-              {/* Search */}
-              <div>
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search logs by message, source, or trace ID..."
-                  className="w-full px-4 py-2 bg-neutral-700 border border-neutral-600 rounded-lg text-white placeholder-neutral-500 focus:border-primary-500 focus:outline-none"
-                />
-              </div>
-
-              {/* Filters */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-neutral-300 mb-2">
-                    Log Level
-                  </label>
-                  <select
-                    value={selectedLevel}
-                    onChange={(e) =>
-                      setSelectedLevel(e.target.value as typeof selectedLevel)
-                    }
-                    className="w-full px-3 py-2 bg-neutral-700 border border-neutral-600 rounded-lg text-white focus:border-primary-500 focus:outline-none"
-                  >
-                    <option value="all">All Levels</option>
-                    <option value="debug">Debug</option>
-                    <option value="info">Info</option>
-                    <option value="warn">Warning</option>
-                    <option value="error">Error</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-neutral-300 mb-2">
-                    Source
-                  </label>
-                  <select
-                    value={selectedSource}
-                    onChange={(e) => setSelectedSource(e.target.value)}
-                    className="w-full px-3 py-2 bg-neutral-700 border border-neutral-600 rounded-lg text-white focus:border-primary-500 focus:outline-none"
-                  >
-                    <option value="all">All Sources</option>
-                    {sources.map((source) => (
-                      <option key={source} value={source}>
-                        {source.charAt(0).toUpperCase() + source.slice(1)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-neutral-300 mb-2">
-                    Time Range
-                  </label>
-                  <select
-                    value={timeRange}
-                    onChange={(e) => setTimeRange(e.target.value as typeof timeRange)}
-                    className="w-full px-3 py-2 bg-neutral-700 border border-neutral-600 rounded-lg text-white focus:border-primary-500 focus:outline-none"
-                  >
-                    <option value="1h">Last 1 hour</option>
-                    <option value="6h">Last 6 hours</option>
-                    <option value="24h">Last 24 hours</option>
-                    <option value="7d">Last 7 days</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Log Table */}
-          <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
-            <table className="w-full text-sm font-mono">
-              <thead className="border-b border-neutral-700 sticky top-0 bg-neutral-900">
-                <tr>
-                  <th className="px-6 py-3 text-left text-neutral-400 font-medium">Timestamp</th>
-                  <th className="px-6 py-3 text-left text-neutral-400 font-medium">Level</th>
-                  <th className="px-6 py-3 text-left text-neutral-400 font-medium">Source</th>
-                  <th className="px-6 py-3 text-left text-neutral-400 font-medium">Message</th>
-                  <th className="px-6 py-3 text-left text-neutral-400 font-medium">Trace ID</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-neutral-700">
-                {filteredLogs.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-4 text-center text-neutral-500">
-                      No logs found matching the selected filters
-                    </td>
-                  </tr>
-                ) : (
-                  filteredLogs.map((log) => (
-                    <tr key={log.id} className="hover:bg-neutral-800/30 transition">
-                      <td className="px-6 py-3 text-neutral-500 whitespace-nowrap text-xs">
-                        {new Date(log.timestamp).toLocaleString()}
-                      </td>
-                      <td className="px-6 py-3 whitespace-nowrap">
-                        <Badge
-                          status={
-                            log.level === 'error'
-                              ? 'error'
-                              : log.level === 'warn'
-                                ? 'warning'
-                                : log.level === 'debug'
-                                  ? 'default'
-                                  : 'success'
-                          }
-                        >
-                          {log.level.toUpperCase()}
-                        </Badge>
-                      </td>
-                      <td className="px-6 py-3 text-neutral-300 whitespace-nowrap text-xs">
-                        {log.source}
-                      </td>
-                      <td className="px-6 py-3 text-neutral-400 text-xs max-w-96 truncate">
-                        {log.message}
-                      </td>
-                      <td className="px-6 py-3 text-neutral-500 whitespace-nowrap text-xs">
-                        {log.traceId ? (
-                          <span className="bg-neutral-800 px-2 py-1 rounded">{log.traceId}</span>
-                        ) : (
-                          '-'
-                        )}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="p-6 border-t border-neutral-700 text-center text-neutral-400 text-sm">
-            Showing {filteredLogs.length} of {stats.total} logs
-          </div>
-        </Card>
-
-        {/* Log Statistics by Source */}
-        <Card variant="glass">
-          <div className="p-6 border-b border-neutral-700">
-            <h3 className="text-lg font-semibold text-white">Logs by Source</h3>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="border-b border-neutral-700">
-                <tr>
-                  <th className="px-6 py-3 text-left text-neutral-400 font-medium">Source</th>
-                  <th className="px-6 py-3 text-left text-neutral-400 font-medium">Debug</th>
-                  <th className="px-6 py-3 text-left text-neutral-400 font-medium">Info</th>
-                  <th className="px-6 py-3 text-left text-neutral-400 font-medium">Warnings</th>
-                  <th className="px-6 py-3 text-left text-neutral-400 font-medium">Errors</th>
-                  <th className="px-6 py-3 text-left text-neutral-400 font-medium">Total</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-neutral-700">
-                {sources.map((source) => {
-                  const sourceLogs = logs.filter((l) => l.source === source)
-                  return (
-                    <tr key={source} className="hover:bg-neutral-800/30">
-                      <td className="px-6 py-3 text-neutral-100 font-medium">
-                        {source.charAt(0).toUpperCase() + source.slice(1)}
-                      </td>
-                      <td className="px-6 py-3 text-neutral-400">
-                        {sourceLogs.filter((l) => l.level === 'debug').length}
-                      </td>
-                      <td className="px-6 py-3 text-neutral-400">
-                        {sourceLogs.filter((l) => l.level === 'info').length}
-                      </td>
-                      <td className="px-6 py-3 text-neutral-400">
-                        {sourceLogs.filter((l) => l.level === 'warn').length}
-                      </td>
-                      <td className="px-6 py-3 text-neutral-400">
-                        {sourceLogs.filter((l) => l.level === 'error').length}
-                      </td>
-                      <td className="px-6 py-3 text-neutral-300 font-medium">{sourceLogs.length}</td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        </Card>
       </div>
-    </AppLayout>
+    </div>
   )
 }
-
-export default Logs

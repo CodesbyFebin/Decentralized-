@@ -1,510 +1,116 @@
-import React, { useEffect, useState } from 'react'
-import { AppLayout } from '@/layouts/AppLayout'
+import React, { useState, useEffect } from 'react'
+import { Sidebar } from '@/components/Sidebar'
 import { Card } from '@/components/Card'
-import { Button } from '@/components/Button'
 import { Badge } from '@/components/Badge'
-import { Loading } from '@/components/Loading'
-import { apiClient } from '@/lib/api'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 
 interface Incident {
   id: string
   title: string
-  severity: 'critical' | 'high' | 'medium' | 'low'
-  status: 'open' | 'investigating' | 'monitoring' | 'resolved' | 'closed'
-  description: string
-  createdAt: string
-  resolvedAt?: string
-  commander: string
-  impactedSystems: string[]
-  affectedUsers?: number
-  timeToDetect?: number
-  timeToResolve?: number
+  severity: 'P1' | 'P2' | 'P3' | 'P4'
+  status: 'active' | 'resolved' | 'investigating'
+  started: string
+  resolved?: string
+  affectedServices: string[]
+  duration: string
+  mttr: string
 }
 
-interface IncidentStats {
-  open: number
-  investigating: number
-  monitoring: number
-  resolved: number
-  mttr: number
-  critical: number
-}
+const generateMockIncidents = (): Incident[] => [
+  { id: 'inc-001', title: 'Database Availability Degradation', severity: 'P1', status: 'investigating', started: '2026-09-30T10:15Z', affectedServices: ['API', 'Dashboard'], duration: '20m', mttr: '-' },
+  { id: 'inc-002', title: 'High Latency on API Endpoints', severity: 'P2', status: 'active', started: '2026-09-30T09:45Z', affectedServices: ['API'], duration: '50m', mttr: '-' },
+  { id: 'inc-003', title: 'Cache Cluster Failover', severity: 'P2', status: 'resolved', started: '2026-09-29T22:30Z', resolved: '2026-09-29T22:45Z', affectedServices: ['Cache'], duration: '15m', mttr: '15m' },
+  { id: 'inc-004', title: 'Deployment Pipeline Failure', severity: 'P3', status: 'resolved', started: '2026-09-29T14:20Z', resolved: '2026-09-29T14:35Z', affectedServices: ['CI/CD'], duration: '15m', mttr: '15m' },
+  { id: 'inc-005', title: 'Certificate Renewal Issue', severity: 'P3', status: 'resolved', started: '2026-09-28T18:00Z', resolved: '2026-09-28T18:30Z', affectedServices: ['Security'], duration: '30m', mttr: '30m' },
+]
 
-const Incidents: React.FC = () => {
+const generateMetrics = () => [
+  { name: 'P1', count: 12 },
+  { name: 'P2', count: 24 },
+  { name: 'P3', count: 38 },
+  { name: 'P4', count: 15 },
+]
+
+export default function IncidentsPage() {
   const [incidents, setIncidents] = useState<Incident[]>([])
-  const [stats, setStats] = useState<IncidentStats>({
-    open: 0,
-    investigating: 0,
-    monitoring: 0,
-    resolved: 0,
-    mttr: 0,
-    critical: 0,
-  })
-  const [loading, setLoading] = useState(true)
-  const [selectedStatus, setSelectedStatus] = useState<string>('all')
-  const [selectedSeverity, setSelectedSeverity] = useState<string>('all')
-  const [showNewForm, setShowNewForm] = useState(false)
-  const [expandedIncident, setExpandedIncident] = useState<string | null>(null)
-  const [newIncident, setNewIncident] = useState({
-    title: '',
-    severity: 'high' as const,
-    description: '',
-  })
-
-  const generateMockIncidents = (): Incident[] => {
-    const now = Date.now()
-    return [
-      {
-        id: 'inc-1',
-        title: 'Database Connection Pool Exhaustion',
-        severity: 'critical',
-        status: 'investigating',
-        description: 'API endpoints experiencing timeout errors due to connection pool limits',
-        createdAt: new Date(now - 1800000).toISOString(),
-        commander: 'alice@example.com',
-        impactedSystems: ['API', 'Database', 'Web Dashboard'],
-        affectedUsers: 450,
-        timeToDetect: 5,
-      },
-      {
-        id: 'inc-2',
-        title: 'Certificate Expiration Warning',
-        severity: 'high',
-        status: 'open',
-        description: 'TLS certificate expiring in 7 days, manual renewal required',
-        createdAt: new Date(now - 86400000).toISOString(),
-        commander: 'bob@example.com',
-        impactedSystems: ['Security', 'API Gateway'],
-      },
-      {
-        id: 'inc-3',
-        title: 'Disk Space Critical on Storage Node',
-        severity: 'high',
-        status: 'monitoring',
-        description: 'Storage node store-02 has 2% disk free, cleanup in progress',
-        createdAt: new Date(now - 3600000).toISOString(),
-        resolvedAt: new Date(now - 600000).toISOString(),
-        commander: 'charlie@example.com',
-        impactedSystems: ['Storage', 'Backups'],
-        timeToDetect: 8,
-        timeToResolve: 50,
-      },
-      {
-        id: 'inc-4',
-        title: 'High Error Rate on /api/deployments',
-        severity: 'medium',
-        status: 'resolved',
-        description: '5.2% error rate detected, root cause identified as rate limiter issue',
-        createdAt: new Date(now - 7200000).toISOString(),
-        resolvedAt: new Date(now - 3600000).toISOString(),
-        commander: 'alice@example.com',
-        impactedSystems: ['API', 'Deployments'],
-        affectedUsers: 120,
-        timeToDetect: 3,
-        timeToResolve: 60,
-      },
-      {
-        id: 'inc-5',
-        title: 'Backup Job Failure',
-        severity: 'medium',
-        status: 'closed',
-        description: 'Nightly backup failed due to network timeout, retried successfully',
-        createdAt: new Date(now - 172800000).toISOString(),
-        resolvedAt: new Date(now - 168000000).toISOString(),
-        commander: 'bob@example.com',
-        impactedSystems: ['Backups', 'Storage'],
-        timeToDetect: 45,
-        timeToResolve: 120,
-      },
-      {
-        id: 'inc-6',
-        title: 'Node Memory Leak Detected',
-        severity: 'low',
-        status: 'closed',
-        description: 'Memory usage gradually increasing on compute node, restarted',
-        createdAt: new Date(now - 259200000).toISOString(),
-        resolvedAt: new Date(now - 255600000).toISOString(),
-        commander: 'charlie@example.com',
-        impactedSystems: ['Compute', 'Nodes'],
-        timeToDetect: 720,
-        timeToResolve: 30,
-      },
-    ]
-  }
+  const [metrics, setMetrics] = useState<any[]>([])
 
   useEffect(() => {
-    const loadIncidents = async () => {
-      try {
-        setLoading(true)
-        const mockIncidents = generateMockIncidents()
-        setIncidents(mockIncidents)
-
-        const mttrs = mockIncidents
-          .filter((i) => i.timeToResolve)
-          .map((i) => i.timeToResolve || 0)
-        const avgMttr = mttrs.length > 0 ? Math.round(mttrs.reduce((a, b) => a + b) / mttrs.length) : 0
-
-        const incidentStats: IncidentStats = {
-          open: mockIncidents.filter((i) => i.status === 'open').length,
-          investigating: mockIncidents.filter((i) => i.status === 'investigating').length,
-          monitoring: mockIncidents.filter((i) => i.status === 'monitoring').length,
-          resolved: mockIncidents.filter((i) => i.status === 'resolved').length,
-          mttr: avgMttr,
-          critical: mockIncidents.filter((i) => i.severity === 'critical').length,
-        }
-        setStats(incidentStats)
-      } catch (err) {
-        console.error('Failed to load incidents:', err)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadIncidents()
+    setIncidents(generateMockIncidents())
+    setMetrics(generateMetrics())
   }, [])
 
-  const handleCreateIncident = async () => {
-    if (!newIncident.title.trim()) return
+  const active = incidents.filter(i => i.status === 'active' || i.status === 'investigating').length
+  const resolved = incidents.filter(i => i.status === 'resolved').length
+  const avgMTTR = '24 minutes'
 
-    try {
-      await apiClient.post('/incidents', {
-        title: newIncident.title,
-        severity: newIncident.severity,
-        description: newIncident.description,
-      })
-
-      const incident: Incident = {
-        id: `inc-${Date.now()}`,
-        title: newIncident.title,
-        severity: newIncident.severity,
-        status: 'open',
-        description: newIncident.description,
-        createdAt: new Date().toISOString(),
-        commander: 'current-user@example.com',
-        impactedSystems: [],
-      }
-
-      setIncidents((prev) => [incident, ...prev])
-      setNewIncident({ title: '', severity: 'high', description: '' })
-      setShowNewForm(false)
-    } catch (err) {
-      console.error('Failed to create incident:', err)
+  const getSeverityColor = (severity: string) => {
+    switch (severity) {
+      case 'P1': return 'bg-red-500/20 text-red-400 border-red-500/50'
+      case 'P2': return 'bg-orange-500/20 text-orange-400 border-orange-500/50'
+      case 'P3': return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50'
+      case 'P4': return 'bg-blue-500/20 text-blue-400 border-blue-500/50'
+      default: return 'bg-neutral-700/50 text-neutral-300 border-neutral-600/50'
     }
   }
-
-  const handleUpdateStatus = async (incidentId: string, newStatus: Incident['status']) => {
-    try {
-      await apiClient.patch(`/incidents/${incidentId}`, {
-        status: newStatus,
-      })
-
-      setIncidents((prev) =>
-        prev.map((i) =>
-          i.id === incidentId
-            ? {
-                ...i,
-                status: newStatus,
-                resolvedAt:
-                  newStatus === 'resolved' || newStatus === 'closed'
-                    ? new Date().toISOString()
-                    : i.resolvedAt,
-              }
-            : i
-        )
-      )
-    } catch (err) {
-      console.error('Failed to update incident:', err)
-    }
-  }
-
-  if (loading) {
-    return (
-      <AppLayout title="Incidents" subtitle="Incident management and response tracking">
-        <Loading message="Loading incidents..." />
-      </AppLayout>
-    )
-  }
-
-  const filteredIncidents = incidents.filter((i) => {
-    const matchesStatus = selectedStatus === 'all' || i.status === selectedStatus
-    const matchesSeverity = selectedSeverity === 'all' || i.severity === selectedSeverity
-    return matchesStatus && matchesSeverity
-  })
-
-  const statuses = Array.from(new Set(incidents.map((i) => i.status)))
-  const severities = Array.from(new Set(incidents.map((i) => i.severity)))
 
   return (
-    <AppLayout
-      title="Incidents"
-      subtitle={`${stats.open + stats.investigating} active • ${stats.critical} critical • ${stats.mttr}min MTTR`}
-    >
-      <div className="space-y-6">
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-          <Card variant="glass">
-            <div className="p-4">
-              <p className="text-neutral-400 text-sm mb-2">Open</p>
-              <span className="text-3xl font-bold text-error-500">{stats.open}</span>
-              <p className="text-xs text-neutral-500 mt-2">incidents</p>
-            </div>
-          </Card>
-
-          <Card variant="glass">
-            <div className="p-4">
-              <p className="text-neutral-400 text-sm mb-2">Investigating</p>
-              <span className="text-3xl font-bold text-warning-500">{stats.investigating}</span>
-              <p className="text-xs text-neutral-500 mt-2">in progress</p>
-            </div>
-          </Card>
-
-          <Card variant="glass">
-            <div className="p-4">
-              <p className="text-neutral-400 text-sm mb-2">Monitoring</p>
-              <span className="text-3xl font-bold text-info-500">{stats.monitoring}</span>
-              <p className="text-xs text-neutral-500 mt-2">follow-up</p>
-            </div>
-          </Card>
-
-          <Card variant="glass">
-            <div className="p-4">
-              <p className="text-neutral-400 text-sm mb-2">Resolved</p>
-              <span className="text-3xl font-bold text-success-500">{stats.resolved}</span>
-              <p className="text-xs text-neutral-500 mt-2">this month</p>
-            </div>
-          </Card>
-
-          <Card variant="glass">
-            <div className="p-4">
-              <p className="text-neutral-400 text-sm mb-2">Critical</p>
-              <span className="text-3xl font-bold text-error-600">{stats.critical}</span>
-              <p className="text-xs text-neutral-500 mt-2">severity</p>
-            </div>
-          </Card>
-
-          <Card variant="glass">
-            <div className="p-4">
-              <p className="text-neutral-400 text-sm mb-2">Avg MTTR</p>
-              <span className="text-3xl font-bold text-primary-500">{stats.mttr}</span>
-              <p className="text-xs text-neutral-500 mt-2">minutes</p>
-            </div>
-          </Card>
-        </div>
-
-        {/* Incident Management */}
-        <Card variant="glass">
-          <div className="p-6 border-b border-neutral-700">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-white">Incidents</h3>
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => setShowNewForm(!showNewForm)}
-              >
-                + Report Incident
-              </Button>
-            </div>
-
-            {showNewForm && (
-              <div className="bg-neutral-800/30 rounded-lg p-4 space-y-3">
-                <input
-                  type="text"
-                  value={newIncident.title}
-                  onChange={(e) => setNewIncident({ ...newIncident, title: e.target.value })}
-                  placeholder="Incident title"
-                  className="w-full px-3 py-2 bg-neutral-700 border border-neutral-600 rounded-lg text-white placeholder-neutral-500 focus:border-primary-500 focus:outline-none"
-                />
-                <textarea
-                  value={newIncident.description}
-                  onChange={(e) =>
-                    setNewIncident({ ...newIncident, description: e.target.value })
-                  }
-                  placeholder="Description and context"
-                  className="w-full px-3 py-2 bg-neutral-700 border border-neutral-600 rounded-lg text-white placeholder-neutral-500 focus:border-primary-500 focus:outline-none h-20"
-                />
-                <select
-                  value={newIncident.severity}
-                  onChange={(e) =>
-                    setNewIncident({
-                      ...newIncident,
-                      severity: e.target.value as 'critical' | 'high' | 'medium' | 'low',
-                    })
-                  }
-                  className="w-full px-3 py-2 bg-neutral-700 border border-neutral-600 rounded-lg text-white focus:border-primary-500 focus:outline-none"
-                >
-                  <option value="critical">Critical</option>
-                  <option value="high">High</option>
-                  <option value="medium">Medium</option>
-                  <option value="low">Low</option>
-                </select>
-                <div className="flex gap-2 justify-end">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => setShowNewForm(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button variant="primary" size="sm" onClick={handleCreateIncident}>
-                    Report
-                  </Button>
-                </div>
-              </div>
-            )}
+    <div className="flex bg-neutral-950 min-h-screen">
+      <Sidebar />
+      <div className="flex-1 ml-64 p-8">
+        <div className="space-y-8">
+          <div>
+            <h1 className="text-4xl font-bold text-white mb-2">Incidents</h1>
+            <p className="text-neutral-400">Track and manage system incidents</p>
           </div>
 
-          {/* Filters */}
-          <div className="p-6 border-b border-neutral-700 bg-neutral-800/20">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-neutral-300 mb-2">
-                  Status
-                </label>
-                <select
-                  value={selectedStatus}
-                  onChange={(e) => setSelectedStatus(e.target.value)}
-                  className="w-full px-3 py-2 bg-neutral-700 border border-neutral-600 rounded-lg text-white text-sm focus:border-primary-500 focus:outline-none"
-                >
-                  <option value="all">All Status</option>
-                  {statuses.map((status) => (
-                    <option key={status} value={status}>
-                      {status.charAt(0).toUpperCase() + status.slice(1)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-neutral-300 mb-2">
-                  Severity
-                </label>
-                <select
-                  value={selectedSeverity}
-                  onChange={(e) => setSelectedSeverity(e.target.value)}
-                  className="w-full px-3 py-2 bg-neutral-700 border border-neutral-600 rounded-lg text-white text-sm focus:border-primary-500 focus:outline-none"
-                >
-                  <option value="all">All Severities</option>
-                  {severities.map((sev) => (
-                    <option key={sev} value={sev}>
-                      {sev.charAt(0).toUpperCase() + sev.slice(1)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
+          <div className="grid grid-cols-5 gap-4">
+            <Card><div className="text-neutral-400 text-sm mb-2">Active</div><div className="text-3xl font-bold text-red-400">{active}</div></Card>
+            <Card><div className="text-neutral-400 text-sm mb-2">Resolved (30d)</div><div className="text-3xl font-bold text-green-400">{resolved}</div></Card>
+            <Card><div className="text-neutral-400 text-sm mb-2">Avg MTTR</div><div className="text-3xl font-bold text-white">{avgMTTR}</div></Card>
+            <Card><div className="text-neutral-400 text-sm mb-2">Total (30d)</div><div className="text-3xl font-bold text-white">{incidents.length}</div></Card>
+            <Card><div className="text-neutral-400 text-sm mb-2">Severity</div><div className="text-3xl font-bold text-yellow-400">Mixed</div></Card>
           </div>
 
-          {/* Incidents List */}
-          <div className="divide-y divide-neutral-700">
-            {filteredIncidents.length === 0 ? (
-              <div className="p-6 text-center text-neutral-400">
-                No incidents matching the selected filters
-              </div>
-            ) : (
-              filteredIncidents.map((incident) => (
-                <div
-                  key={incident.id}
-                  className="p-6 hover:bg-neutral-800/20 transition cursor-pointer"
-                  onClick={() =>
-                    setExpandedIncident(
-                      expandedIncident === incident.id ? null : incident.id
-                    )
-                  }
-                >
-                  <div className="flex justify-between items-start gap-4 mb-2">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <h4 className="text-white font-medium">{incident.title}</h4>
-                        <Badge
-                          status={
-                            incident.severity === 'critical'
-                              ? 'error'
-                              : incident.severity === 'high'
-                                ? 'warning'
-                                : incident.severity === 'medium'
-                                  ? 'info'
-                                  : 'default'
-                          }
-                        >
-                          {incident.severity.charAt(0).toUpperCase() + incident.severity.slice(1)}
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-neutral-400 mb-2">{incident.description}</p>
-                      <div className="flex flex-wrap gap-4 text-xs text-neutral-500">
-                        <span>Created {new Date(incident.createdAt).toLocaleString()}</span>
-                        <span>Commander: {incident.commander}</span>
-                        {incident.affectedUsers && <span>Affected: {incident.affectedUsers} users</span>}
-                      </div>
+          <Card>
+            <h2 className="text-xl font-bold text-white mb-6">Incidents by Severity</h2>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={metrics}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                <XAxis dataKey="name" stroke="#999" />
+                <YAxis stroke="#999" />
+                <Tooltip contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333' }} />
+                <Bar dataKey="count" fill="#00D9FF" />
+              </BarChart>
+            </ResponsiveContainer>
+          </Card>
+
+          <Card>
+            <h2 className="text-xl font-bold text-white mb-6">Recent Incidents</h2>
+            <div className="space-y-3">
+              {incidents.map((incident) => (
+                <div key={incident.id} className="p-4 bg-neutral-900 rounded-lg border border-neutral-700">
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="flex items-center gap-2">
+                      <Badge className={getSeverityColor(incident.severity)}>{incident.severity}</Badge>
+                      <div className="text-white font-semibold">{incident.title}</div>
                     </div>
-                    <Badge
-                      status={
-                        incident.status === 'open'
-                          ? 'error'
-                          : incident.status === 'investigating'
-                            ? 'warning'
-                            : incident.status === 'monitoring'
-                              ? 'info'
-                              : 'success'
-                      }
-                    >
+                    <Badge className={incident.status === 'active' || incident.status === 'investigating' ? 'bg-red-500/20 text-red-400 border-red-500/50' : 'bg-green-500/20 text-green-400 border-green-500/50'}>
                       {incident.status.charAt(0).toUpperCase() + incident.status.slice(1)}
                     </Badge>
                   </div>
-
-                  {expandedIncident === incident.id && (
-                    <div className="mt-4 p-4 bg-neutral-800/30 rounded-lg space-y-3 text-sm">
-                      <div>
-                        <p className="text-neutral-400 mb-2">Impacted Systems</p>
-                        <div className="flex flex-wrap gap-2">
-                          {incident.impactedSystems.map((sys) => (
-                            <span key={sys} className="px-2 py-1 bg-neutral-700 rounded text-xs">
-                              {sys}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                      {incident.timeToDetect && (
-                        <div>
-                          <p className="text-neutral-400">
-                            Time to Detect: <span className="text-neutral-200">{incident.timeToDetect} min</span>
-                          </p>
-                        </div>
-                      )}
-                      {incident.timeToResolve && (
-                        <div>
-                          <p className="text-neutral-400">
-                            Time to Resolve: <span className="text-neutral-200">{incident.timeToResolve} min</span>
-                          </p>
-                        </div>
-                      )}
-                      <div className="flex gap-2 pt-2">
-                        <select
-                          value={incident.status}
-                          onChange={(e) =>
-                            handleUpdateStatus(
-                              incident.id,
-                              e.target.value as Incident['status']
-                            )
-                          }
-                          onClick={(e) => e.stopPropagation()}
-                          className="px-3 py-1 bg-neutral-700 border border-neutral-600 rounded text-xs text-white focus:border-primary-500 focus:outline-none"
-                        >
-                          <option value="open">Open</option>
-                          <option value="investigating">Investigating</option>
-                          <option value="monitoring">Monitoring</option>
-                          <option value="resolved">Resolved</option>
-                          <option value="closed">Closed</option>
-                        </select>
-                      </div>
-                    </div>
-                  )}
+                  <div className="text-sm text-neutral-400 mb-2">{incident.affectedServices.join(', ')}</div>
+                  <div className="grid grid-cols-3 gap-4 text-xs text-neutral-400">
+                    <div>Started: {new Date(incident.started).toLocaleString()}</div>
+                    <div>Duration: {incident.duration}</div>
+                    <div>MTTR: {incident.mttr}</div>
+                  </div>
                 </div>
-              ))
-            )}
-          </div>
-        </Card>
+              ))}
+            </div>
+          </Card>
+        </div>
       </div>
-    </AppLayout>
+    </div>
   )
 }
-
-export default Incidents

@@ -1,522 +1,105 @@
-import React, { useEffect, useState } from 'react'
-import { AppLayout } from '@/layouts/AppLayout'
+import React, { useState, useEffect } from 'react'
+import { Sidebar } from '@/components/Sidebar'
 import { Card } from '@/components/Card'
-import { Button } from '@/components/Button'
 import { Badge } from '@/components/Badge'
-import { Loading } from '@/components/Loading'
-import { apiClient } from '@/lib/api'
-
-interface AlertRule {
-  id: string
-  name: string
-  condition: string
-  threshold: number
-  severity: 'critical' | 'high' | 'medium' | 'low'
-  enabled: boolean
-  actions: string[]
-  created: string
-  lastTriggered?: string
-}
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 
 interface Alert {
   id: string
-  ruleId: string
-  ruleName: string
-  severity: 'critical' | 'high' | 'medium' | 'low'
-  message: string
-  status: 'active' | 'resolved'
-  triggeredAt: string
-  resolvedAt?: string
-  acknowledgedBy?: string
+  title: string
+  description: string
+  severity: 'critical' | 'warning' | 'info'
+  source: string
+  status: 'firing' | 'resolved' | 'acknowledged'
+  created: string
+  affectedResources: string[]
 }
 
-const Alerts: React.FC = () => {
-  const [rules, setRules] = useState<AlertRule[]>([])
+const generateMockAlerts = (): Alert[] => [
+  { id: '1', title: 'High CPU Usage', description: 'CPU > 85%', severity: 'critical', source: 'CPU Monitor', status: 'firing', created: '2026-09-30T10:15Z', affectedResources: ['node-us-east'] },
+  { id: '2', title: 'Replication Lag', description: 'DB lag > 2s', severity: 'warning', source: 'Database', status: 'firing', created: '2026-09-30T10:22Z', affectedResources: ['db-replica-2'] },
+  { id: '3', title: 'API Errors High', description: 'Error rate 2%+', severity: 'warning', source: 'API', status: 'acknowledged', created: '2026-09-30T09:45Z', affectedResources: ['api-server-1'] },
+  { id: '4', title: 'Disk Space Low', description: 'Available < 10%', severity: 'warning', source: 'Storage', status: 'firing', created: '2026-09-30T08:30Z', affectedResources: ['storage-node-3'] },
+  { id: '5', title: 'Cert Expiring', description: 'Expires in 7 days', severity: 'info', source: 'Security', status: 'resolved', created: '2026-09-28T12:00Z', affectedResources: ['api.example.com'] },
+]
+
+const generateMetrics = () => [
+  { time: '00:00', critical: 2, warning: 8, info: 12 },
+  { time: '08:00', critical: 3, warning: 12, info: 18 },
+  { time: '16:00', critical: 4, warning: 18, info: 25 },
+  { time: '23:59', critical: 1, warning: 6, info: 10 },
+]
+
+export default function AlertsPage() {
   const [alerts, setAlerts] = useState<Alert[]>([])
-  const [loading, setLoading] = useState(true)
-  const [showRuleForm, setShowRuleForm] = useState(false)
-  const [newRule, setNewRule] = useState({ name: '', condition: '', threshold: 0, severity: 'high' as const })
-
-  const generateMockRules = (): AlertRule[] => [
-    {
-      id: 'rule-1',
-      name: 'High CPU Usage',
-      condition: 'cpu_utilization > 85%',
-      threshold: 85,
-      severity: 'high',
-      enabled: true,
-      actions: ['Email', 'Slack', 'PagerDuty'],
-      created: '2026-08-15T10:30:00Z',
-      lastTriggered: '2026-09-30T08:45:00Z',
-    },
-    {
-      id: 'rule-2',
-      name: 'Memory Pressure',
-      condition: 'memory_utilization > 80%',
-      threshold: 80,
-      severity: 'high',
-      enabled: true,
-      actions: ['Email', 'Slack'],
-      created: '2026-08-20T14:20:00Z',
-      lastTriggered: '2026-09-29T22:15:00Z',
-    },
-    {
-      id: 'rule-3',
-      name: 'Disk Space Critical',
-      condition: 'disk_free < 5%',
-      threshold: 5,
-      severity: 'critical',
-      enabled: true,
-      actions: ['Email', 'PagerDuty', 'Webhook'],
-      created: '2026-08-10T09:00:00Z',
-      lastTriggered: '2026-09-28T16:30:00Z',
-    },
-    {
-      id: 'rule-4',
-      name: 'High Error Rate',
-      condition: 'error_rate > 5%',
-      threshold: 5,
-      severity: 'medium',
-      enabled: true,
-      actions: ['Email', 'Slack'],
-      created: '2026-09-01T11:45:00Z',
-      lastTriggered: '2026-09-30T07:20:00Z',
-    },
-    {
-      id: 'rule-5',
-      name: 'Node Offline',
-      condition: 'node_status == offline',
-      threshold: 0,
-      severity: 'critical',
-      enabled: true,
-      actions: ['PagerDuty', 'Email'],
-      created: '2026-07-25T08:15:00Z',
-      lastTriggered: '2026-09-27T19:45:00Z',
-    },
-  ]
-
-  const generateMockAlerts = (): Alert[] => [
-    {
-      id: 'alert-1',
-      ruleId: 'rule-1',
-      ruleName: 'High CPU Usage',
-      severity: 'high',
-      message: 'Node prod-worker-03 CPU utilization exceeded 85% threshold',
-      status: 'active',
-      triggeredAt: '2026-09-30T08:45:00Z',
-    },
-    {
-      id: 'alert-2',
-      ruleId: 'rule-4',
-      ruleName: 'High Error Rate',
-      severity: 'medium',
-      message: '/api/deployments endpoint showing 5.2% error rate',
-      status: 'active',
-      triggeredAt: '2026-09-30T07:20:00Z',
-    },
-    {
-      id: 'alert-3',
-      ruleId: 'rule-2',
-      ruleName: 'Memory Pressure',
-      severity: 'high',
-      message: 'Node prod-master-02 memory utilization at 82%',
-      status: 'resolved',
-      triggeredAt: '2026-09-29T22:15:00Z',
-      resolvedAt: '2026-09-30T01:30:00Z',
-      acknowledgedBy: 'alice@example.com',
-    },
-    {
-      id: 'alert-4',
-      ruleId: 'rule-3',
-      ruleName: 'Disk Space Critical',
-      severity: 'critical',
-      message: 'Storage node store-01 disk free space at 4.2%',
-      status: 'active',
-      triggeredAt: '2026-09-28T16:30:00Z',
-    },
-    {
-      id: 'alert-5',
-      ruleId: 'rule-1',
-      ruleName: 'High CPU Usage',
-      severity: 'high',
-      message: 'Node prod-worker-01 CPU utilization exceeded 85% threshold',
-      status: 'resolved',
-      triggeredAt: '2026-09-28T14:20:00Z',
-      resolvedAt: '2026-09-28T15:45:00Z',
-      acknowledgedBy: 'bob@example.com',
-    },
-  ]
+  const [metrics, setMetrics] = useState<any[]>([])
 
   useEffect(() => {
-    const loadAlerts = async () => {
-      try {
-        setLoading(true)
-        const mockRules = generateMockRules()
-        const mockAlerts = generateMockAlerts()
-        setRules(mockRules)
-        setAlerts(mockAlerts)
-      } catch (err) {
-        console.error('Failed to load alerts:', err)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadAlerts()
+    setAlerts(generateMockAlerts())
+    setMetrics(generateMetrics())
   }, [])
 
-  const handleCreateRule = async () => {
-    if (!newRule.name.trim()) return
+  const firing = alerts.filter(a => a.status === 'firing').length
+  const critical = alerts.filter(a => a.severity === 'critical').length
 
-    try {
-      await apiClient.post('/alerts/rules', {
-        name: newRule.name,
-        condition: newRule.condition,
-        threshold: newRule.threshold,
-        severity: newRule.severity,
-      })
-
-      const rule: AlertRule = {
-        id: `rule-${Date.now()}`,
-        name: newRule.name,
-        condition: newRule.condition,
-        threshold: newRule.threshold,
-        severity: newRule.severity,
-        enabled: true,
-        actions: ['Email'],
-        created: new Date().toISOString(),
-      }
-
-      setRules((prev) => [rule, ...prev])
-      setNewRule({ name: '', condition: '', threshold: 0, severity: 'high' })
-      setShowRuleForm(false)
-    } catch (err) {
-      console.error('Failed to create rule:', err)
-    }
-  }
-
-  const handleToggleRule = async (ruleId: string) => {
-    try {
-      const rule = rules.find((r) => r.id === ruleId)
-      if (!rule) return
-
-      await apiClient.patch(`/alerts/rules/${ruleId}`, {
-        enabled: !rule.enabled,
-      })
-
-      setRules((prev) =>
-        prev.map((r) => (r.id === ruleId ? { ...r, enabled: !r.enabled } : r))
-      )
-    } catch (err) {
-      console.error('Failed to toggle rule:', err)
-    }
-  }
-
-  const handleAcknowledgeAlert = async (alertId: string) => {
-    try {
-      await apiClient.post(`/alerts/${alertId}/acknowledge`, {})
-      setAlerts((prev) =>
-        prev.map((a) =>
-          a.id === alertId ? { ...a, acknowledgedBy: 'current-user@example.com' } : a
-        )
-      )
-    } catch (err) {
-      console.error('Failed to acknowledge alert:', err)
-    }
-  }
-
-  if (loading) {
-    return (
-      <AppLayout title="Alerts & Monitoring" subtitle="Alert rules and notification management">
-        <Loading message="Loading alerts..." />
-      </AppLayout>
-    )
-  }
-
-  const activeAlerts = alerts.filter((a) => a.status === 'active')
-  const criticalAlerts = activeAlerts.filter((a) => a.severity === 'critical')
-  const resolved24h = alerts.filter(
-    (a) =>
-      a.status === 'resolved' &&
-      new Date(a.resolvedAt || '').getTime() > Date.now() - 86400000
-  ).length
+  const getSeverityColor = (sev: string) => sev === 'critical' ? 'bg-red-500/20 text-red-400 border-red-500/50' : sev === 'warning' ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50' : 'bg-blue-500/20 text-blue-400 border-blue-500/50'
 
   return (
-    <AppLayout
-      title="Alerts & Monitoring"
-      subtitle={`${activeAlerts.length} active • ${criticalAlerts.length} critical`}
-    >
-      <div className="space-y-6">
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card variant="glass">
-            <div className="p-4">
-              <p className="text-neutral-400 text-sm mb-2">Active Alerts</p>
-              <span className="text-3xl font-bold text-warning-500">{activeAlerts.length}</span>
-              <p className="text-xs text-neutral-500 mt-2">requiring attention</p>
-            </div>
+    <div className="flex bg-neutral-950 min-h-screen">
+      <Sidebar />
+      <div className="flex-1 ml-64 p-8">
+        <div className="space-y-8">
+          <div>
+            <h1 className="text-4xl font-bold text-white mb-2">Alerts & Notifications</h1>
+            <p className="text-neutral-400">Monitor and manage system alerts</p>
+          </div>
+
+          <div className="grid grid-cols-5 gap-4">
+            <Card><div className="text-neutral-400 text-sm mb-2">Firing</div><div className="text-3xl font-bold text-red-400">{firing}</div><div className="text-xs text-neutral-400">Active alerts</div></Card>
+            <Card><div className="text-neutral-400 text-sm mb-2">Critical</div><div className="text-3xl font-bold text-red-400">{critical}</div></Card>
+            <Card><div className="text-neutral-400 text-sm mb-2">Warning</div><div className="text-3xl font-bold text-yellow-400">{alerts.filter(a => a.severity === 'warning').length}</div></Card>
+            <Card><div className="text-neutral-400 text-sm mb-2">Acknowledged</div><div className="text-3xl font-bold text-white">{alerts.filter(a => a.status === 'acknowledged').length}</div></Card>
+            <Card><div className="text-neutral-400 text-sm mb-2">Resolved</div><div className="text-3xl font-bold text-green-400">{alerts.filter(a => a.status === 'resolved').length}</div></Card>
+          </div>
+
+          <Card>
+            <h2 className="text-xl font-bold text-white mb-6">Alert Trend (24h)</h2>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={metrics}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                <XAxis dataKey="time" stroke="#999" />
+                <YAxis stroke="#999" />
+                <Tooltip contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333' }} />
+                <Legend />
+                <Bar dataKey="critical" stackId="a" fill="#EF4444" />
+                <Bar dataKey="warning" stackId="a" fill="#F59E0B" />
+                <Bar dataKey="info" stackId="a" fill="#3B82F6" />
+              </BarChart>
+            </ResponsiveContainer>
           </Card>
 
-          <Card variant="glass">
-            <div className="p-4">
-              <p className="text-neutral-400 text-sm mb-2">Critical</p>
-              <span className="text-3xl font-bold text-error-500">{criticalAlerts.length}</span>
-              <p className="text-xs text-neutral-500 mt-2">severity alerts</p>
-            </div>
-          </Card>
-
-          <Card variant="glass">
-            <div className="p-4">
-              <p className="text-neutral-400 text-sm mb-2">Alert Rules</p>
-              <span className="text-3xl font-bold text-primary-500">{rules.length}</span>
-              <p className="text-xs text-neutral-500 mt-2">
-                {rules.filter((r) => r.enabled).length} enabled
-              </p>
-            </div>
-          </Card>
-
-          <Card variant="glass">
-            <div className="p-4">
-              <p className="text-neutral-400 text-sm mb-2">Resolved (24h)</p>
-              <span className="text-3xl font-bold text-success-500">{resolved24h}</span>
-              <p className="text-xs text-neutral-500 mt-2">alerts resolved</p>
+          <Card>
+            <h2 className="text-xl font-bold text-white mb-6">Active Alerts</h2>
+            <div className="space-y-3">
+              {alerts.filter(a => a.status !== 'resolved').map((alert) => (
+                <div key={alert.id} className="p-4 bg-neutral-900 rounded-lg border border-neutral-700">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <Badge className={getSeverityColor(alert.severity)}>{alert.severity}</Badge>
+                        <div className="text-white font-semibold">{alert.title}</div>
+                      </div>
+                      <div className="text-neutral-400 text-sm">{alert.description}</div>
+                    </div>
+                    <Badge className={alert.status === 'firing' ? 'bg-red-500/20 text-red-400 border-red-500/50' : 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50'}>{alert.status}</Badge>
+                  </div>
+                  <div className="text-xs text-neutral-400">{alert.source} • {alert.affectedResources.join(', ')}</div>
+                </div>
+              ))}
             </div>
           </Card>
         </div>
-
-        {/* Alert Rules */}
-        <Card variant="glass">
-          <div className="p-6 border-b border-neutral-700">
-            <div className="flex justify-between items-center">
-              <h3 className="text-lg font-semibold text-white">Alert Rules</h3>
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => setShowRuleForm(!showRuleForm)}
-              >
-                + New Rule
-              </Button>
-            </div>
-          </div>
-
-          {showRuleForm && (
-            <div className="p-6 border-b border-neutral-700 bg-neutral-800/30">
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-neutral-300 mb-2">
-                    Rule Name
-                  </label>
-                  <input
-                    type="text"
-                    value={newRule.name}
-                    onChange={(e) => setNewRule({ ...newRule, name: e.target.value })}
-                    placeholder="e.g., High CPU Usage"
-                    className="w-full px-3 py-2 bg-neutral-700 border border-neutral-600 rounded-lg text-white placeholder-neutral-500 focus:border-primary-500 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-neutral-300 mb-2">
-                    Condition
-                  </label>
-                  <input
-                    type="text"
-                    value={newRule.condition}
-                    onChange={(e) => setNewRule({ ...newRule, condition: e.target.value })}
-                    placeholder="e.g., cpu_utilization > 85%"
-                    className="w-full px-3 py-2 bg-neutral-700 border border-neutral-600 rounded-lg text-white placeholder-neutral-500 focus:border-primary-500 focus:outline-none"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-neutral-300 mb-2">
-                      Threshold
-                    </label>
-                    <input
-                      type="number"
-                      value={newRule.threshold}
-                      onChange={(e) =>
-                        setNewRule({ ...newRule, threshold: parseInt(e.target.value) || 0 })
-                      }
-                      className="w-full px-3 py-2 bg-neutral-700 border border-neutral-600 rounded-lg text-white placeholder-neutral-500 focus:border-primary-500 focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-neutral-300 mb-2">
-                      Severity
-                    </label>
-                    <select
-                      value={newRule.severity}
-                      onChange={(e) =>
-                        setNewRule({
-                          ...newRule,
-                          severity: e.target.value as 'critical' | 'high' | 'medium' | 'low',
-                        })
-                      }
-                      className="w-full px-3 py-2 bg-neutral-700 border border-neutral-600 rounded-lg text-white focus:border-primary-500 focus:outline-none"
-                    >
-                      <option value="critical">Critical</option>
-                      <option value="high">High</option>
-                      <option value="medium">Medium</option>
-                      <option value="low">Low</option>
-                    </select>
-                  </div>
-                </div>
-                <div className="flex gap-2 justify-end">
-                  <Button variant="secondary" size="sm" onClick={() => setShowRuleForm(false)}>
-                    Cancel
-                  </Button>
-                  <Button variant="primary" size="sm" onClick={handleCreateRule}>
-                    Create Rule
-                  </Button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="border-b border-neutral-700">
-                <tr>
-                  <th className="px-6 py-3 text-left text-neutral-400 font-medium">Rule Name</th>
-                  <th className="px-6 py-3 text-left text-neutral-400 font-medium">Condition</th>
-                  <th className="px-6 py-3 text-left text-neutral-400 font-medium">Severity</th>
-                  <th className="px-6 py-3 text-left text-neutral-400 font-medium">Status</th>
-                  <th className="px-6 py-3 text-left text-neutral-400 font-medium">Actions</th>
-                  <th className="px-6 py-3 text-left text-neutral-400 font-medium">Last Triggered</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-neutral-700">
-                {rules.map((rule) => (
-                  <tr key={rule.id} className="hover:bg-neutral-800/30">
-                    <td className="px-6 py-3 text-neutral-100 font-medium">{rule.name}</td>
-                    <td className="px-6 py-3 text-neutral-400 font-mono text-xs">{rule.condition}</td>
-                    <td className="px-6 py-3">
-                      <Badge
-                        status={
-                          rule.severity === 'critical'
-                            ? 'error'
-                            : rule.severity === 'high'
-                              ? 'warning'
-                              : 'info'
-                        }
-                      >
-                        {rule.severity.charAt(0).toUpperCase() + rule.severity.slice(1)}
-                      </Badge>
-                    </td>
-                    <td className="px-6 py-3">
-                      <button
-                        onClick={() => handleToggleRule(rule.id)}
-                        className={`px-3 py-1 rounded-full text-xs font-medium transition ${
-                          rule.enabled
-                            ? 'bg-success-500/20 text-success-300'
-                            : 'bg-neutral-700 text-neutral-400'
-                        }`}
-                      >
-                        {rule.enabled ? 'Enabled' : 'Disabled'}
-                      </button>
-                    </td>
-                    <td className="px-6 py-3 text-neutral-400 text-xs">
-                      {rule.actions.join(', ')}
-                    </td>
-                    <td className="px-6 py-3 text-neutral-500 text-xs">
-                      {rule.lastTriggered
-                        ? new Date(rule.lastTriggered).toLocaleString()
-                        : 'Never'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-
-        {/* Active Alerts */}
-        <Card variant="glass">
-          <div className="p-6 border-b border-neutral-700">
-            <h3 className="text-lg font-semibold text-white">Active Alerts</h3>
-          </div>
-          <div className="divide-y divide-neutral-700">
-            {activeAlerts.length === 0 ? (
-              <div className="p-6 text-center text-neutral-400">No active alerts</div>
-            ) : (
-              activeAlerts.map((alert) => (
-                <div key={alert.id} className="p-6 hover:bg-neutral-800/20 transition">
-                  <div className="flex justify-between items-start gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Badge status={alert.severity === 'critical' ? 'error' : 'warning'}>
-                          {alert.severity.toUpperCase()}
-                        </Badge>
-                        <span className="text-white font-medium">{alert.ruleName}</span>
-                      </div>
-                      <p className="text-neutral-400 text-sm mb-2">{alert.message}</p>
-                      <p className="text-neutral-500 text-xs">
-                        Triggered {new Date(alert.triggeredAt).toLocaleString()}
-                      </p>
-                    </div>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => handleAcknowledgeAlert(alert.id)}
-                    >
-                      Acknowledge
-                    </Button>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </Card>
-
-        {/* Alert History */}
-        <Card variant="glass">
-          <div className="p-6 border-b border-neutral-700">
-            <h3 className="text-lg font-semibold text-white">Alert History</h3>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="border-b border-neutral-700">
-                <tr>
-                  <th className="px-6 py-3 text-left text-neutral-400 font-medium">Alert</th>
-                  <th className="px-6 py-3 text-left text-neutral-400 font-medium">Severity</th>
-                  <th className="px-6 py-3 text-left text-neutral-400 font-medium">Status</th>
-                  <th className="px-6 py-3 text-left text-neutral-400 font-medium">Triggered</th>
-                  <th className="px-6 py-3 text-left text-neutral-400 font-medium">Resolved</th>
-                  <th className="px-6 py-3 text-left text-neutral-400 font-medium">Acknowledged By</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-neutral-700">
-                {alerts.map((alert) => (
-                  <tr key={alert.id} className="hover:bg-neutral-800/30">
-                    <td className="px-6 py-3 text-neutral-100 font-medium">{alert.ruleName}</td>
-                    <td className="px-6 py-3">
-                      <Badge status={alert.severity === 'critical' ? 'error' : 'warning'}>
-                        {alert.severity.charAt(0).toUpperCase() + alert.severity.slice(1)}
-                      </Badge>
-                    </td>
-                    <td className="px-6 py-3">
-                      <Badge status={alert.status === 'active' ? 'warning' : 'success'}>
-                        {alert.status === 'active' ? 'Active' : 'Resolved'}
-                      </Badge>
-                    </td>
-                    <td className="px-6 py-3 text-neutral-400 text-xs">
-                      {new Date(alert.triggeredAt).toLocaleString()}
-                    </td>
-                    <td className="px-6 py-3 text-neutral-400 text-xs">
-                      {alert.resolvedAt ? new Date(alert.resolvedAt).toLocaleString() : '-'}
-                    </td>
-                    <td className="px-6 py-3 text-neutral-400 text-xs">
-                      {alert.acknowledgedBy || '-'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
       </div>
-    </AppLayout>
+    </div>
   )
 }
-
-export default Alerts
