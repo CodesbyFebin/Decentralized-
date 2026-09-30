@@ -71,12 +71,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-          cache: 'npm'
-          cache-dependency-path: 'api/package-lock.json'
 
       - name: Install dependencies
         working-directory: api
-        run: npm ci --legacy-peer-deps
+        run: npm install --legacy-peer-deps
 
       - name: Run type check
         working-directory: api
