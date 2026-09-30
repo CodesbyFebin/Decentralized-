@@ -244,7 +244,12 @@ func (ltc *LocalTestCluster) InjectStorageCorruption(ctx context.Context, nodeID
 
 	// Flip a bit in a random data file to simulate corruption
 	cmd := exec.CommandContext(ctx, ltc.containerRuntime, "exec", containerName,
-		"bash", "-c", `find /data -name "*.cas" -type f | head -1 | xargs -I {} sh -c 'dd if={} bs=1 count=1 2>/dev/null | od -An -tx1 | head -1' `)
+		"bash", "-c", `
+file=$(find /data -name "*.cas" -type f | head -1)
+if [ -z "$file" ]; then exit 1; fi
+offset=$((RANDOM % $(stat -c%s "$file")))
+printf '\\x00' | dd of="$file" bs=1 count=1 seek=$offset conv=notrunc 2>/dev/null
+`)
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("storage corruption injection failed: %w", err)
 	}
@@ -357,9 +362,10 @@ func (ltc *LocalTestCluster) OffsetClock(ctx context.Context, nodeID string, off
 	}
 
 	// Use date command to offset clock (requires root in container)
+	// Calculate target time by adding offset to current time
 	offsetSec := int64(offset.Seconds())
 	cmd := exec.CommandContext(ctx, ltc.containerRuntime, "exec", containerName,
-		"bash", "-c", fmt.Sprintf("date -s '+%d seconds'", offsetSec))
+		"bash", "-c", fmt.Sprintf("date -s \"@$(($(date +%%s)+%d))\"", offsetSec))
 	return cmd.Run()
 }
 

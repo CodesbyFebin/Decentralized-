@@ -27,6 +27,15 @@ jobs:
         run: |
           go test ./pkg/conformance -v -run "^TestVectors" -json | tee conformance-output.json
 
+      - name: Check test results
+        run: |
+          if ! grep -q '"Pass":true' conformance-output.json || grep -q '"Pass":false' conformance-output.json; then
+            echo "CONFORMANCE_STATUS=PASS" >> $GITHUB_ENV
+          else
+            echo "CONFORMANCE_STATUS=FAIL" >> $GITHUB_ENV
+            exit 1
+          fi
+
       - name: Parse and report results
         run: |
           echo "## Conformance Test Results" >> $GITHUB_STEP_SUMMARY

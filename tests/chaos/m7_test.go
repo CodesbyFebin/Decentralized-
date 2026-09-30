@@ -182,18 +182,19 @@ func BenchmarkM7Recovery(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		b.StopTimer() // Setup phase
+		b.StopTimer() // Setup: kill node
 
-		// Kill a node
+		// Kill a node to trigger recovery
 		if err := tc.KillNode(ctx, "provider-1"); err != nil {
 			b.Fatalf("failed to kill node: %v", err)
 		}
 
-		b.StartTimer() // Measure recovery
+		b.StartTimer() // Measure: recovery time only
 
-		// Time until cluster recovers
+		// Time until cluster recovers to healthy state
 		startRecovery := time.Now()
 		recoveryTimeout := time.After(10 * time.Second)
+		recovered := false
 		for {
 			select {
 			case <-recoveryTimeout:
@@ -203,6 +204,7 @@ func BenchmarkM7Recovery(b *testing.B) {
 					if err := tc.VerifyRaftLeader(ctx); err == nil {
 						elapsed := time.Since(startRecovery)
 						b.ReportMetric(elapsed.Seconds(), "recovery_time_s")
+						recovered = true
 						break
 					}
 				}
@@ -210,8 +212,11 @@ func BenchmarkM7Recovery(b *testing.B) {
 			}
 		}
 
-		b.StopTimer() // Cleanup phase
-		tc.RestartNode(ctx, "provider-1")
+		b.StopTimer() // Cleanup: restart node for next iteration
+
+		if recovered {
+			tc.RestartNode(ctx, "provider-1")
+		}
 	}
 }
 

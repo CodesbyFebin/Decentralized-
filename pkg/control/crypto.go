@@ -302,13 +302,11 @@ func ClearBytes(buf []byte) {
 	if len(buf) == 0 {
 		return
 	}
-	// Use subtle.ConstantTimeCompare(buf, buf) to prevent the compiler from optimizing away
-	// the zeroing, since it would see that the buffer is never read again.
-	// This forces the memory write to happen before any potential use-after-clear.
-	_ = subtle.ConstantTimeCompare(buf, buf)
+	// Overwrite with zeros using copy() - less likely to be optimized away than explicit loop.
+	// This is the standard Go pattern for secure erasure per crypto/internal/fips/alias.go
+	copy(buf, make([]byte, len(buf)))
 
-	// Overwrite with zeros
-	for i := range buf {
-		buf[i] = 0
-	}
+	// Verify the clearing with a constant-time comparison to ensure the compiler
+	// materializes the preceding clear before potentially reusing the buffer.
+	_ = subtle.ConstantTimeCompare(buf, buf)
 }

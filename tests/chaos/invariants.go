@@ -156,7 +156,7 @@ func checkLeaderElection(ctx context.Context, tc TestCluster, scenario *Scenario
 // checkStateRecovery verifies failed nodes recover their state.
 func checkStateRecovery(ctx context.Context, tc TestCluster, scenario *Scenario) error {
 	// After restart, node should rejoin cluster with consistent state
-	if scenario.ID == "node-kill-and-restart" || scenario.ID == "cascade-failure" || scenario.ID == "shutdown" {
+	if scenario.ID == "node-kill-3" || scenario.ID == "cascading-1" || scenario.ID == "shutdown-1" {
 		// Give node time to restart and rejoin
 		time.Sleep(2 * time.Second)
 		return tc.VerifyNodeCount(ctx, 3)
@@ -167,7 +167,7 @@ func checkStateRecovery(ctx context.Context, tc TestCluster, scenario *Scenario)
 // checkStatePersistence verifies committed state survives restarts.
 func checkStatePersistence(ctx context.Context, tc TestCluster, scenario *Scenario) error {
 	// After restart, data should still be present
-	if scenario.ID == "node-kill-and-restart" || scenario.ID == "shutdown" {
+	if scenario.ID == "node-kill-3" || scenario.ID == "shutdown-1" {
 		return tc.VerifyDataIntegrity(ctx)
 	}
 	return nil
