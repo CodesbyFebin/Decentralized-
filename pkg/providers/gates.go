@@ -39,12 +39,13 @@ func (ge *GateExecutor) ExecuteAllGates(ctx context.Context, resourceID string, 
 	adapter ProviderAdapter, cfg *ProviderConfig, topology *RuntimeTopology) (*QualificationCampaign, error) {
 
 	campaign := &QualificationCampaign{
-		ID:         fmt.Sprintf("qual-%d", time.Now().UnixNano()),
-		ResourceID: resourceID,
-		StartTime:  time.Now(),
-		SourceSHA:  sourceSHA,
-		Status:     "RUNNING",
-		GateResults: make([]GateResult, 0, 32),
+		ID:                   fmt.Sprintf("qual-%d", time.Now().UnixNano()),
+		ResourceID:           resourceID,
+		StartTime:            time.Now(),
+		SourceSHA:            sourceSHA,
+		Status:               "RUNNING",
+		GateResults:          make([]GateResult, 0, 32),
+		BackendSpecificGates: make(map[string][]GateResult),
 	}
 
 	gateCtx := &GateTestContext{
@@ -123,12 +124,20 @@ func (ge *GateExecutor) ExecuteAllGates(ctx context.Context, resourceID string, 
 		}
 	}
 
+	// Execute backend-specific qualification gates if topology available
+	if topology != nil && len(topology.Nodes) > 0 {
+		ge.executeBackendSpecificGates(ctx, campaign, topology, resourceID, sourceSHA)
+	}
+
 	campaign.EndTime = time.Now()
 	if allPassed {
 		campaign.Status = "PASSED"
 	} else {
 		campaign.Status = "FAILED"
 	}
+
+	// Determine qualification level based on backend
+	campaign.QualificationLevel = ge.determineQualificationLevel(topology, campaign)
 
 	// Create signed evidence from observed infrastructure
 	evidence := &QualifiedEvidence{
@@ -138,7 +147,7 @@ func (ge *GateExecutor) ExecuteAllGates(ctx context.Context, resourceID string, 
 		Timestamp:      campaign.EndTime,
 		ContentHash:    ge.signer.HashResourceState(resourceID + sourceSHA),
 		P1_CORE_Passed: allPassed,
-		StateSnapshot:  fmt.Sprintf("%d gates executed, %d passed", len(campaign.GateResults), countPassed(campaign.GateResults)),
+		StateSnapshot:  fmt.Sprintf("%d gates executed, %d passed; level: %s", len(campaign.GateResults), countPassed(campaign.GateResults), campaign.QualificationLevel),
 	}
 
 	// Classify failure domains based on topology
@@ -601,6 +610,96 @@ func (ge *GateExecutor) gateAuditTrail(gateCtx *GateTestContext) (*GateResult, e
 	}, nil
 }
 
+// executeBackendSpecificGates runs backend-specific qualification gates.
+func (ge *GateExecutor) executeBackendSpecificGates(ctx context.Context, campaign *QualificationCampaign,
+	topology *RuntimeTopology, resourceID string, sourceSHA string) {
+
+	if len(topology.Nodes) == 0 {
+		return
+	}
+
+	backend := topology.Nodes[0].Backend
+
+	// Execute backend-specific gates based on detected backend
+	switch backend {
+	case BACKEND_QEMU_VM:
+		qe := NewQEMUGateExecutor(ctx, ge.signer)
+		results, _ := qe.ExecuteQEMUGates(ctx, resourceID, sourceSHA, topology)
+		gateResults := make([]GateResult, len(results))
+		for i, r := range results {
+			if r != nil {
+				gateResults[i] = *r
+			}
+		}
+		campaign.BackendSpecificGates["P1_QEMU"] = gateResults
+
+	case BACKEND_KUBERNETES:
+		ke := NewKubernetesGateExecutor(ctx, ge.signer)
+		results, _ := ke.ExecuteKubernetesGates(ctx, resourceID, sourceSHA, topology)
+		gateResults := make([]GateResult, len(results))
+		for i, r := range results {
+			if r != nil {
+				gateResults[i] = *r
+			}
+		}
+		campaign.BackendSpecificGates["P1_K8S"] = gateResults
+
+	case BACKEND_NATIVE, BACKEND_CONTAINER:
+		// Native and container environments support P2_MULTIPHYSICAL if ≥3 nodes
+		if len(topology.Nodes) >= 3 {
+			me := NewMultiPhysicalGateExecutor(ctx, ge.signer)
+			results, _ := me.ExecuteMultiPhysicalGates(ctx, resourceID, sourceSHA, topology)
+			gateResults := make([]GateResult, len(results))
+			for i, r := range results {
+				if r != nil {
+					gateResults[i] = *r
+				}
+			}
+			campaign.BackendSpecificGates["P2_MULTIPHYSICAL"] = gateResults
+		}
+	}
+}
+
+// determineQualificationLevel sets the qualification level based on gate results and backend.
+func (ge *GateExecutor) determineQualificationLevel(topology *RuntimeTopology, campaign *QualificationCampaign) string {
+	// Check if P1_CORE passed
+	p1CorePassed := true
+	for _, result := range campaign.GateResults {
+		if !result.Passed {
+			p1CorePassed = false
+			break
+		}
+	}
+
+	if !p1CorePassed {
+		return "P1_CORE_FAILED"
+	}
+
+	level := "P1_CORE"
+
+	// Check backend-specific qualifications
+	if backendGates, hasQEMU := campaign.BackendSpecificGates["P1_QEMU"]; hasQEMU {
+		if allPassed(backendGates) {
+			level = "P1_QEMU"
+		}
+	}
+
+	if backendGates, hasK8S := campaign.BackendSpecificGates["P1_K8S"]; hasK8S {
+		if allPassed(backendGates) {
+			level = "P1_K8S"
+		}
+	}
+
+	// Check for P2_MULTIPHYSICAL (requires ≥3 physical hosts)
+	if backendGates, hasP2 := campaign.BackendSpecificGates["P2_MULTIPHYSICAL"]; hasP2 {
+		if allPassed(backendGates) && topology != nil && topology.PhysicalHosts >= 3 {
+			level = "P2_MULTIPHYSICAL"
+		}
+	}
+
+	return level
+}
+
 // Utility functions
 func countPassed(results []GateResult) int {
 	count := 0
@@ -610,6 +709,15 @@ func countPassed(results []GateResult) int {
 		}
 	}
 	return count
+}
+
+func allPassed(results []GateResult) bool {
+	for _, r := range results {
+		if !r.Passed {
+			return false
+		}
+	}
+	return len(results) > 0
 }
 
 func hashStates(states []string) string {

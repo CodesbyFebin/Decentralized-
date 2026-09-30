@@ -131,16 +131,18 @@ func VerifyEvidence(evidence *QualifiedEvidence) error {
 	return nil
 }
 
-// QualificationCampaign tracks a single qualification run (32 gates for P1_CORE).
+// QualificationCampaign tracks a single qualification run across all profile levels.
 type QualificationCampaign struct {
-	ID           string           `json:"id"`            // Unique campaign ID
-	ResourceID   string           `json:"resource_id"`   // Resource being qualified
-	StartTime    time.Time        `json:"start_time"`
-	EndTime      time.Time        `json:"end_time,omitempty"`
-	SourceSHA    string           `json:"source_sha"`    // Qualification code version
-	GateResults  []GateResult     `json:"gate_results"`  // Results of 32 P1_CORE gates
-	Evidence     *QualifiedEvidence `json:"evidence"`    // Final signed evidence
-	Status       string           `json:"status"`        // RUNNING | PASSED | FAILED
+	ID                  string                      `json:"id"`                   // Unique campaign ID
+	ResourceID          string                      `json:"resource_id"`          // Resource being qualified
+	StartTime           time.Time                   `json:"start_time"`
+	EndTime             time.Time                   `json:"end_time,omitempty"`
+	SourceSHA           string                      `json:"source_sha"`           // Qualification code version
+	GateResults         []GateResult                `json:"gate_results"`         // Results of P1_CORE gates
+	BackendSpecificGates map[string][]GateResult   `json:"backend_specific_gates"` // Results of backend-specific gates
+	Evidence            *QualifiedEvidence          `json:"evidence"`             // Final signed evidence
+	Status              string                      `json:"status"`               // RUNNING | PASSED | FAILED
+	QualificationLevel  string                      `json:"qualification_level"`  // P1_CORE | P1_QEMU | P1_K8S | P2_MULTIPHYSICAL
 }
 
 // GateResult represents the result of one qualification gate.
