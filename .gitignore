@@ -40,3 +40,9 @@ bootstrap.fingerprint
 /p1-evidence/
 /validation/local-vm/evidence/P1-CLOSE-A01-EXECUTION-*
 dh
+
+# Release artifacts (build outputs)
+dh-v*.tar.gz
+release-v*
+evidence-v*
+*-checksums.txt
