@@ -1,0 +1,55 @@
+name: Update Repository Metadata
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/update-repo-metadata.yml'
+
+permissions:
+  contents: read
+  repository-projects: write
+
+jobs:
+  update-metadata:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update Repository Description and Topics
+        run: |
+          curl -X PATCH \
+            -H "Accept: application/vnd.github+json" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}" \
+            -d '{
+              "description": "Sovereign infrastructure with signed intent, local policy enforcement, and distributed state. Cryptographic qualification system with Ed25519 identities, BLAKE3 content addressing, Raft consensus, and chaos-validated resilience.",
+              "homepage": "https://github.com/CodesbyFebin/Decentralized-",
+              "topics": [
+                "infrastructure",
+                "distributed-systems",
+                "decentralization",
+                "kubernetes",
+                "golang",
+                "cryptography",
+                "ed25519",
+                "consensus",
+                "raft",
+                "policy-enforcement",
+                "qualification-system",
+                "chaos-engineering",
+                "security",
+                "devops",
+                "cloud-native",
+                "sovereign-infrastructure",
+                "open-source",
+                "production-ready"
+              ]
+            }'
+
+      - name: Verify Update
+        run: |
+          curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}" \
+            | jq '{description, homepage, topics}'
