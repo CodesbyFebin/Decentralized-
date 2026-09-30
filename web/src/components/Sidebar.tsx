@@ -4,7 +4,8 @@ import { useRouter } from 'next/router'
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: '📊' },
-  { name: 'Nodes & Compute', href: '/nodes', icon: '🖥️' },
+  { name: 'Nodes', href: '/nodes', icon: '🖥️' },
+  { name: 'Compute', href: '/compute', icon: '⚡' },
   { name: 'Storage', href: '/storage', icon: '💾' },
   { name: 'Deployments', href: '/deploy', icon: '🚀' },
   { name: 'Domains', href: '/domains', icon: '🌐' },
@@ -12,6 +13,8 @@ const navigation = [
   { name: 'Analytics', href: '/analytics', icon: '📈' },
   { name: 'Team', href: '/team', icon: '👥' },
   { name: 'Settings', href: '/settings', icon: '⚙️' },
+  { name: 'Copilot', href: '/copilot', icon: '🤖' },
+  { name: 'Evidence', href: '/evidence', icon: '📋' },
 ]
 
 export const Sidebar: React.FC = () => {
