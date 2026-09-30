@@ -60,17 +60,17 @@ export const Sidebar: React.FC = () => {
         {navigation.map((item) => {
           const isActive = router.pathname === item.href
           return (
-            <Link key={item.href} href={item.href}>
-              <a
-                className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors ${
-                  isActive
-                    ? 'bg-primary-500/20 text-primary-500 border border-primary-500/50'
-                    : 'text-neutral-400 hover:bg-neutral-800 hover:text-neutral-200'
-                }`}
-              >
-                <span className="text-lg">{item.icon}</span>
-                {!collapsed && <span className="font-medium">{item.name}</span>}
-              </a>
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors ${
+                isActive
+                  ? 'bg-primary-500/20 text-primary-500 border border-primary-500/50'
+                  : 'text-neutral-400 hover:bg-neutral-800 hover:text-neutral-200'
+              }`}
+            >
+              <span className="text-lg">{item.icon}</span>
+              {!collapsed && <span className="font-medium">{item.name}</span>}
             </Link>
           )
         })}
