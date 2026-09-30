@@ -10,13 +10,15 @@
 
 ## What This Is
 
-Decentralized.Host is a distributed workload orchestrator built on three core principles:
+Decentralized.Host is a distributed workload orchestrator and sovereign developer cloud built on three core principles:
 
 1. **Signed Intent**: All work is proposed as cryptographically signed requests using Ed25519 identities. No anonymous or forgeable instructions.
 2. **Local Policy Enforcement**: Every host independently evaluates incoming work against its own policy before admission. No global consensus on what runs where.
 3. **Immutable Evidence**: All state transitions are recorded in a Raft-backed audit trail with cryptographic signatures. Full deterministic replay capability.
 
 This eliminates silent task migration, enforces operator authority at each machine, and provides irrefutable evidence of what ran and when.
+
+**From a product perspective**: D.H solves **50 everyday developer problems** (Git, CI/CD, database, storage, secrets, observability, AI, agents) while enabling **50 sovereign innovations** (cryptographic proof-of-deployment, privacy-boundary scheduling, incident replay, portable capsules, agent passports, and more). See [100 Capabilities: 50 Problems + 50 Innovations](docs/100-CAPABILITIES-SOVEREIGN-INNOVATIONS.md) for the full framework.
 
 ---
 
