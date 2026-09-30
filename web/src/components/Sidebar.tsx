@@ -77,7 +77,13 @@ export const Sidebar: React.FC = () => {
       </nav>
 
       <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-neutral-700">
-        <button className="w-full px-4 py-2 bg-neutral-800 hover:bg-neutral-700 rounded-lg text-neutral-300 text-sm font-medium transition-colors">
+        <button
+          onClick={() => {
+            localStorage.removeItem('auth_token')
+            window.location.href = '/login'
+          }}
+          className="w-full px-4 py-2 bg-neutral-800 hover:bg-neutral-700 rounded-lg text-neutral-300 text-sm font-medium transition-colors"
+        >
           {!collapsed && 'Logout'}
         </button>
       </div>

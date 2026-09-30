@@ -8,6 +8,7 @@ import { ErrorState } from '@/components/ErrorState'
 import { AreaChart } from '@/components/Charts/AreaChart'
 import { LineChart } from '@/components/Charts/LineChart'
 import { apiClient } from '@/lib/api'
+import { withAuth } from '@/lib/withAuth'
 import { DashboardMetrics, Activity, Node } from '@/types'
 
 const Dashboard: React.FC = () => {
@@ -312,4 +313,4 @@ const Dashboard: React.FC = () => {
   )
 }
 
-export default Dashboard
+export default withAuth(Dashboard)
