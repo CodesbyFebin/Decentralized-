@@ -27,7 +27,7 @@ export class MailSMTPServer {
     this.smtpServer = new SMTPServer(options)
   }
 
-  private async authenticate(auth: any, session: SMTPServerSession, callback: Function) {
+  private async authenticate(auth: any, session: SMTPServerSession, callback: (err?: Error | null, user?: any) => void) {
     try {
       const mailbox = await this.mailService.getMailboxByEmail(auth.username)
       if (!mailbox) {
@@ -49,7 +49,7 @@ export class MailSMTPServer {
     }
   }
 
-  private async onConnect(session: SMTPServerSession, callback: Function) {
+  private async onConnect(session: SMTPServerSession, callback: (err?: Error | null) => void) {
     console.log(`[SMTP] New connection from ${session.remoteAddress}`)
     callback()
   }
@@ -57,7 +57,7 @@ export class MailSMTPServer {
   private async onMailFrom(
     address: any,
     session: SMTPServerSession,
-    callback: Function
+    callback: (err?: Error | null) => void
   ) {
     try {
       const mailbox = await this.mailService.getMailboxByEmail(address.address)
@@ -65,15 +65,16 @@ export class MailSMTPServer {
         return callback(new Error('Unauthorized sender'))
       }
 
-      (session as any).mailboxId = mailbox.id
-      (session as any).from = address.address
+      const sessionData = session as any
+      sessionData.mailboxId = mailbox.id
+      sessionData.from = address.address
       callback()
     } catch (error: any) {
       callback(error)
     }
   }
 
-  private async onRcptTo(address: any, session: SMTPServerSession, callback: Function) {
+  private async onRcptTo(address: any, session: SMTPServerSession, callback: (err?: Error | null) => void) {
     try {
       if (!(session as any).recipients) {
         (session as any).recipients = []
@@ -85,7 +86,7 @@ export class MailSMTPServer {
     }
   }
 
-  private async onData(stream: any, session: SMTPServerSession, callback: Function) {
+  private async onData(stream: any, session: SMTPServerSession, callback: (err?: Error | null) => void) {
     try {
       let rawEmail = ''
 
@@ -162,7 +163,7 @@ export class MailSMTPServer {
     })
   }
 
-  stop(callback?: Function) {
+  stop(callback?: () => void) {
     this.smtpServer.close(callback)
   }
 }
