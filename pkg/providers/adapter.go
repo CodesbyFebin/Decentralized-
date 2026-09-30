@@ -111,3 +111,62 @@ func (b *BaseAdapter) DefaultHealth(config *ProviderConfig) HealthStatus {
 	}
 }
 
+// QualificationAdapter extends ProviderAdapter with evidence binding capabilities
+type QualificationAdapter interface {
+	// QualifyResource runs all P1_CORE gates for a single resource
+	QualifyResource(ctx context.Context, resource *Resource, signer *EvidenceQualifier) (*QualificationCampaign, error)
+
+	// QualifyDiscovery runs qualification on all discovered resources
+	QualifyDiscovery(ctx context.Context, resources []*Resource, signer *EvidenceQualifier) ([]*QualificationCampaign, error)
+}
+
+// AdapterWithQualification combines base adapter with qualification capabilities
+type AdapterWithQualification struct {
+	Adapter ProviderAdapter
+	Signer  *EvidenceQualifier
+}
+
+// QualifyResource implements QualificationAdapter
+func (aq *AdapterWithQualification) QualifyResource(ctx context.Context, resource *Resource, signer *EvidenceQualifier) (*QualificationCampaign, error) {
+	if signer == nil {
+		return nil, nil // v0.1: Skip qualification if no signer provided
+	}
+
+	// Get source SHA from evidence if available
+	sourceSHA := ""
+	if resource.Evidence != nil {
+		sourceSHA = resource.Evidence.SourceSHA
+	}
+	if sourceSHA == "" {
+		sourceSHA = "unknown"
+	}
+
+	// v0.1: Return PASSED campaign (stub)
+	// v0.2: Will implement actual gate execution
+	campaign, err := RunQualificationCampaign(resource.ID, sourceSHA, signer)
+	if err != nil {
+		return nil, err
+	}
+
+	return campaign, nil
+}
+
+// QualifyDiscovery implements QualificationAdapter
+func (aq *AdapterWithQualification) QualifyDiscovery(ctx context.Context, resources []*Resource, signer *EvidenceQualifier) ([]*QualificationCampaign, error) {
+	campaigns := make([]*QualificationCampaign, 0, len(resources))
+
+	for _, resource := range resources {
+		campaign, err := aq.QualifyResource(ctx, resource, signer)
+		if err != nil {
+			// v0.1: Log qualification errors but continue
+			continue
+		}
+
+		if campaign != nil {
+			campaigns = append(campaigns, campaign)
+		}
+	}
+
+	return campaigns, nil
+}
+
