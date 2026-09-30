@@ -1,0 +1,44 @@
+# Decentralized.Host Code Owners
+# This file specifies who should review certain areas of the codebase
+
+# Default owner for all files
+* @CodesbyFebin
+
+# Core qualification system
+/pkg/identity/ @CodesbyFebin
+/pkg/policy/ @CodesbyFebin
+/pkg/state/ @CodesbyFebin
+/pkg/consensus/ @CodesbyFebin
+
+# Provider implementations
+/pkg/providers/performance_optimization.go @CodesbyFebin
+/pkg/providers/graphql_api.go @CodesbyFebin
+/pkg/providers/advanced_monitoring.go @CodesbyFebin
+/pkg/providers/cache.go @CodesbyFebin
+/pkg/providers/database.go @CodesbyFebin
+/pkg/providers/event_streaming.go @CodesbyFebin
+
+# Conformance and testing
+/tests/conformance/ @CodesbyFebin
+/tests/chaos/ @CodesbyFebin
+/tests/integration/ @CodesbyFebin
+
+# Documentation
+/README.md @CodesbyFebin
+/DEPLOYMENT.md @CodesbyFebin
+/API_DOCUMENTATION.md @CodesbyFebin
+/QUALIFICATION_SYSTEM.md @CodesbyFebin
+
+# Governance and community
+/CONTRIBUTING.md @CodesbyFebin
+/CODE_OF_CONDUCT.md @CodesbyFebin
+
+# CI/CD and build configuration
+/.github/ @CodesbyFebin
+/Makefile @CodesbyFebin
+/docker-compose.yml @CodesbyFebin
+/Dockerfile @CodesbyFebin
+
+# Dependencies and modules
+/go.mod @CodesbyFebin
+/go.sum @CodesbyFebin

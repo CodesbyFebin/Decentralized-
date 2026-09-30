@@ -3,10 +3,12 @@ package control
 import (
 	"fmt"
 	"sort"
+	"time"
 
 	"decentralized.host/pkg/api"
 	"decentralized.host/pkg/audit"
 	"decentralized.host/pkg/envelope"
+	"decentralized.host/pkg/system"
 )
 
 // State is the replicated control-plane document. Everything in it is
@@ -72,6 +74,19 @@ type Node struct {
 	ObsEnv        *envelope.Envelope `json:"obsEnv"`
 	ObsDigest     string             `json:"obsDigest"`
 	FirstSeen     int64              `json:"firstSeen"`
+	Hardware      *system.HardwareProfile `json:"hardware,omitempty"` // DePIN: detected hardware capabilities
+	OwnerReserve  *OwnerReserveRecord     `json:"ownerReserve,omitempty"` // DePIN: owner resource reservation
+}
+
+// OwnerReserveRecord tracks the owner's authority over a node's resources
+type OwnerReserveRecord struct {
+	OwnerID        string    `json:"owner_id"`
+	Status         string    `json:"status"` // verified | pending | expired | revoked
+	CreatedAt      time.Time `json:"created_at"`
+	VerifiedAt     time.Time `json:"verified_at,omitempty"`
+	ExpiresAt      time.Time `json:"expires_at,omitempty"`
+	TokenSigner    string    `json:"token_signer"` // Ed25519 pub key that signed the reserve token
+	TokenSignature string    `json:"token_signature"` // Evidence: signature of the verification token
 }
 
 // ValidKeys returns wire keys valid at ts.

@@ -38,6 +38,25 @@ func (s *Server) opRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/mesh/ping", s.op(read, s.handleMeshPing))
 	mux.HandleFunc("GET /api/v1/cp/raft", s.op(read, s.handleRaftInfo))
 
+	// DePIN Discovery Surface (Phase 4a)
+	mux.HandleFunc("GET /api/v1/depins/profiles", s.op(read, s.handleDePINProfiles))
+	mux.HandleFunc("GET /api/v1/nodes/{id}/hardware", s.op(read, s.handleNodeHardware))
+	mux.HandleFunc("GET /api/v1/nodes/{id}/compatibility", s.op(read, s.handleNodeCompatibility))
+	mux.HandleFunc("GET /api/v1/nodes/{id}/reserve", s.op(read, s.handleNodeReserve))
+	mux.HandleFunc("POST /api/v1/nodes/{id}/reserve", s.opWrite(write, s.handleCreateReserve))
+
+	// Provider Adapters (Phase 4b) - Viral Loop
+	mux.HandleFunc("POST /api/v1/providers/connect", s.opWrite(write, s.handleConnectProvider))
+	mux.HandleFunc("GET /api/v1/providers/graph", s.op(read, s.handleProviderGraph))
+	mux.HandleFunc("GET /api/v1/providers/health", s.op(read, s.handleProviderHealth))
+	mux.HandleFunc("POST /api/v1/providers/migrate", s.opWrite(write, s.handleMigrationPlan))
+
+	// Evidence & Qualification (Phase 4c)
+	mux.HandleFunc("POST /api/v1/qualification/campaign", s.opWrite(write, s.handleQualificationCampaign))
+	mux.HandleFunc("POST /api/v1/qualification/chaos", s.opWrite(write, s.handleChaosTest))
+	mux.HandleFunc("GET /api/v1/qualification/runtime", s.op(read, s.handleRuntimeDetection))
+	mux.HandleFunc("POST /api/v1/qualification/verify", s.op(read, s.handleEvidenceVerification))
+
 	mux.HandleFunc("POST /api/v1/apply", s.opWrite(write, s.handleApply))
 	mux.HandleFunc("POST /api/v1/apps/{name}/scale", s.opWrite(write, s.handleScale))
 	mux.HandleFunc("POST /api/v1/apps/{name}/delete", s.opWrite(write, s.simple("delete-app", func(r *http.Request) any { return map[string]string{"app": r.PathValue("name")} })))
