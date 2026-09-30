@@ -7,12 +7,7 @@ export interface ApiResponse<T> {
   traceId?: string
 }
 
-export interface ApiError extends AxiosError {
-  response?: {
-    data?: ApiResponse<unknown>
-    status?: number
-  }
-}
+export type ApiError = AxiosError<ApiResponse<unknown>>
 
 class ApiClient {
   private client: AxiosInstance

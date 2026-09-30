@@ -1,12 +1,13 @@
-import React from 'react'
+import React, { ReactNode } from 'react'
 
-type StatusType = 'active' | 'inactive' | 'error' | 'pending' | 'warning'
+type StatusType = string
 
 interface BadgeProps {
-  status: StatusType
+  status?: StatusType
   label?: string
   className?: string
   size?: 'sm' | 'md' | 'lg'
+  children?: ReactNode
 }
 
 const statusConfig: Record<StatusType, { bg: string; text: string; dot: string }> = {
@@ -48,7 +49,14 @@ export const Badge: React.FC<BadgeProps> = ({
   label,
   className = '',
   size = 'md',
+  children,
 }) => {
+  if (children && className) {
+    return <span className={`inline-flex items-center gap-2 ${sizeClasses[size]} rounded font-medium ${className}`}>{children}</span>
+  }
+
+  if (!status) return null
+
   const config = statusConfig[status]
   const statusLabel = label || status.charAt(0).toUpperCase() + status.slice(1)
 

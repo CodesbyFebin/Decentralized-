@@ -16,6 +16,7 @@ interface TimeSeriesData {
   latency?: number
   p95?: number
   p99?: number
+  [key: string]: any
 }
 
 interface EndpointMetrics {
