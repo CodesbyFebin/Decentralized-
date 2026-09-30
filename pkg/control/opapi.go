@@ -45,6 +45,12 @@ func (s *Server) opRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/nodes/{id}/reserve", s.op(read, s.handleNodeReserve))
 	mux.HandleFunc("POST /api/v1/nodes/{id}/reserve", s.opWrite(write, s.handleCreateReserve))
 
+	// Provider Adapters (Phase 4b) - Viral Loop
+	mux.HandleFunc("POST /api/v1/providers/connect", s.opWrite(write, s.handleConnectProvider))
+	mux.HandleFunc("GET /api/v1/providers/graph", s.op(read, s.handleProviderGraph))
+	mux.HandleFunc("GET /api/v1/providers/health", s.op(read, s.handleProviderHealth))
+	mux.HandleFunc("POST /api/v1/providers/migrate", s.opWrite(write, s.handleMigrationPlan))
+
 	mux.HandleFunc("POST /api/v1/apply", s.opWrite(write, s.handleApply))
 	mux.HandleFunc("POST /api/v1/apps/{name}/scale", s.opWrite(write, s.handleScale))
 	mux.HandleFunc("POST /api/v1/apps/{name}/delete", s.opWrite(write, s.simple("delete-app", func(r *http.Request) any { return map[string]string{"app": r.PathValue("name")} })))
