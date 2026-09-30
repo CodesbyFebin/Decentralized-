@@ -1,0 +1,7 @@
+{
+  "gate": "01",
+  "category": "Identity",
+  "status": "PASS",
+  "detail": "Nodes report identities in observable state",
+  "timestamp": "2026-09-30T01:02:55Z"
+}

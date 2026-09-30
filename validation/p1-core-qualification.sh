@@ -6,8 +6,8 @@
 set -e
 
 export PATH="/home/user/Decentralized-/bin:$PATH"
-export DH_HOME="/tmp/dh-cluster/operator"
-export DH_CLUSTER="dev"
+export DH_HOME="${DH_HOME:-/tmp/devcluster-test/operator}"
+export DH_CLUSTER="${DH_CLUSTER:-dev}"
 
 CAMPAIGN_ID="P1_CORE_OFFICIAL_$(date +%Y%m%d_%H%M%S)"
 EVIDENCE_DIR="validation/local-vm/evidence/$CAMPAIGN_ID"
