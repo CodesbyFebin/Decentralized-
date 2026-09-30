@@ -5,8 +5,16 @@ volumes. Kubernetes schedules the control-plane processes; Decentralized.Host
 still supplies its own Raft membership, signed host admission, policy, ledger,
 and workload scheduler. `dh-noded` runs on independently administered hosts
 using the [host installation procedure](../../docs/runbooks/install.md).
-This path does not turn Kubernetes pods into qualified QEMU guests or prove
-P1-LOCAL-VM-A01.
+This path is the project's default runtime readiness path. QEMU is no longer
+a prerequisite for this deployment. `P1-LOCAL-VM-A01` remains a separate VM
+campaign and retains its own evidence requirements.
+
+Run `./p1-qualification-master.sh` to collect read-only Kubernetes observations
+in `deploy/kubernetes/evidence/readiness.json`. Its identifier is
+`K8S-CONTROL-A01`; it exits BLOCKED until authenticated quorum, admitted hosts,
+continuous traffic, actual fault/recovery, and signed evidence are verified.
+Pod readiness alone cannot qualify the application. The old VM baseline is
+available explicitly through `./p1-qualification-master.sh --local-vm`.
 
 ## Build and deploy
 
