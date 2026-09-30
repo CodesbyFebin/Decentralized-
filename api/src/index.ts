@@ -9,6 +9,7 @@ import teamsRoutes from './routes/teams'
 import nodesRoutes from './routes/nodes'
 import alertsRoutes from './routes/alerts'
 import auditRoutes from './routes/audit'
+import { createMailRoutes } from './routes/mail'
 import { authenticateToken } from './middleware/auth'
 
 dotenv.config()
@@ -44,6 +45,7 @@ app.use('/api/v1/teams', authenticateToken, teamsRoutes)
 app.use('/api/v1/nodes', authenticateToken, nodesRoutes)
 app.use('/api/v1/alerts', authenticateToken, alertsRoutes)
 app.use('/api/v1/audit', authenticateToken, auditRoutes)
+app.use('/api/v1/mail', createMailRoutes(pool))
 
 // Error handling middleware
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {

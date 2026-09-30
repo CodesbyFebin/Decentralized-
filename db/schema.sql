@@ -92,6 +92,95 @@ CREATE TABLE IF NOT EXISTS api_keys (
   expires_at TIMESTAMP
 );
 
+-- Mail server
+CREATE TABLE IF NOT EXISTS mailboxes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  email_address VARCHAR(255) NOT NULL UNIQUE,
+  display_name VARCHAR(255),
+  password_hash VARCHAR(255) NOT NULL,
+  storage_quota_mb INT DEFAULT 5120,
+  storage_used_mb INT DEFAULT 0,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS email_folders (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  mailbox_id UUID NOT NULL REFERENCES mailboxes(id) ON DELETE CASCADE,
+  name VARCHAR(100) NOT NULL,
+  folder_type VARCHAR(50) DEFAULT 'custom',
+  message_count INT DEFAULT 0,
+  unseen_count INT DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(mailbox_id, name)
+);
+
+CREATE TABLE IF NOT EXISTS emails (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  mailbox_id UUID NOT NULL REFERENCES mailboxes(id) ON DELETE CASCADE,
+  folder_id UUID NOT NULL REFERENCES email_folders(id) ON DELETE CASCADE,
+  message_id VARCHAR(255) UNIQUE,
+  sender_address VARCHAR(255) NOT NULL,
+  sender_name VARCHAR(255),
+  recipient_addresses TEXT[] NOT NULL,
+  cc_addresses TEXT[],
+  bcc_addresses TEXT[],
+  subject VARCHAR(500),
+  body_text TEXT,
+  body_html TEXT,
+  is_read BOOLEAN DEFAULT false,
+  is_flagged BOOLEAN DEFAULT false,
+  size_bytes INT,
+  headers JSONB,
+  received_at TIMESTAMP,
+  sent_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS email_attachments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email_id UUID NOT NULL REFERENCES emails(id) ON DELETE CASCADE,
+  filename VARCHAR(255) NOT NULL,
+  mime_type VARCHAR(100),
+  size_bytes INT,
+  content_id VARCHAR(255),
+  file_path VARCHAR(500),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS email_queue (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email_id UUID REFERENCES emails(id) ON DELETE CASCADE,
+  recipient_address VARCHAR(255) NOT NULL,
+  status VARCHAR(50) DEFAULT 'pending',
+  attempt_count INT DEFAULT 0,
+  max_attempts INT DEFAULT 5,
+  last_error TEXT,
+  next_retry_at TIMESTAMP,
+  delivered_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS mail_settings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  mailbox_id UUID NOT NULL REFERENCES mailboxes(id) ON DELETE CASCADE,
+  enable_autoreply BOOLEAN DEFAULT false,
+  autoreply_subject VARCHAR(255),
+  autoreply_body TEXT,
+  autoreply_start_at TIMESTAMP,
+  autoreply_end_at TIMESTAMP,
+  enable_forwarding BOOLEAN DEFAULT false,
+  forward_to VARCHAR(255),
+  enable_spam_filter BOOLEAN DEFAULT true,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(mailbox_id)
+);
+
 -- Indexes for performance
 CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_team_members_team_id ON team_members(team_id);
@@ -103,3 +192,14 @@ CREATE INDEX idx_alerts_created_at ON alerts(created_at);
 CREATE INDEX idx_audit_logs_team_id ON audit_logs(team_id);
 CREATE INDEX idx_audit_logs_created_at ON audit_logs(created_at);
 CREATE INDEX idx_api_keys_team_id ON api_keys(team_id);
+CREATE INDEX idx_mailboxes_user_id ON mailboxes(user_id);
+CREATE INDEX idx_mailboxes_email ON mailboxes(email_address);
+CREATE INDEX idx_email_folders_mailbox_id ON email_folders(mailbox_id);
+CREATE INDEX idx_emails_mailbox_id ON emails(mailbox_id);
+CREATE INDEX idx_emails_folder_id ON emails(folder_id);
+CREATE INDEX idx_emails_received_at ON emails(received_at);
+CREATE INDEX idx_emails_is_read ON emails(is_read);
+CREATE INDEX idx_email_attachments_email_id ON email_attachments(email_id);
+CREATE INDEX idx_email_queue_status ON email_queue(status);
+CREATE INDEX idx_email_queue_next_retry ON email_queue(next_retry_at);
+CREATE INDEX idx_mail_settings_mailbox_id ON mail_settings(mailbox_id);

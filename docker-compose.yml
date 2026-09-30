@@ -19,6 +19,19 @@ services:
       timeout: 5s
       retries: 5
 
+  redis:
+    image: redis:7-alpine
+    container_name: decentralized-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   api:
     build:
       context: ./api
@@ -33,13 +46,29 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-postgres}
       DB_NAME: ${DB_NAME:-decentralized_host}
       JWT_SECRET: ${JWT_SECRET:-your-secret-key}
+      REDIS_URL: redis://redis:6379
+      MAIL_SMTP_PORT: 25
+      MAIL_SMTP_TLS_PORT: 587
+      MAIL_IMAP_PORT: 993
+      MAIL_IMAP_PLAIN_PORT: 143
+      MAIL_FROM_DOMAIN: ${MAIL_FROM_DOMAIN:-localhost}
+      MAIL_ENCRYPTION_KEY: ${MAIL_ENCRYPTION_KEY:-your-encryption-key}
+      MAIL_ATTACHMENT_STORAGE: /app/mail_attachments
+      MAX_ATTACHMENT_SIZE_MB: 25
     ports:
       - "3001:3001"
+      - "25:25"
+      - "587:587"
+      - "993:993"
+      - "143:143"
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     volumes:
       - ./api/src:/app/src
+      - mail_attachments:/app/mail_attachments
     command: npm run dev
 
   web:
@@ -58,6 +87,8 @@ services:
 
 volumes:
   postgres_data:
+  redis_data:
+  mail_attachments:
 
 networks:
   default:
