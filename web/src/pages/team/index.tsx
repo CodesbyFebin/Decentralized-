@@ -7,7 +7,7 @@ import { Loading } from '@/components/Loading'
 import { ErrorState } from '@/components/ErrorState'
 import { apiClient } from '@/lib/api'
 
-type UserRole = 'admin' | 'operator' | 'viewer' | 'guest'
+type UserRole = 'admin' | 'operator' | 'viewer' | 'guest' | 'developer'
 
 interface TeamMember {
   id: string
@@ -18,6 +18,9 @@ interface TeamMember {
   lastActive: string
   joinedDate: string
   avatar?: string
+  mfaEnabled: boolean
+  team?: string
+  permissionCount: number
 }
 
 interface Permission {
@@ -51,6 +54,9 @@ const Team: React.FC = () => {
       status: 'active',
       lastActive: '2026-09-30T09:45:00Z',
       joinedDate: '2026-01-15T00:00:00Z',
+      mfaEnabled: true,
+      team: 'Infrastructure',
+      permissionCount: 7,
     },
     {
       id: 'user-2',
@@ -60,6 +66,9 @@ const Team: React.FC = () => {
       status: 'active',
       lastActive: '2026-09-30T08:20:00Z',
       joinedDate: '2026-02-28T00:00:00Z',
+      mfaEnabled: true,
+      team: 'Operations',
+      permissionCount: 5,
     },
     {
       id: 'user-3',
@@ -69,6 +78,9 @@ const Team: React.FC = () => {
       status: 'active',
       lastActive: '2026-09-29T16:30:00Z',
       joinedDate: '2026-03-10T00:00:00Z',
+      mfaEnabled: true,
+      team: 'Operations',
+      permissionCount: 5,
     },
     {
       id: 'user-4',
@@ -78,15 +90,33 @@ const Team: React.FC = () => {
       status: 'active',
       lastActive: '2026-09-30T07:15:00Z',
       joinedDate: '2026-05-22T00:00:00Z',
+      mfaEnabled: false,
+      team: 'Analytics',
+      permissionCount: 3,
     },
     {
       id: 'user-5',
       name: 'Taylor Brown',
       email: 'taylor@decentralized.host',
+      role: 'developer',
+      status: 'active',
+      lastActive: '2026-09-30T06:00:00Z',
+      joinedDate: '2026-06-15T00:00:00Z',
+      mfaEnabled: true,
+      team: 'Development',
+      permissionCount: 4,
+    },
+    {
+      id: 'user-6',
+      name: 'River Garcia',
+      email: 'river@decentralized.host',
       role: 'viewer',
       status: 'pending',
       lastActive: '',
       joinedDate: '2026-09-28T10:00:00Z',
+      mfaEnabled: false,
+      team: undefined,
+      permissionCount: 1,
     },
   ]
 
@@ -119,6 +149,15 @@ const Team: React.FC = () => {
         { id: 'p-4', name: 'View Analytics', description: 'Access system analytics and metrics' },
         { id: 'p-8', name: 'View Deployments', description: 'View deployment status and history' },
         { id: 'p-9', name: 'View Nodes', description: 'View node information and metrics' },
+      ],
+    },
+    {
+      role: 'developer',
+      permissions: [
+        { id: 'p-3', name: 'Manage Deployments', description: 'Create and manage deployments' },
+        { id: 'p-4', name: 'View Analytics', description: 'Access system analytics and metrics' },
+        { id: 'p-8', name: 'View Deployments', description: 'View deployment status and history' },
+        { id: 'p-10', name: 'Manage Integrations', description: 'Configure webhooks and integrations' },
       ],
     },
     {
@@ -172,6 +211,7 @@ const Team: React.FC = () => {
   const admins = members.filter((m) => m.role === 'admin').length
   const activeMembers = members.filter((m) => m.status === 'active').length
   const pendingInvites = members.filter((m) => m.status === 'pending').length
+  const mfaEnabledCount = members.filter((m) => m.mfaEnabled).length
 
   const handleAddMember = async () => {
     if (!newMemberEmail.trim()) return
@@ -222,11 +262,11 @@ const Team: React.FC = () => {
   return (
     <AppLayout
       title="Team"
-      subtitle={`${activeMembers} active members • ${admins} admin${admins !== 1 ? 's' : ''} • ${pendingInvites} pending`}
+      subtitle={`${activeMembers} active • ${admins} admin${admins !== 1 ? 's' : ''} • ${mfaEnabledCount} MFA enabled • ${pendingInvites} pending`}
     >
       <div className="space-y-6">
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           <Card variant="glass">
             <div className="p-4">
               <p className="text-neutral-400 text-sm mb-2">Total Members</p>
@@ -261,9 +301,19 @@ const Team: React.FC = () => {
 
           <Card variant="glass">
             <div className="p-4">
+              <p className="text-neutral-400 text-sm mb-2">MFA Enabled</p>
+              <div className="flex items-end gap-2">
+                <span className="text-3xl font-bold text-success-500">{mfaEnabledCount}</span>
+              </div>
+              <p className="text-xs text-neutral-500 mt-2">secure accounts</p>
+            </div>
+          </Card>
+
+          <Card variant="glass">
+            <div className="p-4">
               <p className="text-neutral-400 text-sm mb-2">Pending Invites</p>
               <div className="flex items-end gap-2">
-                <span className="text-3xl font-bold text-success-500">{pendingInvites}</span>
+                <span className="text-3xl font-bold text-info-500">{pendingInvites}</span>
               </div>
               <p className="text-xs text-neutral-500 mt-2">awaiting acceptance</p>
             </div>
@@ -342,6 +392,8 @@ const Team: React.FC = () => {
                       <th className="px-6 py-3 text-left text-neutral-400 font-medium">Name</th>
                       <th className="px-6 py-3 text-left text-neutral-400 font-medium">Email</th>
                       <th className="px-6 py-3 text-left text-neutral-400 font-medium">Role</th>
+                      <th className="px-6 py-3 text-left text-neutral-400 font-medium">Team</th>
+                      <th className="px-6 py-3 text-left text-neutral-400 font-medium">MFA</th>
                       <th className="px-6 py-3 text-left text-neutral-400 font-medium">Status</th>
                       <th className="px-6 py-3 text-left text-neutral-400 font-medium">Last Active</th>
                       <th className="px-6 py-3 text-left text-neutral-400 font-medium">Actions</th>
@@ -360,13 +412,25 @@ const Team: React.FC = () => {
                           >
                             <option value="guest">Guest</option>
                             <option value="viewer">Viewer</option>
+                            <option value="developer">Developer</option>
                             <option value="operator">Operator</option>
                             <option value="admin">Admin</option>
                           </select>
                         </td>
+                        <td className="px-6 py-3 text-neutral-400 text-xs">
+                          {member.team || <span className="text-neutral-600">—</span>}
+                        </td>
                         <td className="px-6 py-3">
                           <Badge
-                            status={member.status === 'active' ? 'active' : member.status === 'pending' ? 'pending' : 'error'}
+                            status={member.mfaEnabled ? 'success' : 'warning'}
+                            size="sm"
+                          >
+                            {member.mfaEnabled ? '✓' : '✗'}
+                          </Badge>
+                        </td>
+                        <td className="px-6 py-3">
+                          <Badge
+                            status={member.status === 'active' ? 'success' : member.status === 'pending' ? 'warning' : 'default'}
                             size="sm"
                           />
                         </td>
