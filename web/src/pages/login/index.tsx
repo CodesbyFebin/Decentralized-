@@ -20,8 +20,8 @@ const LoginPage: React.FC = () => {
         password,
       })
 
-      if (response.success && response.data?.token) {
-        localStorage.setItem('auth_token', response.data.token)
+      if (response.success && (response.data as any)?.token) {
+        localStorage.setItem('auth_token', (response.data as any).token)
         router.push('/dashboard')
       } else {
         setError(response.error || 'Login failed')

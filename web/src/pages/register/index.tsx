@@ -34,8 +34,8 @@ const RegisterPage: React.FC = () => {
         fullName,
       })
 
-      if (response.success && response.data?.token) {
-        localStorage.setItem('auth_token', response.data.token)
+      if (response.success && (response.data as any)?.token) {
+        localStorage.setItem('auth_token', (response.data as any).token)
         router.push('/dashboard')
       } else {
         setError(response.error || 'Registration failed')
