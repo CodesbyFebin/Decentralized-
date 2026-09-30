@@ -35,6 +35,22 @@ interface NotificationSettings {
   maintenanceNotices: boolean
 }
 
+interface UserPreferences {
+  theme: 'dark' | 'light' | 'auto'
+  language: string
+  timezone: string
+  dateFormat: 'MM/DD/YYYY' | 'DD/MM/YYYY' | 'YYYY-MM-DD'
+}
+
+interface SecurityAuditLog {
+  id: string
+  action: string
+  resource: string
+  timestamp: string
+  status: 'success' | 'failure'
+  ipAddress: string
+}
+
 const Settings: React.FC = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -47,6 +63,13 @@ const Settings: React.FC = () => {
     errorAlerts: true,
     maintenanceNotices: true,
   })
+  const [userPreferences, setUserPreferences] = useState<UserPreferences>({
+    theme: 'dark',
+    language: 'en',
+    timezone: 'UTC',
+    dateFormat: 'MM/DD/YYYY',
+  })
+  const [securityAuditLog, setSecurityAuditLog] = useState<SecurityAuditLog[]>([])
   const [showCreateKey, setShowCreateKey] = useState(false)
   const [newKeyName, setNewKeyName] = useState('')
   const [newKeyScopes, setNewKeyScopes] = useState<string[]>(['read:deployments'])
@@ -100,14 +123,62 @@ const Settings: React.FC = () => {
     logLevel: 'info',
   })
 
+  const generateMockSecurityAuditLog = (): SecurityAuditLog[] => {
+    const now = Date.now()
+    return [
+      {
+        id: 'audit-1',
+        action: 'API Key Created',
+        resource: 'CI/CD Pipeline',
+        timestamp: new Date(now - 3600000).toISOString(),
+        status: 'success',
+        ipAddress: '192.168.1.100',
+      },
+      {
+        id: 'audit-2',
+        action: 'Settings Updated',
+        resource: 'TLS Version',
+        timestamp: new Date(now - 7200000).toISOString(),
+        status: 'success',
+        ipAddress: '192.168.1.100',
+      },
+      {
+        id: 'audit-3',
+        action: 'API Key Revoked',
+        resource: 'Old Development Key',
+        timestamp: new Date(now - 86400000).toISOString(),
+        status: 'success',
+        ipAddress: '192.168.1.100',
+      },
+      {
+        id: 'audit-4',
+        action: 'Failed Login Attempt',
+        resource: 'User Account',
+        timestamp: new Date(now - 172800000).toISOString(),
+        status: 'failure',
+        ipAddress: '203.0.113.45',
+      },
+      {
+        id: 'audit-5',
+        action: 'Preferences Changed',
+        resource: 'Theme',
+        timestamp: new Date(now - 259200000).toISOString(),
+        status: 'success',
+        ipAddress: '192.168.1.100',
+      },
+    ]
+  }
+
   useEffect(() => {
     const loadSettings = async () => {
       try {
         setLoading(true)
         const keys = generateMockAPIKeys()
         const config = generateMockSystemConfig()
+        const auditLog = generateMockSecurityAuditLog()
         setApiKeys(keys)
         setSystemConfig(config)
+        setSecurityAuditLog(auditLog)
         setError(null)
       } catch (err) {
         setError('Failed to load settings')
@@ -183,6 +254,14 @@ const Settings: React.FC = () => {
       setSystemConfig(updated)
     } catch (err) {
       console.error('Failed to update config:', err)
+    }
+  }
+
+  const handleSavePreferences = async () => {
+    try {
+      await apiClient.patch('/settings/preferences', userPreferences)
+    } catch (err) {
+      console.error('Failed to save preferences:', err)
     }
   }
 
@@ -472,6 +551,123 @@ const Settings: React.FC = () => {
             >
               Save Preferences
             </Button>
+          </div>
+        </Card>
+
+        {/* User Preferences */}
+        <Card variant="glass">
+          <div className="p-6 border-b border-neutral-700">
+            <h3 className="text-lg font-semibold text-white">User Preferences</h3>
+          </div>
+          <div className="p-6 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-neutral-300 mb-2">
+                  Theme
+                </label>
+                <select
+                  value={userPreferences.theme}
+                  onChange={(e) => setUserPreferences({ ...userPreferences, theme: e.target.value as 'dark' | 'light' | 'auto' })}
+                  className="w-full px-3 py-2 bg-neutral-700 border border-neutral-600 rounded-lg text-white focus:border-primary-500 focus:outline-none"
+                >
+                  <option value="dark">Dark</option>
+                  <option value="light">Light</option>
+                  <option value="auto">Auto</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-neutral-300 mb-2">
+                  Language
+                </label>
+                <select
+                  value={userPreferences.language}
+                  onChange={(e) => setUserPreferences({ ...userPreferences, language: e.target.value })}
+                  className="w-full px-3 py-2 bg-neutral-700 border border-neutral-600 rounded-lg text-white focus:border-primary-500 focus:outline-none"
+                >
+                  <option value="en">English</option>
+                  <option value="es">Español</option>
+                  <option value="fr">Français</option>
+                  <option value="de">Deutsch</option>
+                  <option value="ja">日本語</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-neutral-300 mb-2">
+                  Timezone
+                </label>
+                <select
+                  value={userPreferences.timezone}
+                  onChange={(e) => setUserPreferences({ ...userPreferences, timezone: e.target.value })}
+                  className="w-full px-3 py-2 bg-neutral-700 border border-neutral-600 rounded-lg text-white focus:border-primary-500 focus:outline-none"
+                >
+                  <option value="UTC">UTC</option>
+                  <option value="US/Eastern">US/Eastern</option>
+                  <option value="US/Central">US/Central</option>
+                  <option value="US/Mountain">US/Mountain</option>
+                  <option value="US/Pacific">US/Pacific</option>
+                  <option value="Europe/London">Europe/London</option>
+                  <option value="Europe/Paris">Europe/Paris</option>
+                  <option value="Asia/Tokyo">Asia/Tokyo</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-neutral-300 mb-2">
+                  Date Format
+                </label>
+                <select
+                  value={userPreferences.dateFormat}
+                  onChange={(e) => setUserPreferences({ ...userPreferences, dateFormat: e.target.value as any })}
+                  className="w-full px-3 py-2 bg-neutral-700 border border-neutral-600 rounded-lg text-white focus:border-primary-500 focus:outline-none"
+                >
+                  <option value="MM/DD/YYYY">MM/DD/YYYY</option>
+                  <option value="DD/MM/YYYY">DD/MM/YYYY</option>
+                  <option value="YYYY-MM-DD">YYYY-MM-DD</option>
+                </select>
+              </div>
+            </div>
+            <Button
+              variant="primary"
+              size="md"
+              onClick={handleSavePreferences}
+              className="w-full md:w-auto"
+            >
+              Save Preferences
+            </Button>
+          </div>
+        </Card>
+
+        {/* Security Audit Log */}
+        <Card variant="glass">
+          <div className="p-6 border-b border-neutral-700">
+            <h3 className="text-lg font-semibold text-white">Security Audit Log</h3>
+          </div>
+          <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
+            <table className="w-full text-sm">
+              <thead className="border-b border-neutral-700 sticky top-0 bg-neutral-900">
+                <tr>
+                  <th className="px-6 py-3 text-left text-neutral-400 font-medium">Action</th>
+                  <th className="px-6 py-3 text-left text-neutral-400 font-medium">Resource</th>
+                  <th className="px-6 py-3 text-left text-neutral-400 font-medium">Status</th>
+                  <th className="px-6 py-3 text-left text-neutral-400 font-medium">IP Address</th>
+                  <th className="px-6 py-3 text-left text-neutral-400 font-medium">Timestamp</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-neutral-700">
+                {securityAuditLog.map((log) => (
+                  <tr key={log.id} className="hover:bg-neutral-800/30">
+                    <td className="px-6 py-3 text-neutral-100 font-medium">{log.action}</td>
+                    <td className="px-6 py-3 text-neutral-400 text-xs font-mono">{log.resource}</td>
+                    <td className="px-6 py-3">
+                      <Badge status={log.status === 'success' ? 'success' : 'error'} size="sm" />
+                    </td>
+                    <td className="px-6 py-3 text-neutral-500 text-xs font-mono">{log.ipAddress}</td>
+                    <td className="px-6 py-3 text-neutral-400 text-xs">
+                      {new Date(log.timestamp).toLocaleString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </Card>
       </div>
