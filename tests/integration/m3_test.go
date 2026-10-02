@@ -37,7 +37,7 @@ func hostObsPub(t *testing.T, c *devcluster.Cluster, host string) string {
 func TestM3TrustAndMesh(t *testing.T) {
 	c := up(t, devcluster.Options{CPs: 1, Hosts: 3, Chaos: true})
 	deploy(t, c, beacon(3))
-	v := waitRunning(t, c, "beacon", 3, 60*time.Second)
+	v := waitRunning(t, c, "beacon", 3, timeout(60*time.Second))
 	pids := map[string]int64{}
 	for _, r := range app(v, "beacon").Rows {
 		pids[r.Assignment] = r.PID
@@ -52,7 +52,7 @@ func TestM3TrustAndMesh(t *testing.T) {
 		}
 	}
 
-	if err := c.WaitFor(30*time.Second, "full WireGuard mesh with handshakes, verified bindings, gossip and measured RTT", func(v *control.View) bool {
+	if err := c.WaitFor(timeout(30*time.Second), "full WireGuard mesh with handshakes, verified bindings, gossip and measured RTT", func(v *control.View) bool {
 		for _, n := range v.Nodes {
 			if n.Mesh == nil || n.Mesh.Device != "wireguard-go/netstack" || n.Mesh.Members != 3 || len(n.Mesh.Peers) != 3 {
 				return false
@@ -75,7 +75,7 @@ func TestM3TrustAndMesh(t *testing.T) {
 			t.Fatalf("%v: %s", err, out)
 		}
 		var newPub string
-		if err := c.WaitFor(20*time.Second, "host-a observations signed by the rotated key", func(v *control.View) bool {
+		if err := c.WaitFor(timeout(20*time.Second), "host-a observations signed by the rotated key", func(v *control.View) bool {
 			newPub = hostObsPub(t, c, "host-a")
 			n := nodeByName(v, "host-a")
 			return newPub != oldPub && len(n.Keys) == 2 && n.LastObs.Freshness == "FRESH"

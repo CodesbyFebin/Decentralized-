@@ -28,6 +28,9 @@ spec:
 `
 
 func TestRuntimeP0Isolation(t *testing.T) {
+	if !isRoot() {
+		t.Skip("sandbox isolation tests require root; skipped in non-root environments (CI)")
+	}
 	c := up(t, devcluster.Options{CPs: 1, Hosts: 1})
 	image, _, err := c.Op.PushArtifact(binDir+"/dh-beacon", "dh-beacon", true)
 	if err != nil {
@@ -94,6 +97,9 @@ func TestRuntimeP0Isolation(t *testing.T) {
 // A host whose policy forbids RESTRICTED refuses the workload rather than
 // running it unsandboxed.
 func TestRuntimeP0IsolationPolicyRefusal(t *testing.T) {
+	if !isRoot() {
+		t.Skip("sandbox isolation tests require root; skipped in non-root environments (CI)")
+	}
 	c := up(t, devcluster.Options{CPs: 1, Hosts: 1, Policy: func(string) string {
 		return "sovereign: true\nallowRuntimes: [process, docker]\nallowIsolation: []\nacceptTiers: [trusted]\n"
 	}})

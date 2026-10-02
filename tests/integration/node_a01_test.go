@@ -84,7 +84,7 @@ func TestNodeA01SovereignNode(t *testing.T) {
 			t.Fatal(err)
 		}
 		id = me.ID
-		if err := c.WaitFor(20*time.Second, "host enrolled as pending", func(v *control.View) bool {
+		if err := c.WaitFor(timeout(20*time.Second), "host enrolled as pending", func(v *control.View) bool {
 			n := nodeByName(v, "node-a01")
 			return n != nil && n.ID == id && n.Status == "pending"
 		}); err != nil {
