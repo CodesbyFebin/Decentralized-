@@ -50,13 +50,12 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: '1.26'
-          cache: false
 
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3
-        with:
-          version: latest
-          args: --timeout=5m
+      - name: Format check
+        run: make fmt-check
+
+      - name: Vet
+        run: make vet
 
   integration:
     name: Integration Tests
