@@ -15,7 +15,7 @@
     "db:init": "sudo -u postgres psql -d decentralized_host -f db/schema.sql",
     "db:fixtures": "sudo -u postgres psql -d decentralized_host -f db/test-fixtures.sql",
     "db:reset": "npm run db:init && npm run db:fixtures",
-    "docker:build": "docker build -t mail-server .",
+    "docker:build": "docker build -t mail-server:1.0.0 -t mail-server:latest .",
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down",
     "docker:logs": "docker-compose logs -f mail-server"

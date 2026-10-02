@@ -1,0 +1,52 @@
+{
+  "kind": "chaos-report",
+  "signer": "dh1zwzcxzrsxytpaaq4gfxuvvb26n",
+  "pub": "kCwjoIDNXyC6Ftv_DMbj9D4e5QFkbh1l6nassAsBHfg",
+  "payload": {
+    "durationMs": 38815,
+    "environment": {
+      "arch": "amd64",
+      "cpus": "4",
+      "go": "go1.26.4",
+      "os": "linux",
+      "topology": "1 control-plane member(s), 2 host(s), 0 edge(s)"
+    },
+    "evidence": [
+      "audit chain verified: 20 entries, head 7919ed4175f7"
+    ],
+    "id": "replay-forgery-1790947031463",
+    "injection": "resend a committed host observation; send one signed by a foreign key; send one with a flipped field",
+    "invariant": "each is rejected with a specific reason and recorded; the host's real state is unchanged",
+    "measurements": {
+      "rejection_reasons": "[wrong host key replay detected]"
+    },
+    "observed": "replay, foreign-key and tampered observations rejected with specific reasons; state unchanged",
+    "recovery": [
+      {
+        "atMs": 0,
+        "event": "starting 1 control-plane member(s), 2 host(s), 0 edge(s)"
+      },
+      {
+        "atMs": 3313,
+        "event": "cluster ready"
+      },
+      {
+        "atMs": 38660,
+        "event": "replay → {\"results\":[{\"seq\":31,\"status\":\"rejected\",\"reason\":\"replay detected: seq 31, last accepted 37\"}]}\n"
+      },
+      {
+        "atMs": 38671,
+        "event": "foreign key → {\"results\":[{\"seq\":1000031,\"status\":\"rejected\",\"reason\":\"wrong host key\"}]}\n"
+      },
+      {
+        "atMs": 38796,
+        "event": "tampered → {\"results\":[{\"seq\":31,\"status\":\"rejected\",\"reason\":\"replay detected: seq 31, last accepted 37\"}]}\n"
+      }
+    ],
+    "scenario": "replay-forgery",
+    "started": 1790947031463,
+    "title": "Replayed, forged and tampered observations",
+    "verdict": "PASS"
+  },
+  "sig": "5B-UMtvoGNn00KO-LY9lM0A6Xl99re_qtoWxgFGlf1fjWoeYz14o6p9k0ybxinuP0nZ2D08TRt4sMm5iYuw7CA"
+}

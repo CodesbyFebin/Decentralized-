@@ -1,0 +1,38 @@
+{
+  "kind": "chaos-report",
+  "signer": "dh1zwzcxzrsxytpaaq4gfxuvvb26n",
+  "pub": "kCwjoIDNXyC6Ftv_DMbj9D4e5QFkbh1l6nassAsBHfg",
+  "payload": {
+    "durationMs": 66211,
+    "environment": {
+      "arch": "amd64",
+      "cpus": "4",
+      "go": "go1.26.4",
+      "os": "linux",
+      "topology": "1 control-plane member(s), 4 host(s), 1 edge(s)"
+    },
+    "evidence": [
+      "audit chain verified: 23 entries, head 7527e28e8860"
+    ],
+    "id": "host-crash-1790946469047",
+    "injection": "SIGKILL a host agent and all of its workloads (machine loss)",
+    "invariant": "the edge stops routing to the dead replica without failed requests, the host is marked lost, and the replica is rescheduled and observed running elsewhere",
+    "measurements": {},
+    "observed": "no control-plane member answered: Post \"http://127.0.0.1:33001/api/v1/artifacts?name=dh-beacon\": context deadline exceeded (Client.Timeout exceeded while awaiting headers)",
+    "recovery": [
+      {
+        "atMs": 0,
+        "event": "starting 1 control-plane member(s), 4 host(s), 1 edge(s)"
+      },
+      {
+        "atMs": 6159,
+        "event": "cluster ready"
+      }
+    ],
+    "scenario": "host-crash",
+    "started": 1790946469047,
+    "title": "Host crash",
+    "verdict": "FAIL"
+  },
+  "sig": "dry2kwTZ4rY07Xkm_Yijeyw5E5ZvV-rP-XKX2m8QNvPXlNjIwgxhbgxgkT47TSN7wURgxQusQjetGr74GREPDQ"
+}

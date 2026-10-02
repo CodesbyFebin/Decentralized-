@@ -1,0 +1,7 @@
+{
+  "gate": "12",
+  "status": "FAIL",
+  "reason": "Over-subscription was not denied: DENIED",
+  "timestamp": "2026-09-29T22:55:07Z"
+}
+2026-09-29T22:55:07Z | Gate 12: FAIL | Capacity enforcement failed

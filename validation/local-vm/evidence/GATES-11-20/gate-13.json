@@ -1,0 +1,6 @@
+{
+  "gate": "13",
+  "status": "FAIL",
+  "reason": "Policy inconsistent on 3 nodes",
+  "timestamp": "2026-09-29T22:55:07Z"
+}

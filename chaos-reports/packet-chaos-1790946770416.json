@@ -1,0 +1,55 @@
+{
+  "kind": "chaos-report",
+  "signer": "dh1zwzcxzrsxytpaaq4gfxuvvb26n",
+  "pub": "kCwjoIDNXyC6Ftv_DMbj9D4e5QFkbh1l6nassAsBHfg",
+  "payload": {
+    "durationMs": 95806,
+    "environment": {
+      "arch": "amd64",
+      "cpus": "4",
+      "go": "go1.26.4",
+      "os": "linux",
+      "topology": "1 control-plane member(s), 3 host(s), 1 edge(s)"
+    },
+    "evidence": [
+      "audit chain verified: 31 entries, head 22b17cd82fee"
+    ],
+    "id": "packet-chaos-1790946770416",
+    "injection": "on every WireGuard path: 5% loss, 10% duplication, 10% reordering, +40ms delay for 20s",
+    "invariant": "WireGuard and TCP absorb the faults: no request fails, the measured mesh RTT reflects the injected delay, and it returns to baseline when faults are cleared",
+    "measurements": {
+      "baseline_mesh_rtt_us": "8422 (mean of 16 host-measured samples)",
+      "faulted_mesh_rtt_us": "230278 (mean of 16 samples)",
+      "proxy_packets": "map[dropped:84 duplicated:207 forwarded:24186 reordered:173]",
+      "recovered_mesh_rtt_us": "8476 (mean of 16 samples)",
+      "request_latency_p50_ms": "3.8",
+      "request_latency_p99_ms": "453.9",
+      "requests_failed": "0",
+      "requests_ok": "705"
+    },
+    "observed": "RTT 8422µs → 230278µs under faults → 8476µs after; 705/705 requests OK (p50 4ms, p99 454ms)",
+    "recovery": [
+      {
+        "atMs": 0,
+        "event": "starting 1 control-plane member(s), 3 host(s), 1 edge(s)"
+      },
+      {
+        "atMs": 3508,
+        "event": "cluster ready"
+      },
+      {
+        "atMs": 61733,
+        "event": "faults on: loss 5%, dup 10%, reorder 10%, delay 40ms"
+      },
+      {
+        "atMs": 83769,
+        "event": "faults cleared"
+      }
+    ],
+    "scenario": "packet-chaos",
+    "started": 1790946770416,
+    "title": "Packet loss, duplication, reordering and delay",
+    "verdict": "PASS"
+  },
+  "sig": "ValgRdAWNhLZPTfMw008iD_1CiBVkvbT4y6LQsjeKo9BIC-xNA_OZY9DjaoLPQd95ANnrlLqQzNEZ68N0lrgCQ"
+}

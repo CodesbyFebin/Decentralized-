@@ -1,0 +1,9 @@
+Injecting 2-way network partition (drop all traffic to dh-node-2)...
+Healing partition...
+{
+  "gate": "18",
+  "status": "FAIL",
+  "reason": "Convergence failed or exceeded 30s threshold (actual: 30s)",
+  "timestamp": "2026-09-29T22:55:07Z"
+}
+2026-09-29T22:55:07Z | Gate 18: FAIL | Partition recovery timeout

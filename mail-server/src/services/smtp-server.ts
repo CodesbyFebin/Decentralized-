@@ -1,4 +1,4 @@
-import { SMTPServer as NodeSMTPServer, SMTPServerSession } from 'smtp-server';
+import { SMTPServer as NodeSMTPServer } from 'smtp-server';
 import { MailService } from './mail';
 
 const mailService = new MailService();
@@ -7,26 +7,27 @@ export class SMTPServer {
   private server: NodeSMTPServer | null = null;
 
   start(port: number, tlsPort: number) {
-    const smtpOptions = {
-      secure: false,
-      authOptional: true,
-      logger: false,
-      onData: this.handleData.bind(this),
-      onAuth: this.handleAuth.bind(this),
-    };
-    this.server = new NodeSMTPServer(smtpOptions);
-    this.server.listen(port, () => {
+    try {
+      const smtpOptions = {
+        secure: false,
+        authOptional: true,
+        logger: false,
+        onData: this.handleData.bind(this),
+        onAuth: this.handleAuth.bind(this),
+      };
+      this.server = new NodeSMTPServer(smtpOptions);
+      this.server.listen(port);
       console.log(`📧 SMTP Server running on port ${port}`);
-    }).on('error', (err: any) => {
+    } catch (err: any) {
       if (err.code === 'EACCES') {
         console.warn(`⚠️  Cannot bind to port ${port} (requires root). SMTP disabled.`);
       } else {
         console.error('SMTP Error:', err);
       }
-    });
+    }
   }
 
-  private async handleAuth(auth: any, session: SMTPServerSession, callback: Function) {
+  private async handleAuth(auth: any, session: any, callback: Function) {
     try {
       const result = await mailService.authenticateMailbox(auth.username, auth.password);
       callback(null, { user: result.mailboxId });
@@ -35,7 +36,7 @@ export class SMTPServer {
     }
   }
 
-  private async handleData(stream: any, session: SMTPServerSession, callback: Function) {
+  private async handleData(stream: any, session: any, callback: Function) {
     try {
       const chunks: Buffer[] = [];
       stream.on('data', (chunk: Buffer) => chunks.push(chunk));

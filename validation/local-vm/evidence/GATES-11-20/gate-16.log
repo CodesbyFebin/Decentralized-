@@ -1,0 +1,14 @@
+Stopping dh-node-1...
+dh-node-1
+Stopping dh-node-2...
+dh-node-2
+Restarting dh-node-1 and dh-node-2...
+dh-node-1
+dh-node-2
+{
+  "gate": "16",
+  "status": "FAIL",
+  "reason": "Node-3 unhealthy or unable to admit work (health=UNKNOWN)",
+  "timestamp": "2026-09-29T22:55:07Z"
+}
+2026-09-29T22:55:07Z | Gate 16: FAIL | Cascade propagated

@@ -1,0 +1,17 @@
+{"id":"concurrent-work-1","target":"dh-node-2","resources":{"cpu":1,"memory":1Gi}}
+{"id":"concurrent-work-2","target":"dh-node-3","resources":{"cpu":1,"memory":1Gi}}
+{"id":"concurrent-work-4","target":"dh-node-2","resources":{"cpu":1,"memory":1Gi}}
+{"id":"concurrent-work-3","target":"dh-node-1","resources":{"cpu":1,"memory":1Gi}}
+{"id":"concurrent-work-5","target":"dh-node-3","resources":{"cpu":1,"memory":1Gi}}
+{"id":"concurrent-work-6","target":"dh-node-1","resources":{"cpu":1,"memory":1Gi}}
+{"id":"concurrent-work-8","target":"dh-node-3","resources":{"cpu":1,"memory":1Gi}}
+{"id":"concurrent-work-9","target":"dh-node-1","resources":{"cpu":1,"memory":1Gi}}
+{"id":"concurrent-work-10","target":"dh-node-2","resources":{"cpu":1,"memory":1Gi}}
+{"id":"concurrent-work-7","target":"dh-node-2","resources":{"cpu":1,"memory":1Gi}}
+{
+  "gate": "11",
+  "status": "FAIL",
+  "reason": "Only 0/10 work items admitted",
+  "timestamp": "2026-09-29T22:55:07Z"
+}
+2026-09-29T22:55:07Z | Gate 11: FAIL | Concurrent admission incomplete

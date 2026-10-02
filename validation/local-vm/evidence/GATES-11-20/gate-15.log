@@ -1,0 +1,7 @@
+{
+  "gate": "15",
+  "status": "FAIL",
+  "reason": "Corrupted artifact not detected",
+  "timestamp": "2026-09-29T22:55:07Z"
+}
+2026-09-29T22:55:07Z | Gate 15: FAIL | Corruption detection failed
