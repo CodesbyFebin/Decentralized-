@@ -5,3 +5,10 @@
   "timestamp": "2026-09-29T22:55:07Z"
 }
 2026-09-29T22:55:07Z | Gate 13: FAIL | Split-brain detected
+{
+  "gate": "13",
+  "status": "FAIL",
+  "reason": "Policy inconsistent on 3 nodes",
+  "timestamp": "2026-10-02T14:40:51Z"
+}
+2026-10-02T14:40:51Z | Gate 13: FAIL | Split-brain detected

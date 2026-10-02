@@ -5,3 +5,10 @@
   "timestamp": "2026-09-29T22:55:07Z"
 }
 2026-09-29T22:55:07Z | Gate 14: PASS | Clock skew tolerance verified
+{
+  "gate": "14",
+  "status": "PASS",
+  "detail": "Clock skew within tolerance: 0s (threshold: 30s)",
+  "timestamp": "2026-10-02T14:40:51Z"
+}
+2026-10-02T14:40:51Z | Gate 14: PASS | Clock skew tolerance verified
