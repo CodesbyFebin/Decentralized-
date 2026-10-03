@@ -8,7 +8,13 @@ require (
 	github.com/hashicorp/raft v1.8.0
 	github.com/hashicorp/raft-boltdb/v2 v2.4.2
 	github.com/jackc/pgx/v5 v5.11.0
+	github.com/prometheus/client_golang v1.20.5
 	github.com/zeebo/blake3 v0.2.4
+	go.opentelemetry.io/otel v1.33.0
+	go.opentelemetry.io/otel/exporters/jaeger/otlptrace v1.33.0
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.33.0
+	go.opentelemetry.io/otel/sdk v1.33.0
+	go.opentelemetry.io/otel/trace v1.33.0
 	go.yaml.in/yaml/v3 v3.0.5
 	golang.org/x/crypto v0.57.0
 	golang.zx2c4.com/wireguard v0.0.0-20260522210424-ecfc5a8d5446
