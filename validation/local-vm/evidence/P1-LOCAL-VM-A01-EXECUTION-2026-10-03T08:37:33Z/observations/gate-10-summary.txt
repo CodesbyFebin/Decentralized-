@@ -1,0 +1,1 @@
+observations_captured=12 artifacts_captured=0 
