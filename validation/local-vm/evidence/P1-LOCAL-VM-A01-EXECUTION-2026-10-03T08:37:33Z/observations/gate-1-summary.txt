@@ -1,0 +1,1 @@
+commands_ok=false source_sha=18bf7c1ce21f8f1c9943a917b1ac9781d3e477e5 qemu_ok=false state_dir_ok=true 

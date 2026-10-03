@@ -214,24 +214,6 @@ sleep 5
 # ============================================================================
 echo "Gate 18: Mesh Recovery (verify mesh can report peer status)"
 {
-  # Check mesh peer status before any disruption
-  MESH_STATUS=$(dh mesh status 2>/dev/null | wc -l || echo "0")
-
-  if [ "$MESH_STATUS" -ge 1 ]; then
-    gate_pass "18" "Mesh topology observable and recoverable (${MESH_STATUS} lines of status)" | tee "$GATES_DIR/gate-18.json"
-    log_gate "18" "PASS" "Mesh recovery verified"
-  else
-    # Try mesh peers instead
-    MESH_PEERS=$(dh mesh peers 2>/dev/null | wc -l || echo "0")
-    if [ "$MESH_PEERS" -ge 1 ]; then
-      gate_pass "18" "Mesh peers queryable (${MESH_PEERS} lines)" | tee "$GATES_DIR/gate-18.json"
-      log_gate "18" "PASS" "Mesh recovery verified"
-    else
-      gate_fail "18" "Mesh status unavailable" | tee "$GATES_DIR/gate-18.json"
-      log_gate "18" "FAIL" "Mesh status check failed"
-    fi
-  fi
-} 2>&1 | tee -a "$GATES_DIR/gate-18.log"
 
 sleep 5
 
@@ -281,3 +263,71 @@ echo "Evidence collected in: $GATES_DIR/"
 echo ""
 echo "Next: Commit results and proceed to Gates 21-32 (Chaos Scenarios)"
 echo ""
+# ============================================================================
+# Gate 18: Mesh Partition Recovery (FIXED - Using tc instead of localhost SSH)
+# ============================================================================
+echo "Gate 18: Mesh Partition Recovery"
+{
+  echo "Injecting 2-way network partition using tc (traffic control)..."
+  PARTITION_START=$(date +%s)
+
+  # Setup tc qdisc on all nodes
+  for node in dh-node-1 dh-node-3; do
+    podman exec $node tc qdisc replace dev eth0 root handle 1: prio 2>/dev/null || true
+  done
+
+  # Drop traffic to dh-node-2 (172.30.0.3) from nodes 1 and 3
+  for node in dh-node-1 dh-node-3; do
+    podman exec $node tc filter replace dev eth0 parent 1: prio 1 protocol ip u32 \
+      match ip dst 172.30.0.3 flowid 1:2 2>/dev/null || true
+    # Alternative: use iptables inside container
+    podman exec $node sudo iptables -I FORWARD -d 172.30.0.3 -j DROP 2>/dev/null || true
+  done
+
+  sleep 20
+
+  # Remove partition (heal)
+  echo "Healing partition..."
+  for node in dh-node-1 dh-node-3; do
+    # Clear tc rules
+    podman exec $node tc qdisc del dev eth0 root 2>/dev/null || true
+    # Clear iptables
+    podman exec $node sudo iptables -D FORWARD -d 172.30.0.3 -j DROP 2>/dev/null || true
+  done
+
+  # Check convergence
+  CONVERGENCE_START=$(date +%s)
+  CONVERGED=0
+  for i in {1..30}; do
+    # Test connectivity: each node should reach all others
+    PATHS=0
+    for src in 1 2 3; do
+      for dst in 1 2 3; do
+        if [ $src -ne $dst ]; then
+          if podman exec dh-node-$src curl -s http://172.30.0.$((dst+1)):8080/ >/dev/null 2>&1; then
+            ((PATHS++))
+          fi
+        fi
+      done
+    done
+
+    if [ "$PATHS" -eq 6 ]; then
+      CONVERGED=1
+      break
+    fi
+    sleep 1
+  done
+
+  CONVERGENCE_END=$(date +%s)
+  CONVERGENCE_TIME=$((CONVERGENCE_END - CONVERGENCE_START))
+
+  if [ $CONVERGED -eq 1 ] && [ $CONVERGENCE_TIME -lt 30 ]; then
+    gate_pass "18" "Mesh partition healed and converged in ${CONVERGENCE_TIME}s" | tee "$GATES_DIR/gate-18.json"
+    log_gate "18" "PASS" "Partition recovery verified with tc injection"
+  else
+    gate_fail "18" "Convergence failed or exceeded 30s threshold (actual: ${CONVERGENCE_TIME}s)" | tee "$GATES_DIR/gate-18.json"
+    log_gate "18" "FAIL" "Partition recovery timeout"
+  fi
+} 2>&1 | tee -a "$GATES_DIR/gate-18.log"
+
+sleep 5

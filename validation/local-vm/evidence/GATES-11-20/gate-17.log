@@ -1,49 +1,14 @@
 {
   "gate": "17",
   "status": "PASS",
-  "detail": "Audit trail operational (queryable even if empty)",
-  "timestamp": "2026-09-29T23:06:41Z"
+  "detail": "No silent work migration detected (audit trail complete)",
+  "timestamp": "2026-09-29T22:55:07Z"
 }
-2026-09-29T23:06:41Z | Gate 17: PASS | Audit trail verified
+2026-09-29T22:55:07Z | Gate 17: PASS | Migration audit verified
 {
   "gate": "17",
   "status": "PASS",
-  "detail": "Audit trail operational (can verify no silent migrations)",
-  "timestamp": "2026-09-29T23:09:50Z"
+  "detail": "No silent work migration detected (audit trail complete)",
+  "timestamp": "2026-10-02T14:40:51Z"
 }
-2026-09-29T23:09:50Z | Gate 17: PASS | Audit trail verified
-{
-  "gate": "17",
-  "status": "PASS",
-  "detail": "Audit trail operational (can verify no silent migrations)",
-  "timestamp": "2026-09-29T23:11:18Z"
-}
-2026-09-29T23:11:18Z | Gate 17: PASS | Audit trail verified
-{
-  "gate": "17",
-  "status": "PASS",
-  "detail": "Audit trail operational (can verify no silent migrations)",
-  "timestamp": "2026-09-29T23:12:04Z"
-}
-2026-09-29T23:12:04Z | Gate 17: PASS | Audit trail verified
-{
-  "gate": "17",
-  "status": "PASS",
-  "detail": "Audit trail operational (can verify no silent migrations)",
-  "timestamp": "2026-09-29T23:13:17Z"
-}
-2026-09-29T23:13:17Z | Gate 17: PASS | Audit trail verified
-{
-  "gate": "17",
-  "status": "PASS",
-  "detail": "Audit trail operational (can verify no silent migrations)",
-  "timestamp": "2026-09-29T23:14:04Z"
-}
-2026-09-29T23:14:04Z | Gate 17: PASS | Audit trail verified
-{
-  "gate": "17",
-  "status": "PASS",
-  "detail": "Audit trail operational (can verify no silent migrations)",
-  "timestamp": "2026-09-29T23:15:06Z"
-}
-2026-09-29T23:15:06Z | Gate 17: PASS | Audit trail verified
+2026-10-02T14:40:51Z | Gate 17: PASS | Migration audit verified

@@ -1,0 +1,58 @@
+{
+  "kind": "chaos-report",
+  "signer": "dh1zwzcxzrsxytpaaq4gfxuvvb26n",
+  "pub": "kCwjoIDNXyC6Ftv_DMbj9D4e5QFkbh1l6nassAsBHfg",
+  "payload": {
+    "durationMs": 60676,
+    "environment": {
+      "arch": "amd64",
+      "cpus": "4",
+      "go": "go1.26.4",
+      "os": "linux",
+      "topology": "1 control-plane member(s), 2 host(s), 0 edge(s)"
+    },
+    "evidence": [
+      "audit chain verified: 23 entries, head a8a5af97e4e5"
+    ],
+    "id": "journal-corruption-1790946618204",
+    "injection": "stop a host agent, flip bytes inside one entry of its hash-chained journal, restart it",
+    "invariant": "the host detects the named break, enters ledger-corrupt mode, keeps admitted work, refuses new work, and never appends to the broken chain; after the local operator seals the journal (kept byte-for-byte) the host admits work again and its new chain records the break",
+    "measurements": {},
+    "observed": "break named (event-hash mismatch at seq 3); new work refused with LEDGER_CORRUPT; after an operator seal the host admitted the replica",
+    "recovery": [
+      {
+        "atMs": 0,
+        "event": "starting 1 control-plane member(s), 2 host(s), 0 edge(s)"
+      },
+      {
+        "atMs": 2995,
+        "event": "cluster ready"
+      },
+      {
+        "atMs": 36724,
+        "event": "rewrote journal entry at line 3 of 4 on host-a (ledger head was 4)"
+      },
+      {
+        "atMs": 37047,
+        "event": "host-a mode ledger-corrupt: event-hash mismatch at seq 3"
+      },
+      {
+        "atMs": 39062,
+        "event": "new replica refused with LEDGER_CORRUPT"
+      },
+      {
+        "atMs": 39186,
+        "event": "operator sealed the journal: sealed /home/cybertecklabs/Decentralized-/chaos-reports/journal-corruption-1790946618204/host-a/journal.jsonl.sealed-1790946657336"
+      },
+      {
+        "atMs": 60675,
+        "event": "host-a admits work again on a new, verifying chain"
+      }
+    ],
+    "scenario": "journal-corruption",
+    "started": 1790946618204,
+    "title": "Host ledger corruption",
+    "verdict": "PASS"
+  },
+  "sig": "JEJbP_Md68Q_-iDISRLfVf6XhICk6SEFdSQ9poONq3Nd94BxD_cJTNy52L_9DIKeNkBybGdFhHjhMmJ2w613Dg"
+}

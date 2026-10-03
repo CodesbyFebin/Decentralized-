@@ -1,0 +1,5 @@
+preflight_start=2026-10-03T08:37:33.495Z
+required_commands=MISSING: ssh-keygen
+repo_source_sha=18bf7c1ce21f8f1c9943a917b1ac9781d3e477e5
+qemu_status=NOT_FOUND
+state_dir_exists=true

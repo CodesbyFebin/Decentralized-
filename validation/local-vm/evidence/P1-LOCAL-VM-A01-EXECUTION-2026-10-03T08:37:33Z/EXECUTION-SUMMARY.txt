@@ -1,0 +1,13 @@
+=== P1-LOCAL-VM-A01 Execution Summary ===
+Campaign ID: 2026-10-03T08:37:33Z
+Start Time: 2026-10-03T08:37:33
+End Time: 2026-10-03T08:37:33.779Z
+Repository SHA: 18bf7c1ce21f8f1c9943a917b1ac9781d3e477e5
+Execution Dir: /home/user/Decentralized-/validation/local-vm/evidence/P1-LOCAL-VM-A01-EXECUTION-2026-10-03T08:37:33Z
+
+Gates Executed: 1-10 (Preflight, Topology, Bootstrap, Mesh, Baseline, State Consistency)
+Total Observations: 13
+Total Artifacts: 0
+
+Next Step: Run verifier script to evaluate gate contracts against observations
+Command: bash validation/local-vm/scripts/verify-p1-local-vm-gates.sh /home/user/Decentralized-/validation/local-vm/evidence/P1-LOCAL-VM-A01-EXECUTION-2026-10-03T08:37:33Z

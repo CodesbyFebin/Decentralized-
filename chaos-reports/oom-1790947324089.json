@@ -1,0 +1,42 @@
+{
+  "kind": "chaos-report",
+  "signer": "dh1zwzcxzrsxytpaaq4gfxuvvb26n",
+  "pub": "kCwjoIDNXyC6Ftv_DMbj9D4e5QFkbh1l6nassAsBHfg",
+  "payload": {
+    "durationMs": 131920,
+    "environment": {
+      "arch": "amd64",
+      "cpus": "4",
+      "go": "go1.26.4",
+      "os": "linux",
+      "topology": "1 control-plane member(s), 1 host(s), 0 edge(s)"
+    },
+    "evidence": [
+      "audit chain verified: 12 entries, head f2d40107235a"
+    ],
+    "id": "oom-1790947324089",
+    "injection": "run a container limited to 32 MiB that allocates without bound",
+    "invariant": "the container runtime kills it (OOMKilled=true), the host reports oom-killed from runtime evidence, audits it, and restarts it with backoff",
+    "measurements": {},
+    "observed": "timed out after 2m0s waiting for OOM kill observed",
+    "recovery": [
+      {
+        "atMs": 155,
+        "event": "starting 1 control-plane member(s), 1 host(s), 0 edge(s)"
+      },
+      {
+        "atMs": 3259,
+        "event": "cluster ready"
+      },
+      {
+        "atMs": 11597,
+        "event": "using docker.io/library/busybox@sha256:73aaf090f3d85aa34ee199857f03fa3a95c8ede2ffd4cc2cdb5b94e566b11662"
+      }
+    ],
+    "scenario": "oom",
+    "started": 1790947324089,
+    "title": "Out-of-memory kill (Docker runtime)",
+    "verdict": "FAIL"
+  },
+  "sig": "EeytgbV40f2ZwemylR1RRmqB3jPXq7uRX3DPkf04B2-V1G2878d7EyQYIeFKvQyBxP3BpIqjq-HdSHUpocE2Dg"
+}

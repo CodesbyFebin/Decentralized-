@@ -1,74 +1,45 @@
 ## Description
-<!-- Briefly describe the changes in this PR -->
+<!-- Clear, concise summary of changes -->
 
 ## Type of Change
-<!-- Mark the relevant option with an "x" -->
-- [ ] Bug fix (non-breaking change fixing an issue)
-- [ ] New feature (non-breaking change adding functionality)
-- [ ] Breaking change (fix or feature causing existing functionality to change)
-- [ ] Documentation update
-- [ ] Performance improvement
-- [ ] Test improvement
+- [ ] 🐛 Bug fix
+- [ ] ✨ New feature
+- [ ] 📖 Documentation
+- [ ] ♻️ Refactoring
+- [ ] ⚡ Performance
+- [ ] ✅ Test
 
 ## Related Issues
-<!-- Link to related GitHub issues using #issue_number -->
-Fixes #issue_number
-Relates to #other_issue_number
-
-## Changes Made
-<!-- List the specific changes made in this PR -->
-- Change 1
-- Change 2
-- Change 3
+<!-- Fixes #123, Related to #456 -->
 
 ## Testing
-<!-- Describe how the changes were tested -->
-
-### Test Coverage
 - [ ] Unit tests added/updated
 - [ ] Integration tests added/updated
-- [ ] Manual testing completed
-
-### Testing Steps
-```
-1. Step 1
-2. Step 2
-3. Verify expected behavior
-```
+- [ ] All tests pass (`make test`)
+- [ ] Race detector passes (`make race`)
+- [ ] Tested on dev cluster (`./bin/dh dev up`)
 
 ## Documentation
-<!-- Describe documentation changes -->
-- [ ] Updated README.md
-- [ ] Updated API documentation
-- [ ] Updated deployment guide
-- [ ] Added code comments for complex logic
-
-## Performance Impact
-<!-- Describe any performance implications -->
-- Benchmark results (if applicable)
-- Memory/CPU impact
-- Expected performance improvements/regressions
+- [ ] Code comments added (for non-obvious logic)
+- [ ] Docstrings updated (for public functions)
+- [ ] README updated (if user-facing change)
+- [ ] Runbooks updated (if operational impact)
 
 ## Breaking Changes
-<!-- If this is a breaking change, describe it and migration path -->
 - [ ] No breaking changes
-- [ ] Breaking change (describe below)
+- [ ] Breaking changes (describe below)
+
+<!-- If breaking changes, describe what changed and migration path -->
 
 ## Checklist
-- [ ] Code follows project style guidelines
-- [ ] All tests pass locally (`make test`)
-- [ ] Linting passes (`make lint`)
-- [ ] No new warnings introduced
-- [ ] Changes are backward compatible
-- [ ] Documentation is complete and accurate
+- [ ] Follows code style guide
+- [ ] No linting errors (`gofmt`, `goimports`)
 - [ ] Commit messages are clear and descriptive
+- [ ] All CI checks pass
 
-## Screenshots (if applicable)
-<!-- Add screenshots for UI/visual changes -->
-
-## Additional Context
-<!-- Any additional information reviewers should know -->
+## Screenshots/Logs (if applicable)
+<!-- Add any relevant screenshots, terminal output, or logs -->
 
 ---
 
-Thank you for contributing to Decentralized.Host! 🙏
+**Note:** Please ensure all tests pass before submitting. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.

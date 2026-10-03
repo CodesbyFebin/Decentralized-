@@ -1,6 +1,6 @@
 {
   "gate": "13",
-  "status": "PASS",
-  "detail": "Control plane consensus verified (atomicity guaranteed by Raft)",
-  "timestamp": "2026-09-29T23:15:06Z"
+  "status": "FAIL",
+  "reason": "Policy inconsistent on 3 nodes",
+  "timestamp": "2026-10-02T14:40:51Z"
 }

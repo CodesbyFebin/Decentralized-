@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"os/user"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -21,6 +22,26 @@ import (
 
 var binDir string
 var basePort atomic.Int64
+var inCI = os.Getenv("CI") != "" || os.Getenv("GITHUB_ACTIONS") != ""
+
+// timeoutMultiplier increases test timeouts in CI environments
+func timeoutMultiplier() float64 {
+	if inCI {
+		return 2.0 // 2x longer timeouts in CI
+	}
+	return 1.0
+}
+
+// timeout scales the given duration by the CI multiplier
+func timeout(d time.Duration) time.Duration {
+	return time.Duration(float64(d) * timeoutMultiplier())
+}
+
+// isRoot checks if the test is running as root (needed for sandbox isolation tests)
+func isRoot() bool {
+	u, err := user.Current()
+	return err == nil && u.Uid == "0"
+}
 
 func TestMain(m *testing.M) {
 	// Integration tests start real processes; they run by default and are

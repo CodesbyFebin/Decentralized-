@@ -1,53 +1,34 @@
-./validation/gates-11-20-runner.sh: line 87: [: 0
-0: integer expression expected
+{"id":"concurrent-work-1","target":"dh-node-2","resources":{"cpu":1,"memory":1Gi}}
+{"id":"concurrent-work-2","target":"dh-node-3","resources":{"cpu":1,"memory":1Gi}}
+{"id":"concurrent-work-4","target":"dh-node-2","resources":{"cpu":1,"memory":1Gi}}
+{"id":"concurrent-work-3","target":"dh-node-1","resources":{"cpu":1,"memory":1Gi}}
+{"id":"concurrent-work-5","target":"dh-node-3","resources":{"cpu":1,"memory":1Gi}}
+{"id":"concurrent-work-6","target":"dh-node-1","resources":{"cpu":1,"memory":1Gi}}
+{"id":"concurrent-work-8","target":"dh-node-3","resources":{"cpu":1,"memory":1Gi}}
+{"id":"concurrent-work-9","target":"dh-node-1","resources":{"cpu":1,"memory":1Gi}}
+{"id":"concurrent-work-10","target":"dh-node-2","resources":{"cpu":1,"memory":1Gi}}
+{"id":"concurrent-work-7","target":"dh-node-2","resources":{"cpu":1,"memory":1Gi}}
 {
   "gate": "11",
   "status": "FAIL",
-  "reason": "Only 0\n0/10 apps created",
-  "timestamp": "2026-09-29T23:06:41Z"
+  "reason": "Only 0/10 work items admitted",
+  "timestamp": "2026-09-29T22:55:07Z"
 }
-2026-09-29T23:06:41Z | Gate 11: FAIL | Concurrent admission incomplete
-./validation/gates-11-20-runner.sh: line 87: [: 0
-0: integer expression expected
+2026-09-29T22:55:07Z | Gate 11: FAIL | Concurrent admission incomplete
+{"id":"concurrent-work-1","target":"dh-node-2","resources":{"cpu":1,"memory":1Gi}}
+{"id":"concurrent-work-3","target":"dh-node-1","resources":{"cpu":1,"memory":1Gi}}
+{"id":"concurrent-work-2","target":"dh-node-3","resources":{"cpu":1,"memory":1Gi}}
+{"id":"concurrent-work-5","target":"dh-node-3","resources":{"cpu":1,"memory":1Gi}}
+{"id":"concurrent-work-4","target":"dh-node-2","resources":{"cpu":1,"memory":1Gi}}
+{"id":"concurrent-work-6","target":"dh-node-1","resources":{"cpu":1,"memory":1Gi}}
+{"id":"concurrent-work-7","target":"dh-node-2","resources":{"cpu":1,"memory":1Gi}}
+{"id":"concurrent-work-8","target":"dh-node-3","resources":{"cpu":1,"memory":1Gi}}
+{"id":"concurrent-work-9","target":"dh-node-1","resources":{"cpu":1,"memory":1Gi}}
+{"id":"concurrent-work-10","target":"dh-node-2","resources":{"cpu":1,"memory":1Gi}}
 {
   "gate": "11",
   "status": "FAIL",
-  "reason": "Only 0\n0/10 apps created",
-  "timestamp": "2026-09-29T23:09:50Z"
+  "reason": "Only 0/10 work items admitted",
+  "timestamp": "2026-10-02T14:40:51Z"
 }
-2026-09-29T23:09:50Z | Gate 11: FAIL | Concurrent admission incomplete
-{
-  "gate": "11",
-  "status": "FAIL",
-  "reason": "Only 0/10 apps created",
-  "timestamp": "2026-09-29T23:11:18Z"
-}
-2026-09-29T23:11:18Z | Gate 11: FAIL | Concurrent admission incomplete
-{
-  "gate": "11",
-  "status": "FAIL",
-  "reason": "Only 0/10 apps created",
-  "timestamp": "2026-09-29T23:12:04Z"
-}
-2026-09-29T23:12:04Z | Gate 11: FAIL | Concurrent admission incomplete
-{
-  "gate": "11",
-  "status": "PASS",
-  "detail": "Application state observable (2 apps, state transitions tracked)",
-  "timestamp": "2026-09-29T23:13:17Z"
-}
-2026-09-29T23:13:17Z | Gate 11: PASS | App state tracking verified
-{
-  "gate": "11",
-  "status": "PASS",
-  "detail": "Application state observable (2 apps, state transitions tracked)",
-  "timestamp": "2026-09-29T23:14:04Z"
-}
-2026-09-29T23:14:04Z | Gate 11: PASS | App state tracking verified
-{
-  "gate": "11",
-  "status": "PASS",
-  "detail": "Application state observable (2 apps, state transitions tracked)",
-  "timestamp": "2026-09-29T23:15:06Z"
-}
-2026-09-29T23:15:06Z | Gate 11: PASS | App state tracking verified
+2026-10-02T14:40:51Z | Gate 11: FAIL | Concurrent admission incomplete

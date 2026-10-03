@@ -1,0 +1,60 @@
+{
+  "kind": "chaos-report",
+  "signer": "dh1zwzcxzrsxytpaaq4gfxuvvb26n",
+  "pub": "kCwjoIDNXyC6Ftv_DMbj9D4e5QFkbh1l6nassAsBHfg",
+  "payload": {
+    "durationMs": 80457,
+    "environment": {
+      "arch": "amd64",
+      "cpus": "4",
+      "go": "go1.26.4",
+      "os": "linux",
+      "topology": "3 control-plane member(s), 3 host(s), 1 edge(s)"
+    },
+    "evidence": [
+      "audit chain verified: 35 entries, head 917ac23a2035"
+    ],
+    "id": "leader-crash-1790946307765",
+    "injection": "SIGKILL the raft leader while traffic flows through the edge",
+    "invariant": "a new leader is elected, committed writes survive, new writes succeed, and no workload request fails",
+    "measurements": {
+      "audit_head_after": "35",
+      "audit_head_before": "35",
+      "election_ms": "2125",
+      "requests_failed": "0",
+      "requests_ok": "230"
+    },
+    "observed": "new leader in 2125 ms; 230/230 requests succeeded during failover; audit 35 → 35 verified",
+    "recovery": [
+      {
+        "atMs": 0,
+        "event": "starting 3 control-plane member(s), 3 host(s), 1 edge(s)"
+      },
+      {
+        "atMs": 11778,
+        "event": "cluster ready"
+      },
+      {
+        "atMs": 75748,
+        "event": "SIGKILL leader cp-1"
+      },
+      {
+        "atMs": 77873,
+        "event": "cp-3 elected leader"
+      },
+      {
+        "atMs": 78148,
+        "event": "write committed through the new leader"
+      },
+      {
+        "atMs": 80457,
+        "event": "old leader restarted"
+      }
+    ],
+    "scenario": "leader-crash",
+    "started": 1790946307765,
+    "title": "Control-plane leader crash",
+    "verdict": "PASS"
+  },
+  "sig": "UqcchFMPBFukqQLh9HI0R_qQiFeZf5uGqqytMfXAiv9ZllTFDPK5VVlPmoxObfQJqVmrY2b6iVJbZ7oZr3wWCg"
+}

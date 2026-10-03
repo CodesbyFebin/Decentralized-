@@ -1,0 +1,46 @@
+{
+  "kind": "chaos-report",
+  "signer": "dh1zwzcxzrsxytpaaq4gfxuvvb26n",
+  "pub": "kCwjoIDNXyC6Ftv_DMbj9D4e5QFkbh1l6nassAsBHfg",
+  "payload": {
+    "durationMs": 81371,
+    "environment": {
+      "arch": "amd64",
+      "cpus": "4",
+      "go": "go1.26.4",
+      "os": "linux",
+      "topology": "1 control-plane member(s), 2 host(s), 0 edge(s)"
+    },
+    "evidence": [
+      "audit chain verified: 20 entries, head 784784ea9c79"
+    ],
+    "id": "agent-restart-1790946536013",
+    "injection": "SIGKILL dh-noded only (workloads keep running) and restart it",
+    "invariant": "the restarted agent re-adopts every workload by PID and kernel start time without restarting it",
+    "measurements": {},
+    "observed": "1 workload(s) re-adopted with unchanged PIDs; ledger records re-adoption: true",
+    "recovery": [
+      {
+        "atMs": 0,
+        "event": "starting 1 control-plane member(s), 2 host(s), 0 edge(s)"
+      },
+      {
+        "atMs": 4817,
+        "event": "cluster ready"
+      },
+      {
+        "atMs": 75361,
+        "event": "SIGKILL dh-noded on host-a"
+      },
+      {
+        "atMs": 77363,
+        "event": "dh-noded restarted"
+      }
+    ],
+    "scenario": "agent-restart",
+    "started": 1790946536013,
+    "title": "Host agent restart",
+    "verdict": "PASS"
+  },
+  "sig": "3aoxcsVQ4CgmlVpwTB-rp_RM1ZZNe6TnTDqSxe2JFqEhbHPnVh8BpqK3XxhuAyLW5XabF7tUThVy-Qh81fP5BA"
+}

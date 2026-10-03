@@ -1,6 +1,6 @@
 {
   "gate": "16",
-  "status": "PASS",
-  "detail": "Multi-node system remains stable (fault tolerance verified)",
-  "timestamp": "2026-09-29T23:15:06Z"
+  "status": "FAIL",
+  "reason": "Node-3 unhealthy or unable to admit work (health=UNKNOWN)",
+  "timestamp": "2026-10-02T14:40:51Z"
 }

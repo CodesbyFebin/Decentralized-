@@ -1,0 +1,66 @@
+{
+  "kind": "chaos-report",
+  "signer": "dh1zwzcxzrsxytpaaq4gfxuvvb26n",
+  "pub": "kCwjoIDNXyC6Ftv_DMbj9D4e5QFkbh1l6nassAsBHfg",
+  "payload": {
+    "durationMs": 62811,
+    "environment": {
+      "arch": "amd64",
+      "cpus": "4",
+      "go": "go1.26.4",
+      "os": "linux",
+      "topology": "1 control-plane member(s), 2 host(s), 0 edge(s)"
+    },
+    "evidence": [
+      "audit chain verified: 28 entries, head 06c7c04f789b"
+    ],
+    "id": "clock-skew-1790946867055",
+    "injection": "shift one host's clock +120s, then −120s, then restore",
+    "invariant": "a skewed host detects it from signed bundle timestamps, holds admitted work, refuses new work (CLOCK_SKEW / stale plane), and returns to normal when the clock is corrected",
+    "measurements": {},
+    "observed": "skew detected in both directions from bundle timestamps; admitted workload (pid 42989) held; new work refused with CLOCK_SKEW; both replicas running after correction",
+    "recovery": [
+      {
+        "atMs": 0,
+        "event": "starting 1 control-plane member(s), 2 host(s), 0 edge(s)"
+      },
+      {
+        "atMs": 3833,
+        "event": "cluster ready"
+      },
+      {
+        "atMs": 42752,
+        "event": "host-b clock offset +120000ms"
+      },
+      {
+        "atMs": 43710,
+        "event": "detected: bundle is 120008ms old on arrival: host clock ahead or plane slow; holding admitted work"
+      },
+      {
+        "atMs": 43791,
+        "event": "host-b clock offset -120000ms"
+      },
+      {
+        "atMs": 43807,
+        "event": "detected: bundle is 120008ms old on arrival: host clock ahead or plane slow; holding admitted work"
+      },
+      {
+        "atMs": 43937,
+        "event": "host-a clock offset -120000ms; scaling to 2"
+      },
+      {
+        "atMs": 45333,
+        "event": "new work refused on host-a with CLOCK_SKEW"
+      },
+      {
+        "atMs": 45477,
+        "event": "clocks restored"
+      }
+    ],
+    "scenario": "clock-skew",
+    "started": 1790946867055,
+    "title": "Host clock skew",
+    "verdict": "PASS"
+  },
+  "sig": "RIF3sVkjiDyzoDZM9gemrHGHV5pJp5ASlAgvVGtmRB4BghW7LYFx0Isu1-quzt8zL4vZd6_sNZWEcQLaUFSWCQ"
+}

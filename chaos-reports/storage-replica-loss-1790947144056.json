@@ -1,0 +1,45 @@
+{
+  "kind": "chaos-report",
+  "signer": "dh1zwzcxzrsxytpaaq4gfxuvvb26n",
+  "pub": "kCwjoIDNXyC6Ftv_DMbj9D4e5QFkbh1l6nassAsBHfg",
+  "payload": {
+    "durationMs": 73165,
+    "environment": {
+      "arch": "amd64",
+      "cpus": "4",
+      "go": "go1.26.4",
+      "os": "linux",
+      "topology": "1 control-plane member(s), 4 host(s), 1 edge(s)"
+    },
+    "evidence": [
+      "audit chain verified: 37 entries, head db9af3826b91"
+    ],
+    "id": "storage-replica-loss-1790947144056",
+    "injection": "delete every stored object on one replica host while it runs",
+    "invariant": "anti-entropy detects the missing objects by Merkle comparison, repairs them from peers with signed evidence, and the volume returns to HEALTHY with identical data",
+    "measurements": {
+      "objects_repaired": "29",
+      "repair_ms": "7314"
+    },
+    "observed": "29 object(s) repaired on edge-1 with verified evidence in 7314 ms; data identical",
+    "recovery": [
+      {
+        "atMs": 0,
+        "event": "starting 1 control-plane member(s), 4 host(s), 1 edge(s)"
+      },
+      {
+        "atMs": 4077,
+        "event": "cluster ready"
+      },
+      {
+        "atMs": 65767,
+        "event": "deleted all stored objects on edge-1"
+      }
+    ],
+    "scenario": "storage-replica-loss",
+    "started": 1790947144056,
+    "title": "Loss of a storage replica",
+    "verdict": "PASS"
+  },
+  "sig": "D8HPLN2IQ5lESC5ztMozCW3vBXvL9h5uM_wGyQlZvOXiJ5IK6UkY8GhGVW4GqZn8Dd90J1wd39E_cSoWFCb9Cg"
+}

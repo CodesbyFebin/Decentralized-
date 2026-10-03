@@ -1,57 +1,14 @@
-./validation/gates-11-20-runner.sh: line 136: [: 0
-0: integer expression expected
-./validation/gates-11-20-runner.sh: line 142: [: 0
-0: integer expression expected
 {
   "gate": "12",
   "status": "FAIL",
-  "reason": "Over-subscription was not enforced",
-  "timestamp": "2026-09-29T23:06:41Z"
+  "reason": "Over-subscription was not denied: DENIED",
+  "timestamp": "2026-09-29T22:55:07Z"
 }
-2026-09-29T23:06:41Z | Gate 12: FAIL | Capacity enforcement failed
-./validation/gates-11-20-runner.sh: line 136: [: 0
-0: integer expression expected
-./validation/gates-11-20-runner.sh: line 142: [: 0
-0: integer expression expected
+2026-09-29T22:55:07Z | Gate 12: FAIL | Capacity enforcement failed
 {
   "gate": "12",
   "status": "FAIL",
-  "reason": "Over-subscription was not enforced",
-  "timestamp": "2026-09-29T23:09:50Z"
+  "reason": "Over-subscription was not denied: DENIED",
+  "timestamp": "2026-10-02T14:40:51Z"
 }
-2026-09-29T23:09:50Z | Gate 12: FAIL | Capacity enforcement failed
-{
-  "gate": "12",
-  "status": "PASS",
-  "detail": "Over-subscription correctly enforced (app rejected or placement denied)",
-  "timestamp": "2026-09-29T23:11:18Z"
-}
-2026-09-29T23:11:18Z | Gate 12: PASS | Capacity enforcement verified
-{
-  "gate": "12",
-  "status": "PASS",
-  "detail": "Over-subscription correctly enforced (app rejected or placement denied)",
-  "timestamp": "2026-09-29T23:12:04Z"
-}
-2026-09-29T23:12:04Z | Gate 12: PASS | Capacity enforcement verified
-{
-  "gate": "12",
-  "status": "PASS",
-  "detail": "Resource request parsing operational (schema validation working)",
-  "timestamp": "2026-09-29T23:13:17Z"
-}
-2026-09-29T23:13:17Z | Gate 12: PASS | Resource parsing verified
-{
-  "gate": "12",
-  "status": "PASS",
-  "detail": "Resource request parsing operational (schema validation working)",
-  "timestamp": "2026-09-29T23:14:04Z"
-}
-2026-09-29T23:14:04Z | Gate 12: PASS | Resource parsing verified
-{
-  "gate": "12",
-  "status": "PASS",
-  "detail": "Resource request parsing operational (schema validation working)",
-  "timestamp": "2026-09-29T23:15:06Z"
-}
-2026-09-29T23:15:06Z | Gate 12: PASS | Resource parsing verified
+2026-10-02T14:40:51Z | Gate 12: FAIL | Capacity enforcement failed

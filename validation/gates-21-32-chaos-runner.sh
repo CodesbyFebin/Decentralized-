@@ -46,43 +46,6 @@ chaos_result() {
     '{gate: $gate, scenario: $scenario, status: $status, latency_p50_ms: $latency_p50, latency_p99_ms: $latency_p99, error_rate: $errors, detail: $detail, timestamp: $timestamp}'
 }
 
-start_load_generation() {
-  # Start background load via app creation
-  (
-    APP_NUM=0
-    while true; do
-      APP_NUM=$((APP_NUM + 1))
-      APP_DIR="/tmp/chaos-load-$$-$APP_NUM"
-      mkdir -p "$APP_DIR" 2>/dev/null || true
-
-      cat > "$APP_DIR/app.yaml" <<'EOF'
-kind: Application
-metadata:
-  name: load-gen-UNIQ
-spec:
-  image: busybox:latest
-  command: ["/bin/sh", "-c", "echo ok"]
-  replicas: 1
-  resources:
-    requests:
-      cpu: "0.01"
-      memory: "32Mi"
-EOF
-
-      # Replace UNIQ with timestamp
-      sed -i "s/UNIQ/$(date +%s%N)/" "$APP_DIR/app.yaml"
-
-      # Try to apply
-      dh apply -f "$APP_DIR/app.yaml" >/dev/null 2>&1 || true
-
-      # Cleanup
-      rm -rf "$APP_DIR" 2>/dev/null || true
-
-      sleep 0.1  # ~10 ops/sec background load
-    done
-  ) &
-  LOAD_PID=$!
-}
 
 stop_load_generation() {
   if [ ! -z "$LOAD_PID" ]; then
@@ -321,3 +284,48 @@ fi
 echo ""
 echo "Next: Generate final P1_CORE Qualification Report"
 echo ""
+start_load_generation() {
+  # Start sustained load in background with auto-restart capability
+  (
+    RETRY_COUNT=0
+    MAX_RETRIES=5
+    while true; do
+      for node in 172.30.0.2 172.30.0.3 172.30.0.4; do
+        NODE_IDX=$((node % 3 + 1))
+        timeout 10 bash -c "
+          for i in {1..10}; do
+            podman exec dh-node-$NODE_IDX dh-cli propose-work \
+              --target dh-node-$NODE_IDX \
+              --resources cpu:0.5,memory:512Mi >/dev/null 2>&1 &
+          done
+          wait
+        " 2>/dev/null || true
+      done
+
+      sleep 0.01  # ~1000 ops/sec
+
+      # Check for failures and restart if needed
+      if [ $? -ne 0 ] && [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+        ((RETRY_COUNT++))
+        echo "Load generation failed, restarting (attempt $RETRY_COUNT/$MAX_RETRIES)..."
+        sleep 1
+        continue
+      fi
+
+      RETRY_COUNT=0
+    done
+  ) &
+  LOAD_PID=$!
+
+  # Monitor process and restart if it crashes
+  (
+    while true; do
+      sleep 5
+      if ! kill -0 $LOAD_PID 2>/dev/null; then
+        echo "Load generation process died, restarting..."
+        start_load_generation  # Recursive restart
+        break
+      fi
+    done
+  ) &
+}

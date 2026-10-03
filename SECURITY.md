@@ -2,98 +2,153 @@
 
 ## Reporting Security Vulnerabilities
 
-We take security very seriously. If you discover a security vulnerability in Decentralized.Host, please report it responsibly and do not open a public GitHub issue.
+**Do not file public issues for security vulnerabilities.** Instead, please email [security@decentralized-host.dev](mailto:codesbyfebin@gmail.com?subject=Security%20Vulnerability) with:
 
-### How to Report
+- **Description:** Clear explanation of the vulnerability
+- **Reproduction:** Steps to reproduce the issue
+- **Impact:** Potential damage or exposure
+- **Proposed fix:** Your suggested solution (if available)
 
-1. **Email**: Send details to codesbyfebin@gmail.com with subject line "[SECURITY]"
-2. **Include**:
-   - Description of the vulnerability
-   - Steps to reproduce (if applicable)
-   - Potential impact
-   - Suggested fix (if you have one)
-
-3. **Do Not**:
-   - Open a public GitHub issue
-   - Share vulnerability details publicly before we've had time to address it
-   - Test on live production systems without authorization
-
-### Timeline
-
-We aim to:
-- **Acknowledge** your report within 48 hours
-- **Assess** the vulnerability within 1 week
-- **Develop and test a fix** within 2 weeks
-- **Release a patch** as soon as possible
-- **Credit** you in release notes (with your permission)
-
-## Security Best Practices
-
-### For Users
-
-1. **Keep Updated**: Always use the latest version of Decentralized.Host
-2. **Configuration**: 
-   - Enable TLS/mTLS for all network communication
-   - Use strong API keys and rotate them regularly
-   - Restrict network access using firewalls and network policies
-   - Enable authentication for all endpoints
-
-3. **Deployment**:
-   - Follow DEPLOYMENT.md security hardening section
-   - Use read-only root filesystems where possible
-   - Run with minimum required permissions
-   - Enable security monitoring and logging
-
-4. **Secrets Management**:
-   - Never commit secrets to version control
-   - Use environment variables or secret management systems
-   - Rotate credentials regularly
-   - Audit access to sensitive data
-
-### For Contributors
-
-1. **Code Review**: Security-focused code review for all changes
-2. **Dependencies**: Keep dependencies up-to-date
-3. **Input Validation**: Always validate user inputs
-4. **Error Handling**: Don't expose sensitive information in errors
-5. **Logging**: Don't log sensitive data
+**We will:**
+1. Acknowledge your report within 48 hours
+2. Investigate and verify the vulnerability
+3. Work with you to develop and test a fix
+4. Coordinate public disclosure with you
+5. Credit you in the security advisory (if you'd like)
 
 ## Security Features
 
-Decentralized.Host includes the following security features:
+### Cryptographic Assurance
+- **Signed intent:** All work assignments use Ed25519 signatures
+- **Signed observations:** Hosts report state with cryptographic proof
+- **Hash-chained audit trail:** Tamper detection at every boundary
+- **BLAKE3 content addressing:** Hash-based storage integrity
 
-- **Ed25519 Cryptography**: Signed intent and identity binding
-- **mTLS**: Mutual TLS for control plane communication
-- **Local Policy Enforcement**: Per-host admission control
-- **Audit Trails**: Comprehensive logging of all state changes
-- **Content Addressing**: BLAKE3-based content verification
-- **Network Policies**: Kubernetes network policy support
+### Isolation & Control
+- **Per-host admission control:** No centralized overrides
+- **Local policy enforcement:** Each host decides autonomously
+- **Revocation support:** Immediate effect (no grace period exploits)
+- **Key rotation:** Automatic and operator-triggered
 
-## Known Issues
+### Encrypted Channels
+- **Control-plane TLS:** Mutual mTLS for all APIs
+- **Mesh WireGuard:** Peer-to-peer encryption, userspace implementation
+- **No unencrypted communication:** TLS enforced from first start
 
-We maintain transparency about known issues:
-- Check our [Security Advisories](https://github.com/CodesbyFebin/Decentralized-/security/advisories) page
-- Review [CHANGELOG](CHANGELOG.md) for security fixes
+### Audit & Compliance
+- **Complete audit trail:** Every decision is logged and signed
+- **Local verification:** Operators can verify ledger integrity offline
+- **No telemetry:** No data leaves the cluster
+- **Tamper detection:** Hash-chained logs prevent retroactive modification
 
-## Dependencies
+## Known Limitations
 
-We regularly audit and update dependencies. Check `go.mod` for current versions and review security advisories:
-- `go list -u -m all` to check for updates
-- GitHub's Dependabot for automated security updates
+### By Design
+- **Byzantine hosts:** System doesn't defend against compromised hosts (they can refuse work)
+- **Byzantine operators:** Federation assumes trust between operators
+- **Timing attacks:** Cryptographic paths are checked carefully but haven't been formally analyzed
+- **Kernel exploits:** Userspace WireGuard is not protected from kernel-level attacks
 
-## Compliance
+### Not Implemented Yet
+- **Formal verification:** Protocol has not been formally verified
+- **Differential privacy:** Topology and workload distribution may leak information
+- **Quantum-resistant crypto:** Uses standard elliptic curve cryptography
+- **Hardware security modules:** Keys are stored in plaintext on disk (encrypt with host filesystem)
 
-Decentralized.Host aims to meet these standards:
-- OWASP Top 10 mitigation
-- CWE/SANS Top 25 awareness
-- Secure coding practices
+## Security Best Practices
+
+### For Operators
+
+1. **Secure bootstrap:**
+   - Generate root key on isolated machine
+   - Manually verify control-plane certificate fingerprints
+   - Use `dh init --acme` for TLS with ACME
+
+2. **Protect secrets:**
+   - Encrypt `/etc/dh` partition at rest
+   - Use restricted file permissions (mode 0700)
+   - Rotate host keys regularly
+   - Monitor audit logs for anomalies
+
+3. **Network security:**
+   - Isolate control-plane to trusted network
+   - Firewall WireGuard port (default 51820)
+   - Use VPN or air-gap for production clusters
+   - Monitor gossip for unexpected peers
+
+4. **Incident response:**
+   - Maintain signed backups (test restore regularly)
+   - Revoke compromised certificates immediately
+   - Audit trail is tamper-proof (check integrity)
+   - Plan for leader loss and total control-plane failure
+
+### For Developers
+
+1. **Input validation:**
+   - Validate all network inputs
+   - Bounds-check offsets and lengths
+   - Use strong types (not `interface{}`)
+   - Parse untrusted data carefully
+
+2. **Cryptographic hygiene:**
+   - Use `crypto/sha256` and `blake3` appropriately
+   - Constant-time comparison for signatures: `subtle.ConstantTimeCompare`
+   - No hardcoded secrets in source
+   - Use random nonces and salts
+
+3. **Concurrency safety:**
+   - Avoid data races (`make race` in CI)
+   - Use channels for synchronization
+   - Document shared state clearly
+   - Test with `go test -race`
+
+4. **Deployment security:**
+   - Sign binaries and container images
+   - Use staged rollouts
+   - Monitor control-plane for unexpected behavior
+   - Log all administrative actions
+
+## Vulnerability Response Timeline
+
+| When | Action |
+|------|--------|
+| Day 0 | Initial report and acknowledgment |
+| Day 1-2 | Verification and impact assessment |
+| Day 3-7 | Fix development and testing |
+| Day 7-14 | Beta release or scheduled release window |
+| Release day | Public security advisory and CVE assignment |
+| Day 30+ | Post-mortem and analysis (if applicable) |
+
+## CVE Assignments
+
+Security vulnerabilities discovered in Decentralized.Host are assigned CVE identifiers. See [GitHub Security Advisories](https://github.com/CodesbyFebin/Decentralized-/security/advisories) for the full list.
+
+## Security Audits
+
+- **M1–M8 testing:** Each milestone includes comprehensive multi-process tests
+- **P1 qualification:** 10/10 gates verify robustness under 17 chaos scenarios
+- **Conformance:** 136 test vectors against independent Python implementation
+- **Formal audit:** Not yet performed (planned for production release)
+
+## Updates & Patches
+
+### Staying Secure
+- Subscribe to [GitHub release notifications](https://github.com/CodesbyFebin/Decentralized-/releases)
+- Monitor security advisories: https://github.com/CodesbyFebin/Decentralized-/security
+- Enable automatic updates in your deployment
+- Test updates in staging before production
+
+### Patching Timeline
+- Critical vulnerabilities: Emergency release within 48 hours
+- High-severity: Next scheduled release (within 2 weeks)
+- Medium/Low: Regular release cycle (monthly or as part of feature releases)
 
 ## Questions?
 
-For security-related questions (non-vulnerability):
-- Email: codesbyfebin@gmail.com
-- Subject: [SECURITY-QUESTION]
+- **Security issues:** [Email us](mailto:codesbyfebin@gmail.com?subject=Security%20Inquiry)
+- **General questions:** [GitHub Discussions](https://github.com/CodesbyFebin/Decentralized-/discussions)
+- **Runbooks:** [docs/runbooks/](docs/runbooks/)
 
 ---
 
-**Last Updated**: 2026-09-30
+**Thank you for helping us keep Decentralized.Host secure!**

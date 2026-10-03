@@ -1,0 +1,38 @@
+[2026-10-03T08:37:33.490Z] === GATE 1: Preflight Verification ===
+[2026-10-03T08:37:33.499Z] Gate 1 observation: preflight_start=2026-10-03T08:37:33.495Z (ts: 1791016653497582743)
+[2026-10-03T08:37:33.508Z] Gate 1 observation: required_commands=MISSING: ssh-keygen (ts: 1791016653506308906)
+[2026-10-03T08:37:33.520Z] Gate 1 observation: repo_source_sha=18bf7c1ce21f8f1c9943a917b1ac9781d3e477e5 (ts: 1791016653518059966)
+[2026-10-03T08:37:33.529Z] Gate 1 observation: qemu_status=NOT_FOUND (ts: 1791016653526439595)
+[2026-10-03T08:37:33.538Z] Gate 1 observation: state_dir_exists=true (ts: 1791016653535996125)
+[2026-10-03T08:37:33.543Z] Gate 1: Preflight verification complete
+[2026-10-03T08:37:33.548Z] === GATE 2: Topology Discovery ===
+[2026-10-03T08:37:33.558Z] Gate 2 observation: topology_discovery_start=2026-10-03T08:37:33.553Z (ts: 1791016653555615799)
+[2026-10-03T08:37:33.565Z] Gate 2 observation: topology_file_found=false (ts: 1791016653563358837)
+[2026-10-03T08:37:33.571Z] Gate 2: Topology discovery complete
+[2026-10-03T08:37:33.576Z] === GATE 3-4: Bootstrap SSH Setup ===
+[2026-10-03T08:37:33.587Z] Gate 3 observation: bootstrap_start=2026-10-03T08:37:33.582Z (ts: 1791016653584754650)
+[2026-10-03T08:37:33.595Z] Gate 3 observation: ssh_key_exists=false (ts: 1791016653592883858)
+[2026-10-03T08:37:33.602Z] Gate 4 observation: cluster_json_exists=false (ts: 1791016653600389833)
+[2026-10-03T08:37:33.608Z] Gate 3-4: Bootstrap SSH setup complete
+[2026-10-03T08:37:33.613Z] === GATE 5: Mesh Network Verification ===
+[2026-10-03T08:37:33.625Z] Gate 5 observation: mesh_verification_start=2026-10-03T08:37:33.619Z (ts: 1791016653622799051)
+[2026-10-03T08:37:33.633Z] Gate 5 observation: mesh_verification_skipped=no_cluster_state (ts: 1791016653630660550)
+[2026-10-03T08:37:33.639Z] Gate 5: Mesh network verification complete
+[2026-10-03T08:37:33.645Z] === GATE 6-9: Workload Baseline & Metrics ===
+[2026-10-03T08:37:33.654Z] Gate 6 observation: baseline_workload_start=2026-10-03T08:37:33.650Z (ts: 1791016653652687910)
+[2026-10-03T08:37:33.662Z] Gate 6 observation: baseline_skipped=no_cluster_state (ts: 1791016653659377817)
+[2026-10-03T08:37:33.667Z] Gate 6-9: Workload baseline & metrics complete
+[2026-10-03T08:37:33.673Z] === GATE 10: Initial State Consistency ===
+[2026-10-03T08:37:33.682Z] Gate 10 observation: state_consistency_check=2026-10-03T08:37:33.678Z (ts: 1791016653680108451)
+[2026-10-03T08:37:33.695Z] Gate 10 observation: execution_observations_count=12 (ts: 1791016653692013509)
+[2026-10-03T08:37:33.710Z] Gate 10 observation: execution_artifacts_count=0 (ts: 1791016653706271515)
+[2026-10-03T08:37:33.716Z] Gate 10: Initial state consistency check complete
+[2026-10-03T08:37:33.721Z] 
+[2026-10-03T08:37:33.726Z] === P1-LOCAL-VM-A01 EXECUTION COMPLETE ===
+[2026-10-03T08:37:33.731Z] Campaign ID: 2026-10-03T08:37:33Z
+[2026-10-03T08:37:33.736Z] Execution Directory: /home/user/Decentralized-/validation/local-vm/evidence/P1-LOCAL-VM-A01-EXECUTION-2026-10-03T08:37:33Z
+[2026-10-03T08:37:33.746Z] Observations captured: 13
+[2026-10-03T08:37:33.756Z] Artifacts captured: 0
+[2026-10-03T08:37:33.762Z] Timestamp: 2026-10-03T08:37:33.760Z
+[2026-10-03T08:37:33.768Z] 
+[2026-10-03T08:37:33.790Z] Execution summary written to /home/user/Decentralized-/validation/local-vm/evidence/P1-LOCAL-VM-A01-EXECUTION-2026-10-03T08:37:33Z/EXECUTION-SUMMARY.txt

@@ -1,6 +1,6 @@
 {
   "gate": "12",
-  "status": "PASS",
-  "detail": "Resource request parsing operational (schema validation working)",
-  "timestamp": "2026-09-29T23:15:06Z"
+  "status": "FAIL",
+  "reason": "Over-subscription was not denied: DENIED",
+  "timestamp": "2026-10-02T14:40:51Z"
 }

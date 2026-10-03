@@ -1,0 +1,51 @@
+{
+  "kind": "chaos-report",
+  "signer": "dh1zwzcxzrsxytpaaq4gfxuvvb26n",
+  "pub": "kCwjoIDNXyC6Ftv_DMbj9D4e5QFkbh1l6nassAsBHfg",
+  "payload": {
+    "durationMs": 72162,
+    "environment": {
+      "arch": "amd64",
+      "cpus": "4",
+      "go": "go1.26.4",
+      "os": "linux",
+      "topology": "1 control-plane member(s), 4 host(s), 1 edge(s)"
+    },
+    "evidence": [
+      "audit chain verified: 42 entries, head 2e327ac96e4f"
+    ],
+    "id": "revoked-host-1790947071052",
+    "injection": "revoke a host that serves a replica while traffic flows",
+    "invariant": "the revoked host keeps its admitted workload but is removed from the mesh and the edge routing table, the replica is rescheduled, and no request fails",
+    "measurements": {
+      "requests_failed": "0",
+      "requests_ok": "736",
+      "reschedule_ms": "18299",
+      "served_by_revoked_after_removal": "0"
+    },
+    "observed": "revoked host removed from routing and mesh; replica rescheduled; 736/736 requests OK; 0 routed to the revoked host after removal: true",
+    "recovery": [
+      {
+        "atMs": 0,
+        "event": "starting 1 control-plane member(s), 4 host(s), 1 edge(s)"
+      },
+      {
+        "atMs": 4083,
+        "event": "cluster ready"
+      },
+      {
+        "atMs": 50859,
+        "event": "revoked host-c"
+      },
+      {
+        "atMs": 69158,
+        "event": "replica 2 running on another host; host-c removed from routing"
+      }
+    ],
+    "scenario": "revoked-host",
+    "started": 1790947071052,
+    "title": "Host revocation under traffic",
+    "verdict": "PASS"
+  },
+  "sig": "kGljSoNpKl0VjkGE1r7p15jvWHKsxLepv90eP_nSbdjQ1pX6_J6EmAtsrWwSyhEdEd6EXcKRKCVMcjkyyNv8BQ"
+}

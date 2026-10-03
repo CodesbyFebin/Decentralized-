@@ -1,0 +1,50 @@
+{
+  "kind": "chaos-report",
+  "signer": "dh1zwzcxzrsxytpaaq4gfxuvvb26n",
+  "pub": "kCwjoIDNXyC6Ftv_DMbj9D4e5QFkbh1l6nassAsBHfg",
+  "payload": {
+    "durationMs": 105176,
+    "environment": {
+      "arch": "amd64",
+      "cpus": "4",
+      "go": "go1.26.4",
+      "os": "linux",
+      "topology": "1 control-plane member(s), 4 host(s), 1 edge(s)"
+    },
+    "evidence": [
+      "audit chain verified: 40 entries, head 7387eec57eee"
+    ],
+    "id": "disk-full-1790947218087",
+    "injection": "make every new write on one replica host fail with ENOSPC (storage-layer injection), write new data, then clear it",
+    "invariant": "the volume is reported DEGRADED — never falsely HEALTHY — while the replica cannot store data; writes still commit on the other replicas; after the disk frees, anti-entropy restores HEALTHY",
+    "measurements": {},
+    "observed": "volume shown DEGRADED while host-d was full (DEGRADED: 2/3 replicas verified; anti-entropy is repairing); HEALTHY after recovery; data intact",
+    "recovery": [
+      {
+        "atMs": 0,
+        "event": "starting 1 control-plane member(s), 4 host(s), 1 edge(s)"
+      },
+      {
+        "atMs": 5752,
+        "event": "cluster ready"
+      },
+      {
+        "atMs": 61037,
+        "event": "ENOSPC injected on host-d"
+      },
+      {
+        "atMs": 98005,
+        "event": "reported DEGRADED: 2/3 replicas verified; anti-entropy is repairing"
+      },
+      {
+        "atMs": 98076,
+        "event": "ENOSPC cleared"
+      }
+    ],
+    "scenario": "disk-full",
+    "started": 1790947218087,
+    "title": "Disk full on a replica (injected ENOSPC)",
+    "verdict": "PASS"
+  },
+  "sig": "3643tUbFnwADVxQpcbI_jqMICQyTXNHXaCsuNVdAksIdyXhmaW4ggdX5I5zSh6Ewq9wfWWt71V0LHFK18dJjBw"
+}

@@ -1,0 +1,57 @@
+{
+  "kind": "chaos-report",
+  "signer": "dh1zwzcxzrsxytpaaq4gfxuvvb26n",
+  "pub": "kCwjoIDNXyC6Ftv_DMbj9D4e5QFkbh1l6nassAsBHfg",
+  "payload": {
+    "durationMs": 99930,
+    "environment": {
+      "arch": "amd64",
+      "cpus": "4",
+      "go": "go1.26.4",
+      "os": "linux",
+      "topology": "1 control-plane member(s), 3 host(s), 1 edge(s)"
+    },
+    "evidence": [
+      "audit chain verified: 49 entries, head 27eee4492485"
+    ],
+    "id": "stale-generation-1790946930627",
+    "injection": "cut one host from the control plane, roll the app to a new generation, heal",
+    "invariant": "the cut-off host keeps the generation it admitted (never runs an unsigned one), the console shows it as stale, other hosts roll within maxUnavailable, and after healing every replica runs the new generation",
+    "measurements": {
+      "requests_failed": "0",
+      "requests_ok": "1794"
+    },
+    "observed": "cut-off host held generation 1 until healed; rollout completed; 1794/1794 requests OK",
+    "recovery": [
+      {
+        "atMs": 0,
+        "event": "starting 1 control-plane member(s), 3 host(s), 1 edge(s)"
+      },
+      {
+        "atMs": 3580,
+        "event": "cluster ready"
+      },
+      {
+        "atMs": 48580,
+        "event": "host-c cut from the control plane"
+      },
+      {
+        "atMs": 48638,
+        "event": "applied generation 2: web: template changed; rolling update to a new generation (generation 2)"
+      },
+      {
+        "atMs": 98469,
+        "event": "cut-off host still runs generation 1 (stale evidence shown: true)"
+      },
+      {
+        "atMs": 98548,
+        "event": "healed"
+      }
+    ],
+    "scenario": "stale-generation",
+    "started": 1790946930627,
+    "title": "Rollout while a host is cut off",
+    "verdict": "PASS"
+  },
+  "sig": "MkpXkFss-2zcSyw-2QBEvrLybmEPxMtPZJjhcdxqrX5EoatB0_zOBalhQtlGE0ft1VZvSiXW2pkK11QZEWYPBg"
+}

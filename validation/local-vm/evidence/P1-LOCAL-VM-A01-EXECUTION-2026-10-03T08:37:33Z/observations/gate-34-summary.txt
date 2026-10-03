@@ -1,0 +1,1 @@
+ssh_key_ok=false cluster_status=NOT_CREATED 

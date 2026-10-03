@@ -1,47 +1,38 @@
 ---
 name: Bug Report
-about: Report a bug or issue
+about: Report a bug or unexpected behavior
 title: "[BUG] "
 labels: bug
-assignees: CodesbyFebin
+assignees: ''
+
 ---
 
 ## Description
-A clear and concise description of the bug.
+<!-- Clear, concise description of the bug -->
 
 ## Steps to Reproduce
-Steps to reproduce the behavior:
-1. ...
-2. ...
-3. ...
+1. <!-- First step -->
+2. <!-- Second step -->
+3. <!-- ... -->
 
 ## Expected Behavior
-What you expected to happen.
+<!-- What should happen -->
 
 ## Actual Behavior
-What actually happened.
+<!-- What actually happens -->
 
 ## Environment
-- **OS**: (e.g., Ubuntu 20.04, macOS 12)
-- **Go Version**: (e.g., 1.21.0)
-- **Decentralized.Host Version**: (e.g., main branch, v0.1.0)
-- **Database**: (e.g., PostgreSQL 14, MySQL 8.0)
-- **Deployment**: (e.g., Docker, Kubernetes, native)
+- **Go version:** <!-- e.g., 1.26 -->
+- **OS/Arch:** <!-- e.g., Linux/amd64, macOS/arm64 -->
+- **Decentralized.Host version:** <!-- git commit hash or release tag -->
 
-## Configuration
-Relevant configuration snippets (remove sensitive information):
-```yaml
-# Your config here
+## Error Log
 ```
-
-## Logs
-```
-Relevant error logs or stack traces
+<!-- Paste error messages, stack traces, or relevant logs -->
 ```
 
 ## Additional Context
-Any additional information that might be helpful:
-- Frequency of the issue (always, sometimes, rarely)
-- Impact (critical, high, medium, low)
-- Related issues or PRs
-- Workarounds (if any)
+<!-- Any other context that helps us understand the issue -->
+
+## Related Issues
+<!-- Link to related issues: Fixes #123, Related to #456 -->
