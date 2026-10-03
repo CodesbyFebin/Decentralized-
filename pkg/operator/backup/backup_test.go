@@ -243,8 +243,8 @@ func TestBackupStatusSummary(t *testing.T) {
 		t.Errorf("expected 5 operators, got %d", summary.TotalOperators)
 	}
 
-	if summary.ConfiguredOperators != 5 {
-		t.Errorf("expected 5 configured, got %d", summary.ConfiguredOperators)
+	if summary.ConfiguredOperators != 2 {
+		t.Errorf("expected 2 configured (with nodes), got %d", summary.ConfiguredOperators)
 	}
 
 	if summary.ReadyForProductionCount != 2 {
