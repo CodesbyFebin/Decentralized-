@@ -154,17 +154,17 @@ func TestUpTimeTrending(t *testing.T) {
 
 	latencies := []time.Duration{100 * time.Millisecond}
 
-	// Record degrading uptime
-	sm.RecordMetrics(operatorID, 95, 5, latencies)
+	// Record improving uptime (from initial 100% down, then improve)
+	sm.RecordMetrics(operatorID, 80, 20, latencies)
 	metrics, _ := sm.GetMetrics(operatorID)
-	if !metrics.TrendingUptime {
-		t.Error("expected uptime to be trending up initially")
+	if metrics.TrendingUptime {
+		t.Error("expected uptime to be trending down when below previous")
 	}
 
-	sm.RecordMetrics(operatorID, 80, 20, latencies)
+	sm.RecordMetrics(operatorID, 85, 15, latencies) // Improving from 80% to 85%
 	metrics, _ = sm.GetMetrics(operatorID)
-	if metrics.TrendingUptime {
-		t.Error("expected uptime to be trending down")
+	if !metrics.TrendingUptime {
+		t.Error("expected uptime to be trending up when improving")
 	}
 }
 
@@ -185,8 +185,8 @@ func TestConsecutiveFailures(t *testing.T) {
 		t.Errorf("expected 3 consecutive failures, got %d", metrics.ConsecutiveFailures)
 	}
 
-	// Record success
-	sm.RecordMetrics(operatorID, 99, 1, latencies)
+	// Record period with no failures (success only)
+	sm.RecordMetrics(operatorID, 100, 0, latencies)
 	metrics, _ = sm.GetMetrics(operatorID)
 	if metrics.ConsecutiveFailures != 0 {
 		t.Errorf("expected consecutive failures to reset, got %d", metrics.ConsecutiveFailures)

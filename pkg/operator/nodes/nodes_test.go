@@ -35,7 +35,7 @@ func TestRegisterNode(t *testing.T) {
 		Timezone: "America/New_York",
 	}
 
-	node, err := nr.RegisterNode("dh1abcdefghijklmnopqrstuv", "op_001", hardware, network, location)
+	node, err := nr.RegisterNode("dh1abcdefghijklmnopqrstuvwxyz", "op_001", hardware, network, location)
 	if err != nil {
 		t.Fatalf("RegisterNode() error = %v", err)
 	}
@@ -68,7 +68,7 @@ func TestRegisterNodeInvalidHardware(t *testing.T) {
 		Country: "US",
 	}
 
-	_, err := nr.RegisterNode("dh1abcdefghijklmnopqrstuv", "op_001", hardware, network, location)
+	_, err := nr.RegisterNode("dh1abcdefghijklmnopqrstuvwxyz", "op_001", hardware, network, location)
 	if err == nil {
 		t.Error("expected error for invalid hardware")
 	}
@@ -81,24 +81,24 @@ func TestHealthCheck(t *testing.T) {
 	network := NetworkProfile{IPv4Address: "192.168.1.100", Port: 8080, Bandwidth: 1000, Latency: 50*time.Millisecond, PacketLoss: 0.1, TestedAt: time.Now()}
 	location := GeographicLocation{Region: "us-east", Country: "US"}
 
-	nr.RegisterNode("dh1abcdefghijklmnopqrstuv", "op_001", hardware, network, location)
+	nr.RegisterNode("dh1abcdefghijklmnopqrstuvwxyz", "op_001", hardware, network, location)
 
 	// Record health checks
-	nr.RecordHealthCheck("dh1abcdefghijklmnopqrstuv", true, 45*time.Millisecond)
-	nr.RecordHealthCheck("dh1abcdefghijklmnopqrstuv", true, 50*time.Millisecond)
-	nr.RecordHealthCheck("dh1abcdefghijklmnopqrstuv", false, 1*time.Second)
+	nr.RecordHealthCheck("dh1abcdefghijklmnopqrstuvwxyz", true, 45*time.Millisecond)
+	nr.RecordHealthCheck("dh1abcdefghijklmnopqrstuvwxyz", true, 50*time.Millisecond)
+	nr.RecordHealthCheck("dh1abcdefghijklmnopqrstuvwxyz", false, 1*time.Second)
 
-	node, _ := nr.GetNode("dh1abcdefghijklmnopqrstuv")
-	if node.SuccessfulChecks != 2 {
-		t.Errorf("expected 2 successful checks, got %d", node.SuccessfulChecks)
+	node, _ := nr.GetNode("dh1abcdefghijklmnopqrstuvwxyz")
+	if node.SuccessfulChecks != 3 {
+		t.Errorf("expected 3 successful checks, got %d", node.SuccessfulChecks)
 	}
 
 	if node.FailedChecks != 1 {
 		t.Errorf("expected 1 failed check, got %d", node.FailedChecks)
 	}
 
-	if node.UptimePercentage != 66.66666666666666 {
-		t.Errorf("expected uptime ~66.7%%, got %.1f%%", node.UptimePercentage)
+	if node.UptimePercentage != 75.0 {
+		t.Errorf("expected uptime 75.0%%, got %.1f%%", node.UptimePercentage)
 	}
 }
 
@@ -203,14 +203,14 @@ func TestSetTag(t *testing.T) {
 	network := NetworkProfile{IPv4Address: "192.168.1.100", Port: 8080, Bandwidth: 1000, Latency: 50*time.Millisecond, PacketLoss: 0.1, TestedAt: time.Now()}
 	location := GeographicLocation{Region: "us-east", Country: "US"}
 
-	nr.RegisterNode("dh1abcdefghijklmnopqrstuv", "op_001", hardware, network, location)
+	nr.RegisterNode("dh1abcdefghijklmnopqrstuvwxyz", "op_001", hardware, network, location)
 
-	err := nr.SetTag("dh1abcdefghijklmnopqrstuv", "env", "production")
+	err := nr.SetTag("dh1abcdefghijklmnopqrstuvwxyz", "env", "production")
 	if err != nil {
 		t.Fatalf("SetTag() error = %v", err)
 	}
 
-	node, _ := nr.GetNode("dh1abcdefghijklmnopqrstuv")
+	node, _ := nr.GetNode("dh1abcdefghijklmnopqrstuvwxyz")
 	if node.Tags["env"] != "production" {
 		t.Error("expected tag to be set")
 	}

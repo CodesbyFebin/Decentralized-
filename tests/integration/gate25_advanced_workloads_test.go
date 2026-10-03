@@ -29,7 +29,7 @@ func TestGATE25_CassandraLikeCluster(t *testing.T) {
 		ServiceName:       "cassandra-headless",
 		UpdateStrategy:    "RollingUpdate",
 		PodManagementPolicy: "Ordered",
-		Template: api.WorkloadTemplate{
+		Template: api.AppSpec{
 			Image: "cassandra:4.0",
 			Resources: api.Resources{
 				CPUMilli: 2000,
@@ -84,7 +84,7 @@ func TestGATE25_OrderedDeployment(t *testing.T) {
 		Replicas:          5,
 		ServiceName:       "cassandra-headless",
 		PodManagementPolicy: "Ordered",
-		Template: api.WorkloadTemplate{
+		Template: api.AppSpec{
 			Image: "cassandra:4.0",
 		},
 	}
@@ -167,7 +167,7 @@ func TestGATE25_PersistentStorageBinding(t *testing.T) {
 		Name:        "cassandra",
 		Replicas:    3,
 		ServiceName: "cassandra-headless",
-		Template: api.WorkloadTemplate{
+		Template: api.AppSpec{
 			Image: "cassandra:4.0",
 		},
 		VolumeClaimTemplates: []stateful.VolumeClaimTemplate{
@@ -336,7 +336,7 @@ func TestGATE25_FailoverAndRecovery(t *testing.T) {
 		Name:        "cassandra",
 		Replicas:    5,
 		ServiceName: "cassandra-headless",
-		Template: api.WorkloadTemplate{
+		Template: api.AppSpec{
 			Image: "cassandra:4.0",
 		},
 	}
@@ -405,9 +405,6 @@ func TestGATE25_GPUScheduling(t *testing.T) {
 		{ID: 3, UUID: "gpu-3", Model: "MI300X", Arch: "rocm", ComputeCapability: "9.4", MemoryBytes: 192e9, Tier: "performance"},
 	}
 
-	disc := gpu.New()
-	disc.lastDiscovery = devices
-
 	allocator := gpu.NewAllocator(devices)
 
 	// Schedule GPU-intensive workload
@@ -436,24 +433,25 @@ func TestGATE25_GPUScheduling(t *testing.T) {
 		}
 	}
 
-	// Check scheduling efficiency
-	reporter := gpu.NewReporter(disc, allocator)
-	report := reporter.Report()
-
-	if report.TotalGPUs != 4 {
-		t.Errorf("Expected 4 total GPUs, got %d", report.TotalGPUs)
+	// Check scheduling efficiency by examining allocations directly
+	allocations := allocator.ListAllocations()
+	allocatedCount := 0
+	for _, devs := range allocations {
+		allocatedCount += len(devs)
 	}
-	if report.AvailableGPUs != 2 {
-		t.Errorf("Expected 2 available GPUs, got %d", report.AvailableGPUs)
+	totalGPUs := len(devices)
+
+	if allocatedCount != 2 {
+		t.Errorf("Expected 2 GPUs allocated, got %d", allocatedCount)
 	}
 
-	efficiency := report.SchedulingEfficiency
+	efficiency := float64(allocatedCount) / float64(totalGPUs)
 	if efficiency < 0.4 || efficiency > 0.6 {
 		t.Errorf("Expected ~50%% efficiency, got %.1f%%", efficiency*100)
 	}
 
 	t.Logf("✓ GPU scheduling verified: %d/%d GPUs scheduled (%.1f%% efficiency)",
-		report.TotalGPUs-report.AvailableGPUs, report.TotalGPUs, efficiency*100)
+		allocatedCount, totalGPUs, efficiency*100)
 }
 
 func TestGATE25_RuntimeManagement(t *testing.T) {
@@ -495,7 +493,7 @@ func TestGATE25_RuntimeManagement(t *testing.T) {
 	}
 
 	// Verify workload can select runtime
-	workloadSpec := api.WorkloadTemplate{
+	workloadSpec := api.AppSpec{
 		Image: "app:latest",
 		// Would have a runtime field in real implementation
 	}
@@ -524,7 +522,7 @@ func TestGATE25_ComprehensiveWorkflow(t *testing.T) {
 		Name:        "cassandra",
 		Replicas:    5,
 		ServiceName: "cassandra-headless",
-		Template: api.WorkloadTemplate{
+		Template: api.AppSpec{
 			Image: "cassandra:4.0",
 			Resources: api.Resources{
 				CPUMilli: 2000,

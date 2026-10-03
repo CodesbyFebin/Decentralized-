@@ -7,7 +7,7 @@ import (
 func TestInitiateAudit(t *testing.T) {
 	sm := NewSecurityManager()
 
-	audit, err := sm.InitiateAudit("op_001", "dh1abcdefghijklmnopqrstuv")
+	audit, err := sm.InitiateAudit("op_001", "dh1abcdefghijklmnopqrstuvwxyz")
 	if err != nil {
 		t.Fatalf("InitiateAudit() error = %v", err)
 	}
@@ -21,7 +21,7 @@ func TestRecordCheck(t *testing.T) {
 	sm := NewSecurityManager()
 	operatorID := "op_001"
 
-	sm.InitiateAudit(operatorID, "dh1abcdefghijklmnopqrstuv")
+	sm.InitiateAudit(operatorID, "dh1abcdefghijklmnopqrstuvwxyz")
 
 	// Record passing check
 	err := sm.RecordCheck(operatorID, IDENTITY_VERIFICATION, true, "INFO", "Identity verified", "")
@@ -39,7 +39,7 @@ func TestComplianceLevelProgression(t *testing.T) {
 	sm := NewSecurityManager()
 	operatorID := "op_001"
 
-	sm.InitiateAudit(operatorID, "dh1abcdefghijklmnopqrstuv")
+	sm.InitiateAudit(operatorID, "dh1abcdefghijklmnopqrstuvwxyz")
 
 	// Record required checks
 	checks := []struct {
@@ -72,7 +72,7 @@ func TestCertification(t *testing.T) {
 	sm := NewSecurityManager()
 	operatorID := "op_001"
 
-	sm.InitiateAudit(operatorID, "dh1abcdefghijklmnopqrstuv")
+	sm.InitiateAudit(operatorID, "dh1abcdefghijklmnopqrstuvwxyz")
 
 	// Try to certify without meeting requirements (should fail)
 	err := sm.CertifyOperator(operatorID)
@@ -124,7 +124,7 @@ func TestAuditStatus(t *testing.T) {
 	sm := NewSecurityManager()
 	operatorID := "op_001"
 
-	sm.InitiateAudit(operatorID, "dh1abcdefghijklmnopqrstuv")
+	sm.InitiateAudit(operatorID, "dh1abcdefghijklmnopqrstuvwxyz")
 
 	sm.RecordCheck(operatorID, IDENTITY_VERIFICATION, true, "INFO", "Passed", "")
 	sm.RecordCheck(operatorID, KEY_MANAGEMENT, false, "HIGH", "Failed", "Fix key storage")
@@ -149,7 +149,7 @@ func TestSecuritySummary(t *testing.T) {
 	// Create multiple audits with different compliance levels
 	for i := 0; i < 3; i++ {
 		operatorID := "op_00" + string(rune('1'+i))
-		sm.InitiateAudit(operatorID, "dh1abcdefghijklmnopqrstuv")
+		sm.InitiateAudit(operatorID, "dh1abcdefghijklmnopqrstuvwxyz")
 
 		// Vary compliance levels by recording different checks
 		if i == 0 {
@@ -186,7 +186,7 @@ func TestListAudits(t *testing.T) {
 	count := 10
 	for i := 0; i < count; i++ {
 		operatorID := "op_" + string(rune('0'+i))
-		sm.InitiateAudit(operatorID, "dh1abcdefghijklmnopqrstuv")
+		sm.InitiateAudit(operatorID, "dh1abcdefghijklmnopqrstuvwxyz")
 	}
 
 	audits := sm.ListAudits()
@@ -199,7 +199,7 @@ func TestRenewCertification(t *testing.T) {
 	sm := NewSecurityManager()
 	operatorID := "op_001"
 
-	sm.InitiateAudit(operatorID, "dh1abcdefghijklmnopqrstuv")
+	sm.InitiateAudit(operatorID, "dh1abcdefghijklmnopqrstuvwxyz")
 
 	// Record all required checks
 	requiredChecks := []AuditCheckType{
@@ -243,7 +243,7 @@ func TestFindingsSeverity(t *testing.T) {
 	sm := NewSecurityManager()
 	operatorID := "op_001"
 
-	sm.InitiateAudit(operatorID, "dh1abcdefghijklmnopqrstuv")
+	sm.InitiateAudit(operatorID, "dh1abcdefghijklmnopqrstuvwxyz")
 
 	// Record checks with different severities
 	sm.RecordCheck(operatorID, IDENTITY_VERIFICATION, false, "CRITICAL", "Critical finding", "Fix immediately")

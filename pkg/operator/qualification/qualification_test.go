@@ -17,13 +17,13 @@ func TestRegisterOperator(t *testing.T) {
 		{
 			name:       "valid registration",
 			operatorID: "op_001",
-			nodeID:     "dh1a234567b234567c234567",
+			nodeID:     "dh1abcdefghijklmnopqrstuvwxyz",
 			wantErr:    false,
 		},
 		{
 			name:       "empty operator ID",
 			operatorID: "",
-			nodeID:     "dh1a234567b234567c234567",
+			nodeID:     "dh1abcdefghijklmnopqrstuvwxyz",
 			wantErr:    true,
 		},
 		{
@@ -50,7 +50,7 @@ func TestRegisterOperator(t *testing.T) {
 func TestRecordWork(t *testing.T) {
 	qm := NewQualificationManager()
 	operatorID := "op_001"
-	qm.RegisterOperator(operatorID, "dh1a234567b234567c234567")
+	qm.RegisterOperator(operatorID, "dh1abcdefghijklmnopqrstuvwxyz")
 
 	// Record work to reach NOVICE
 	err := qm.RecordWork(operatorID, 100_000, 100*time.Millisecond)
@@ -71,7 +71,7 @@ func TestRecordWork(t *testing.T) {
 func TestReputationScore(t *testing.T) {
 	qm := NewQualificationManager()
 	operatorID := "op_001"
-	qm.RegisterOperator(operatorID, "dh1a234567b234567c234567")
+	qm.RegisterOperator(operatorID, "dh1abcdefghijklmnopqrstuvwxyz")
 
 	// Decrease reputation
 	qm.UpdateReputationScore(operatorID, -100)
@@ -91,7 +91,7 @@ func TestReputationScore(t *testing.T) {
 func TestCertification(t *testing.T) {
 	qm := NewQualificationManager()
 	operatorID := "op_001"
-	qm.RegisterOperator(operatorID, "dh1abcdefghijklmnopqrstuv")
+	qm.RegisterOperator(operatorID, "dh1abcdefghijklmnopqrstuvwxyz")
 
 	// Try to certify BOOTSTRAP operator (should fail)
 	err := qm.Certify(operatorID)
@@ -123,7 +123,7 @@ func TestQualificationStatus(t *testing.T) {
 	qm := NewQualificationManager()
 
 	for i := 0; i < 25; i++ {
-		qm.RegisterOperator("op_"+string(rune(i)), "dh1abcdefghijklmnopqrstuv")
+		qm.RegisterOperator("op_"+string(rune(i)), "dh1abcdefghijklmnopqrstuvwxyz")
 	}
 
 	status := qm.GetQualificationStatus()
@@ -137,7 +137,7 @@ func TestListOperators(t *testing.T) {
 	count := 10
 
 	for i := 0; i < count; i++ {
-		qm.RegisterOperator("op_"+string(rune(i)), "dh1abcdefghijklmnopqrstuv")
+		qm.RegisterOperator("op_"+string(rune(i)), "dh1abcdefghijklmnopqrstuvwxyz")
 	}
 
 	operators := qm.ListOperators()
@@ -150,7 +150,7 @@ func TestOperatorsByTier(t *testing.T) {
 	qm := NewQualificationManager()
 
 	for i := 0; i < 5; i++ {
-		qm.RegisterOperator("op_"+string(rune(i)), "dh1abcdefghijklmnopqrstuv")
+		qm.RegisterOperator("op_"+string(rune(i)), "dh1abcdefghijklmnopqrstuvwxyz")
 	}
 
 	bootstrapOps := qm.OperatorsByTier(BOOTSTRAP)

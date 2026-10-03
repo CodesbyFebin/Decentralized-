@@ -187,7 +187,7 @@ func TestVerifyKeyChain(t *testing.T) {
 		Status:     "active",
 	}
 
-	_, _, err := manager.RotateKey(dir, oldMetadata)
+	_, _, err = manager.RotateKey(dir, oldMetadata)
 	if err != nil {
 		t.Fatalf("failed to rotate key: %v", err)
 	}

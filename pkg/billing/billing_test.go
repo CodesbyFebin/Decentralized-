@@ -117,6 +117,10 @@ func TestRecordUsage(t *testing.T) {
 	ctx := context.Background()
 
 	quote := &pricing.Quote{
+		CPUCostPerHour:       0.001,
+		MemoryCostPerHour:    0.01,
+		BandwidthCostPerHour: 0.005,
+		StorageCostPerMonth:  0.1,
 		TotalHourlyCharge:    0.5,
 		EstimatedMonthlyCost: 365,
 	}
@@ -221,6 +225,10 @@ func TestExpireLease(t *testing.T) {
 	ctx := context.Background()
 
 	quote := &pricing.Quote{
+		CPUCostPerHour:       0.001,
+		MemoryCostPerHour:    0.01,
+		BandwidthCostPerHour: 0.005,
+		StorageCostPerMonth:  0.1,
 		TotalHourlyCharge:    0.5,
 		EstimatedMonthlyCost: 365,
 	}
@@ -302,6 +310,10 @@ func TestRecordPayment(t *testing.T) {
 	ctx := context.Background()
 
 	quote := &pricing.Quote{
+		CPUCostPerHour:       0.001,
+		MemoryCostPerHour:    0.01,
+		BandwidthCostPerHour: 0.005,
+		StorageCostPerMonth:  0.1,
 		TotalHourlyCharge:    0.5,
 		EstimatedMonthlyCost: 365,
 	}
@@ -355,6 +367,10 @@ func TestListLeases(t *testing.T) {
 	ctx := context.Background()
 
 	quote := &pricing.Quote{
+		CPUCostPerHour:       0.001,
+		MemoryCostPerHour:    0.01,
+		BandwidthCostPerHour: 0.005,
+		StorageCostPerMonth:  0.1,
 		TotalHourlyCharge:    0.5,
 		EstimatedMonthlyCost: 365,
 	}
@@ -441,6 +457,10 @@ func TestConcurrentLeaseLimit(t *testing.T) {
 	ctx := context.Background()
 
 	quote := &pricing.Quote{
+		CPUCostPerHour:       0.001,
+		MemoryCostPerHour:    0.01,
+		BandwidthCostPerHour: 0.005,
+		StorageCostPerMonth:  0.1,
 		TotalHourlyCharge:    0.5,
 		EstimatedMonthlyCost: 365,
 	}

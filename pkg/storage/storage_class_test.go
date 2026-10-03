@@ -469,7 +469,7 @@ func TestTimingTracking(t *testing.T) {
 	}
 
 	// Bind
-	pv, _ := sm.BindClaim("timed-pvc", "node-1")
+	_, _ = sm.BindClaim("timed-pvc", "node-1")
 	retrieved, _ = sm.GetClaim("timed-pvc")
 
 	if retrieved.BoundAt.IsZero() {

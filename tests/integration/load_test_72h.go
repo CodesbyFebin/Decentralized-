@@ -2,6 +2,7 @@ package integration
 
 import (
 	"fmt"
+	"os"
 	"runtime"
 	"sync"
 	"sync/atomic"
@@ -399,6 +400,3 @@ func max(a, b uint64) uint64 {
 	}
 	return b
 }
-
-// Import needed for os.Getenv
-import "os"
