@@ -32,26 +32,27 @@ type LoadTestMetrics struct {
 	Throughput       float64 // ops/sec
 }
 
-type LoadTestRunner struct {
-	Name      string
-	Workers   int
+// StressTestRunner is for load/stress testing operations
+type StressTestRunner struct {
+	Name       string
+	Workers    int
 	Operations int
-	Metrics   *LoadTestMetrics
-	lock      sync.Mutex
+	Metrics    *LoadTestMetrics
+	lock       sync.Mutex
 }
 
-func NewLoadTestRunner(name string, workers, ops int) *LoadTestRunner {
-	return &LoadTestRunner{
+func NewStressTestRunner(name string, workers, ops int) *StressTestRunner {
+	return &StressTestRunner{
 		Name:       name,
 		Workers:    workers,
 		Operations: ops,
 		Metrics: &LoadTestMetrics{
-			MinLatency: 1<<63 - 1, // max int64
+			MinLatency: 1<<63 - 1,
 		},
 	}
 }
 
-func (l *LoadTestRunner) RecordOperation(success bool, latency time.Duration) {
+func (l *StressTestRunner) RecordOperation(success bool, latency time.Duration) {
 	latencyNs := latency.Nanoseconds()
 
 	if success {
@@ -85,7 +86,7 @@ func (l *LoadTestRunner) RecordOperation(success bool, latency time.Duration) {
 	}
 }
 
-func (l *LoadTestRunner) Finalize() {
+func (l *StressTestRunner) Finalize() {
 	l.Metrics.EndTime = time.Now()
 	duration := l.Metrics.EndTime.Sub(l.Metrics.StartTime).Seconds()
 
@@ -105,7 +106,7 @@ func TestLoad_10xBaselineThroughput(t *testing.T) {
 	harness := NewTestHarness("Load-10xBaseline")
 	harness.Start()
 
-	runner := NewLoadTestRunner("10x-baseline", 50, 50000)
+	runner := NewStressTestRunner("10x-baseline", 50, 50000)
 	runner.Metrics.StartTime = time.Now()
 
 	// Record memory before test
@@ -191,7 +192,7 @@ func TestLoad_1000ConcurrentOperators(t *testing.T) {
 	const opsPerOperator = 100
 	const workers = 50
 
-	runner := NewLoadTestRunner("1000-operators", workers, numOperators*opsPerOperator)
+	runner := NewStressTestRunner("1000-operators", workers, numOperators*opsPerOperator)
 	runner.Metrics.StartTime = time.Now()
 
 	// Shared operator state
@@ -378,7 +379,7 @@ func TestLoad_NetworkBandwidthSaturation(t *testing.T) {
 	const numStreams = 100
 	const bytesPerStream = 1024 * 1024 // 1MB per stream
 
-	runner := NewLoadTestRunner("network-saturation", 50, numStreams)
+	runner := NewStressTestRunner("network-saturation", 50, numStreams)
 	runner.Metrics.StartTime = time.Now()
 
 	totalBytesTransferred := atomic.Int64{}
@@ -445,7 +446,7 @@ func TestLoad_ResourceConstrainedOperation(t *testing.T) {
 	const memoryBudget = 100 * 1024 * 1024 // 100MB
 	const numWorkers = 10
 
-	runner := NewLoadTestRunner("resource-constrained", numWorkers, 10000)
+	runner := NewStressTestRunner("resource-constrained", numWorkers, 10000)
 	runner.Metrics.StartTime = time.Now()
 
 	// Pre-allocate budget to simulate constraint
@@ -523,7 +524,7 @@ func TestLoad_SustainedOperation(t *testing.T) {
 	harness.Start()
 
 	testDuration := 2 * time.Minute // 2 minutes sustained load
-	runner := NewLoadTestRunner("sustained", 20, 0) // Dynamic operation count
+	runner := NewStressTestRunner("sustained", 20, 0) // Dynamic operation count
 	runner.Metrics.StartTime = time.Now()
 
 	endTime := time.Now().Add(testDuration)
